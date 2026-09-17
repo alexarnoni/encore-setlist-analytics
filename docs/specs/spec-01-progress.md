@@ -68,7 +68,14 @@ every task, marking items done and recording decisions made along the way
       `/opt/dbt-venv/bin/dbt` so it never shadows Airflow's own
       `python`/`pip`. Merged with item 8 (same Dockerfile) — see decisions
       log.
-- [ ] **4. `config/bands.yaml`** — 7 bands with name + MBID from Phase 0.
+- [x] **4. `config/bands.yaml`** — already existed in the working tree
+      (not created by Claude, found untracked before this task). Verified
+      all 7 MBIDs against the Phase 0 MusicBrainz search cache
+      (`data/raw/musicbrainz/search_artist_*.json`, gitignored, not in the
+      repo): every band's top match has score 100 and its MBID matches the
+      file exactly. Added `src/encore/config.py` (`load_bands()`) and
+      `tests/test_config.py` (7 bands, UUID format, exact match against the
+      Phase 0 values) as a regression guard.
 - [ ] **5. `.env.example`** — including `ENCORE_BANDS_FILTER` and every var
       referenced by `infra/docker-compose.yml` (`AIRFLOW_IMAGE_NAME`,
       `AIRFLOW_UID`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`,
@@ -189,3 +196,6 @@ every task, marking items done and recording decisions made along the way
   src/` and `config/` (paths outside `airflow/`). Excludes `.venv`, `.git`,
   `data/`, `notebooks/`, `.env`, caches and markdown files from the build
   context.
+- **2026-09-17** — Added `PyYAML==6.0.2` to the top-level `requirements.txt`
+  (already an indirect dependency via `jupyter`, but `src/encore/config.py`
+  now imports it directly so it needs its own pin).
