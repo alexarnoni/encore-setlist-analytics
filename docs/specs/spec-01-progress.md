@@ -126,14 +126,23 @@ every task, marking items done and recording decisions made along the way
       single `src/clients.py` file into separate modules. `get_cache_hits`
       (Phase-0-only debugging counter) was **not** carried over — not a
       spec-01 requirement.
-- [ ] **12. `src/encore/clients/setlistfm.py`** — moved from
-      `src/clients.py`, disk cache removed, rate limit/backoff/counters kept.
-- [x] **13. Unit tests for clients (MusicBrainz half)** — mocked HTTP
-      (`unittest.mock`, no `responses`/`requests-mock` dependency added):
-      real request writes cache + increments counter, cache hit skips
-      both, 429-then-success retry, pagination params. `time.sleep`
-      mocked so the suite stays fast. The setlist.fm half of this item
-      lands with item 12.
+- [x] **12. `src/encore/clients/setlistfm.py`** — logic moved from
+      `src/clients.py`, disk cache **removed** entirely (R3.2 — every call
+      hits the network; caching would defeat the ephemeral-data policy).
+      Reuses `_http.request_with_retry` from item 11 instead of
+      duplicating retry/counter logic.
+- [x] **13. Unit tests for clients** — mocked HTTP (`unittest.mock`, no
+      `responses`/`requests-mock` dependency added). MusicBrainz: real
+      request writes cache + increments counter, cache hit skips both,
+      429-then-success retry, pagination params. setlist.fm: missing API
+      key raises, session carries the `x-api-key` header, two identical
+      calls both hit the network and nothing is written to the temp cwd
+      (proves no disk cache), pagination param, 503-then-success retry,
+      exhausting all 3 retries raises `RuntimeError`. `time.sleep` mocked
+      throughout so the suite stays fast (22 tests, 0.34s). Still **not**
+      covered here: a live round trip against a real setlist.fm response
+      or a real `raw_setlistfm` table — blocked on Docker (see decisions
+      log); that gap is what items 18/23/25 close later.
 - [x] **14. Preserve Phase 0 client** — `src/clients.py` moved
       (`git mv`, history preserved) to `notebooks/phase0_clients.py`,
       docstring updated to mark it frozen/Phase-0-only. Notebook's import
