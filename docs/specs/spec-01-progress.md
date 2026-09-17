@@ -76,11 +76,15 @@ every task, marking items done and recording decisions made along the way
       file exactly. Added `src/encore/config.py` (`load_bands()`) and
       `tests/test_config.py` (7 bands, UUID format, exact match against the
       Phase 0 values) as a regression guard.
-- [ ] **5. `.env.example`** — including `ENCORE_BANDS_FILTER` and every var
-      referenced by `infra/docker-compose.yml` (`AIRFLOW_IMAGE_NAME`,
-      `AIRFLOW_UID`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`,
-      `AIRFLOW_FERNET_KEY`, `AIRFLOW_JWT_SECRET`, `AIRFLOW_WWW_USER_USERNAME`,
-      `AIRFLOW_WWW_USER_PASSWORD`).
+- [x] **5. `.env.example`** — cross-checked against every `${VAR}`
+      reference in `infra/docker-compose.yml`
+      (`grep -oE '\$\{[A-Z_]+' infra/docker-compose.yml`): all covered
+      except `AIRFLOW_PROJ_DIR` and `ENV_FILE_PATH` (documented as
+      commented-out advanced overrides, since the compose file already
+      defaults them for the normal case) and `HOSTNAME` (shell-provided
+      inside the container, not a `.env` var). Includes `SETLISTFM_API_KEY`
+      (matches the variable name already used in the local `.env` and in
+      `src/clients.py`) and `ENCORE_BANDS_FILTER` (adjustment 11).
 - [ ] **6. Idempotent schema/table creation** — init scripts for first boot
       plus an on-demand task/command using `CREATE ... IF NOT EXISTS`;
       documented in README. `raw_setlistfm`, `raw_musicbrainz`, `staging`,
