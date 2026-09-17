@@ -85,10 +85,22 @@ every task, marking items done and recording decisions made along the way
       inside the container, not a `.env` var). Includes `SETLISTFM_API_KEY`
       (matches the variable name already used in the local `.env` and in
       `src/clients.py`) and `ENCORE_BANDS_FILTER` (adjustment 11).
-- [ ] **6. Idempotent schema/table creation** — init scripts for first boot
-      plus an on-demand task/command using `CREATE ... IF NOT EXISTS`;
-      documented in README. `raw_setlistfm`, `raw_musicbrainz`, `staging`,
-      `intermediate`, `analytics`, `ops` schemas still pending.
+- [x] **6. Idempotent schema creation** — the 6 schemas from
+      `structure.md` (`raw_setlistfm`, `raw_musicbrainz`, `staging`,
+      `intermediate`, `analytics`, `ops`). Two paths, both idempotent
+      (`CREATE SCHEMA IF NOT EXISTS`): `infra/postgres/init/02_create_schemas.sh`
+      (first boot only, explicitly targets `--dbname encore` since init
+      scripts otherwise connect to `$POSTGRES_DB`, i.e. the airflow
+      metadata db) and `python -m encore.db` (on demand, any time) via
+      `src/encore/db.py` (`get_connection()` + `ensure_schemas()`). Merged
+      with item 10 (`src/encore/db.py`) — same file, see decisions log.
+      Documented in a new minimal `README.md` ("Database schema
+      bootstrap" section; full README content is still item 24). Unit
+      tests in `tests/test_db.py` use a mocked connection (no Docker in
+      this environment); a real integration run against `postgres-test`
+      is still pending (item 23).
+      **Table** creation (`raw_setlistfm.*`, `raw_musicbrainz.*`,
+      `ops.pipeline_runs`) is separate and still pending — items 15–17.
 - [x] **7. `infra/docker-compose.yml`** — done together with item 2 above.
 - [x] **8. `airflow/Dockerfile`** — done together with item 3 above. Base
       `apache/airflow:3.3.2-python3.12` (official image, multi-arch —
@@ -103,7 +115,7 @@ every task, marking items done and recording decisions made along the way
       root (build context is now the repo root) to keep `.venv`, `.git`,
       `data/`, notebooks and caches out of the build.
 - [ ] **9. Airflow log cleanup** — logs older than 14 days removed.
-- [ ] **10. `src/encore/db.py`** — connection helpers from env vars.
+- [x] **10. `src/encore/db.py`** — done together with item 6 above.
 - [ ] **11. `src/encore/clients/musicbrainz.py`** — moved from
       `src/clients.py`, keeps disk cache, rate limit, backoff, counters.
 - [ ] **12. `src/encore/clients/setlistfm.py`** — moved from
@@ -203,6 +215,19 @@ every task, marking items done and recording decisions made along the way
 - **2026-09-17** — Added `PyYAML==6.0.2` to the top-level `requirements.txt`
   (already an indirect dependency via `jupyter`, but `src/encore/config.py`
   now imports it directly so it needs its own pin).
+- **2026-09-17** — Checklist items 6 and 10 were the same deliverable
+  (`src/encore/db.py`); implemented together and both marked done.
+- **2026-09-17** — `encore.db.get_connection()` always targets the
+  `encore` database by a hardcoded `DATABASE_NAME` constant, independent
+  of `POSTGRES_DB` (which names Airflow's own metadata database). Reads
+  `POSTGRES_HOST`/`POSTGRES_PORT` from the environment with defaults
+  (`postgres`/`5432`) matching the Docker network; outside the
+  `airflow-*` containers (e.g. running `python -m encore.db` from a host
+  shell) these must be overridden to `localhost`/`5435`.
+- **2026-09-17** — Created a minimal `README.md` ahead of item 24, to
+  satisfy adjustment 5's requirement that the on-demand schema bootstrap
+  command be documented there. Item 24 will expand it (architecture
+  diagram, deploy steps, attribution, etc.) without redoing this section.
 - **2026-09-17** — Fix (user-flagged): `infra/docker-compose.yml` fell back
   to a hardcoded `airflow` default whenever `POSTGRES_PASSWORD`,
   `AIRFLOW_FERNET_KEY`, `AIRFLOW_JWT_SECRET` or `AIRFLOW_WWW_USER_PASSWORD`
