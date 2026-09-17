@@ -48,18 +48,31 @@ every task, marking items done and recording decisions made along the way
       track count → earliest date → country (GB > US > XW). Tests in
       `tests/test_representative_release.py` (7 cases, all passing).
       No deviation from the adjusted spec.
-- [ ] **2. Airflow infra baseline** — pin Airflow 3.x latest stable, adapt
-      official docker-compose (`api-server`, `scheduler`, `dag-processor`,
-      `triggerer` if needed), install via official constraints file.
+- [x] **2. Airflow infra baseline** — `infra/docker-compose.yml` created,
+      merged with item 7 (same deliverable — see decisions log). Pinned
+      Airflow **3.3.2** (latest stable as of 2026-09-17). Services:
+      `postgres`, `airflow-init`, `airflow-api-server`, `airflow-scheduler`,
+      `airflow-dag-processor`, plus `postgres-test` (adjustment 10 / item
+      23, profile `test`, `127.0.0.1:5436`). No Redis/worker/Flower (LocalExecutor
+      doesn't need Celery); triggerer omitted (no deferrable operators in
+      spec-01). All ports bound to `127.0.0.1`, verified by grep. YAML
+      syntax validated with `yaml.safe_load` (Docker not available in this
+      environment — `docker compose config` still needs to be run where
+      Docker is installed). `infra/postgres/init/01_create_encore_database.sh`
+      creates the `encore` database alongside `airflow` (idempotent
+      `WHERE NOT EXISTS`); full schema creation is still item 6.
 - [ ] **3. dbt in separate venv** — `/opt/dbt-venv` inside the Airflow image.
 - [ ] **4. `config/bands.yaml`** — 7 bands with name + MBID from Phase 0.
-- [ ] **5. `.env.example`** — including `ENCORE_BANDS_FILTER`.
+- [ ] **5. `.env.example`** — including `ENCORE_BANDS_FILTER` and every var
+      referenced by `infra/docker-compose.yml` (`AIRFLOW_IMAGE_NAME`,
+      `AIRFLOW_UID`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`,
+      `AIRFLOW_FERNET_KEY`, `AIRFLOW_JWT_SECRET`, `AIRFLOW_WWW_USER_USERNAME`,
+      `AIRFLOW_WWW_USER_PASSWORD`).
 - [ ] **6. Idempotent schema/table creation** — init scripts for first boot
       plus an on-demand task/command using `CREATE ... IF NOT EXISTS`;
-      documented in README.
-- [ ] **7. `infra/docker-compose.yml`** — postgres, airflow services, ports
-      bound to 127.0.0.1, named volumes, plus `postgres-test` under a
-      `test` profile on `127.0.0.1:5436`.
+      documented in README. `raw_setlistfm`, `raw_musicbrainz`, `staging`,
+      `intermediate`, `analytics`, `ops` schemas still pending.
+- [x] **7. `infra/docker-compose.yml`** — done together with item 2 above.
 - [ ] **8. `airflow/Dockerfile`** — official Airflow 3.x base, project
       requirements, dbt in its own venv; arm64-compatible, native build
       (no buildx).
@@ -96,8 +109,10 @@ every task, marking items done and recording decisions made along the way
       `raw_setlistfm`, `trigger_rule=all_done`.
 - [ ] **22. Analytics schema guard test** — fails if any table in
       `analytics` has a column named `setlist_id`.
-- [ ] **23. Integration test setup** — `postgres-test` service, documented
-      run instructions.
+- [ ] **23. Integration test setup** — `postgres-test` service added to
+      `infra/docker-compose.yml` (done, in item 2). Still pending: actual
+      integration tests that use it, and documented run instructions in
+      README (item 24).
 - [ ] **24. `README.md`** — summary, Mermaid architecture diagram, data
       policy, local run instructions (including idempotent schema
       creation and `ENCORE_BANDS_FILTER`), VM deploy steps, setlist.fm
@@ -117,3 +132,29 @@ every task, marking items done and recording decisions made along the way
   `tech.md`, `structure.md`, `spec-01-ingestion.md` were at the repo root;
   moved to `docs/context/` and `docs/specs/` per `structure.md`, no content
   change.
+- **2026-09-17** — Airflow version pinned to **3.3.2** (confirmed latest
+  stable via web search on this date). Constraints file for the Dockerfile
+  (item 8) will be
+  `https://raw.githubusercontent.com/apache/airflow/constraints-3.3.2/constraints-3.12.txt`.
+- **2026-09-17** — Checklist items 2 and 7 were the same deliverable
+  (`infra/docker-compose.yml`); implemented together under item 2 and both
+  marked done to avoid duplicate work in a later task.
+- **2026-09-17** — Executor: **LocalExecutor** confirmed per `tech.md`, so
+  the compose file drops Redis, `airflow-worker` and `flower` from the
+  official baseline. Auth manager kept as `FabAuthManager` (official
+  default); `AIRFLOW__CORE__LOAD_EXAMPLES` set to `'false'` (deviation from
+  the official example's `'true'`, since example DAGs have no place in
+  this project).
+- **2026-09-17** — Triggerer service omitted from `infra/docker-compose.yml`.
+  Spec-01 has no deferrable operators; revisit if a later spec needs one.
+- **2026-09-17** — Single PostgreSQL instance holds both the `airflow` and
+  `encore` databases (per `tech.md`), created via
+  `infra/postgres/init/01_create_encore_database.sh` (`airflow` comes from
+  `POSTGRES_DB`, `encore` is created idempotently by the script). Schemas
+  inside `encore` are still pending (item 6).
+- **2026-09-17** — Could not run `docker compose config` or `docker compose
+  up` in this environment (Docker CLI not installed). Validated the compose
+  file with `python -c "import yaml; yaml.safe_load(...)"` instead and
+  manually confirmed every `ports:` entry is bound to `127.0.0.1`. Full
+  `docker compose up` verification is still needed on a machine with Docker
+  before item 25 (first real run).
