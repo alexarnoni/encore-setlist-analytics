@@ -20,6 +20,16 @@
 #   AIRFLOW_WWW_USER_USERNAME, AIRFLOW_WWW_USER_PASSWORD
 #
 # Ports are bound to 127.0.0.1 only (never 0.0.0.0), per docs/context/tech.md.
+#
+# IMPORTANT — run from the repo root with an explicit --env-file:
+#   docker compose -f infra/docker-compose.yml --env-file .env up
+# `env_file:` below only injects variables into the containers; Compose's
+# own ${VAR} interpolation in this file (including the :? required-var
+# checks) reads .env from the compose project directory, i.e. infra/, by
+# default — NOT from the repo root where the real .env lives — so a bare
+# `docker compose up` run from infra/ fails with "variable is missing a
+# value" even though .env exists one level up. --env-file makes Compose
+# read the right file for both purposes.
 
 x-airflow-common:
   &airflow-common
@@ -77,12 +87,20 @@ services:
       - |
         mkdir -v -p /opt/airflow/logs
         chown -R "${AIRFLOW_UID:-50000}:0" /opt/airflow/logs
-        airflow db migrate
-        airflow users create \
-          --username "${AIRFLOW_WWW_USER_USERNAME:-airflow}" \
-          --password "${AIRFLOW_WWW_USER_PASSWORD:?Set AIRFLOW_WWW_USER_PASSWORD in .env}" \
+        # Airflow lives in a real venv at /home/airflow/.local (it has its
+        # own pyvenv.cfg), but the `airflow` console script's shebang
+        # points straight at the base interpreter, which only resolves
+        # that venv's site-packages via the invoking user's HOME. As
+        # root (HOME=/root) `airflow db migrate` fails with
+        # "ModuleNotFoundError: No module named 'airflow'" even though
+        # the exact same command works for the airflow user — so run it
+        # via `su airflow` instead of directly as root.
+        su airflow -c "airflow db migrate"
+        su airflow -c "airflow users create \
+          --username '${AIRFLOW_WWW_USER_USERNAME:-airflow}' \
+          --password '${AIRFLOW_WWW_USER_PASSWORD:?Set AIRFLOW_WWW_USER_PASSWORD in .env}' \
           --firstname Encore --lastname Admin --role Admin \
-          --email admin@example.com || true
+          --email admin@example.com" || true
     user: "0:0"
 
   airflow-api-server:

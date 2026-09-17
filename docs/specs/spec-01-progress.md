@@ -95,10 +95,13 @@ every task, marking items done and recording decisions made along the way
       `src/encore/db.py` (`get_connection()` + `ensure_schemas()`). Merged
       with item 10 (`src/encore/db.py`) — same file, see decisions log.
       Documented in a new minimal `README.md` ("Database schema
-      bootstrap" section; full README content is still item 24). Unit
-      tests in `tests/test_db.py` use a mocked connection (no Docker in
-      this environment); a real integration run against `postgres-test`
-      is still pending (item 23).
+      bootstrap" section; full README content is still item 24).
+      **Verified for real on 2026-09-17** once Docker became available
+      (see "Docker validation pass" below): `docker compose up -d
+      postgres` ran both init scripts, `\dn` inside the container showed
+      all 6 schemas, and `python -m encore.db` run a second time against
+      the already-initialized database completed with no errors
+      (idempotency confirmed against a real Postgres, not just mocks).
       **Table** creation (`raw_setlistfm.*`, `raw_musicbrainz.*`,
       `ops.pipeline_runs`) is separate and still pending — items 15–17.
 - [x] **7. `infra/docker-compose.yml`** — done together with item 2 above.
@@ -114,6 +117,30 @@ every task, marking items done and recording decisions made along the way
       of pulling `apache/airflow` directly. Added `.dockerignore` at repo
       root (build context is now the repo root) to keep `.venv`, `.git`,
       `data/`, notebooks and caches out of the build.
+      **Verified for real on 2026-09-17**: `docker compose build`
+      succeeds (with a fix, see decisions log), `dbt --version` inside
+      `/opt/dbt-venv` reports `dbt-core 1.12.3` / `postgres 1.11.0`, `dbt`
+      is confirmed absent from `PATH`, and `python -c "import
+      encore..."` works inside the image.
+
+### Docker validation pass (2026-09-17)
+
+The user installed Docker Desktop mid-session. Ran the full local stack
+for the first time against real Docker/PostgreSQL/Airflow and fixed
+three real bugs this surfaced (all itemized in the decisions log below):
+`docker compose up` failing outside `infra/` without `--env-file`, a
+pip dependency conflict between `airflow/requirements.txt`'s pinned
+`requests==2.32.3` and Airflow's own constraints file, and `airflow
+db migrate` failing as root (`user: "0:0"`) inside `airflow-init`.
+After the fixes: `docker compose up -d postgres` → healthy, both init
+scripts ran; `docker compose build` → succeeded; `airflow-init` →
+migration completed, admin user created; `airflow-scheduler`,
+`airflow-dag-processor`, `airflow-api-server` → all reached `healthy`;
+`GET /api/v2/monitor/health` → all green (scheduler, dag_processor,
+metadatabase; triggerer `null` as expected, none configured);
+`airflow dags list-import-errors` → none (only `.gitkeep` in
+`airflow/dags/` so far). Stack torn down with `docker compose down`
+afterward.
 - [ ] **9. Airflow log cleanup** — logs older than 14 days removed.
 - [x] **10. `src/encore/db.py`** — done together with item 6 above.
 - [x] **11. `src/encore/clients/musicbrainz.py`** — logic moved from
@@ -301,3 +328,66 @@ every task, marking items done and recording decisions made along the way
   a guessable credential. Non-secret vars (`POSTGRES_USER`, `POSTGRES_DB`,
   `AIRFLOW_WWW_USER_USERNAME`) keep their plain defaults. Updated
   `.env.example` to mark these four as required with no default.
+- **2026-09-17** — Docker Desktop installed mid-session (previously
+  unavailable). Installed to a non-standard path
+  (`AppData\Local\Programs\DockerDesktop`, not `Program Files`), so its
+  `resources/bin` had to be added to `PATH` manually for this session —
+  future sessions on this machine may need the same until the user's
+  normal shell profile picks up the installer's PATH change.
+- **2026-09-17** — Fix: `docker compose up` (or any `docker compose`
+  command) run from `infra/` — or even from the repo root with `-f
+  infra/docker-compose.yml` alone — fails every `${VAR:?...}` check with
+  "variable is missing a value", even though `.env` exists at the repo
+  root and is correctly filled in. Cause: Compose resolves its own
+  `${VAR}` interpolation (as opposed to the `environment:`/`env_file:`
+  values injected into containers) against a `.env` file in the *compose
+  project directory* — the directory of the first `-f` file — not the
+  directory the command is run from and not the repo root. Fix: always
+  invoke Compose with an explicit `--env-file .env` from the repo root:
+  `docker compose -f infra/docker-compose.yml --env-file .env <cmd>`.
+  Documented in `infra/docker-compose.yml`'s header comment and in
+  `README.md`'s new "Running locally" section.
+- **2026-09-17** — Fix: `docker compose build` failed with
+  `ResolutionImpossible` — `airflow/requirements.txt` pinned
+  `requests==2.32.3`, which conflicts with Airflow 3.3.2's own official
+  constraints file (`constraints-3.12.txt`), which pins
+  `requests==2.34.2`. Fix: dropped all version pins from
+  `airflow/requirements.txt` (`requests`, `python-dotenv`,
+  `psycopg2-binary`, `PyYAML` with no `==`), since the file is installed
+  with `--constraint <official constraints file>` anyway — the
+  constraints file already fixes exact versions for anything it manages,
+  and pinning the same package again here can only conflict with it, not
+  usefully override it. General lesson for item 8/anything installed
+  under an Airflow constraints file going forward: don't pin versions in
+  `airflow/requirements.txt`.
+- **2026-09-17** — Fix: `airflow-init`'s `airflow db migrate` /
+  `airflow users create` failed with `ModuleNotFoundError: No module
+  named 'airflow'` — but only when run as root (`user: "0:0"`, needed so
+  the container can `chown` the mounted logs volume); the exact same
+  commands work fine as the `airflow` user (uid 50000). Root cause:
+  `/home/airflow/.local` is a real Python venv (it has its own
+  `pyvenv.cfg`) where Airflow itself is installed, but the `airflow`
+  console-script's shebang points straight at the base interpreter
+  (`/usr/python/bin/python3.12`), bypassing PEP 405 venv detection
+  entirely. That base interpreter only picks up the venv's
+  site-packages as a fallback via Python's ordinary user-site-packages
+  mechanism, which resolves through `$HOME` — `/home/airflow/.local`
+  for the `airflow` user (matches), `/root` for root (doesn't). Fix:
+  in `airflow-init`'s command script, run `su airflow -c "airflow
+  ..."` for both the migrate and user-create steps instead of invoking
+  `airflow` directly as root (root is still needed, and kept, for the
+  preceding `mkdir`/`chown` on the logs volume). This is specific to
+  this Airflow image's package layout, not a general Docker/Compose
+  issue — worth re-checking if a future Airflow base image version
+  changes how it installs itself.
+- **2026-09-17** — Full Docker validation pass completed successfully
+  after the three fixes above: `postgres`, `airflow-init`,
+  `airflow-scheduler`, `airflow-dag-processor`, `airflow-api-server` all
+  came up healthy; schema bootstrap (item 6) and the Airflow+dbt image
+  (items 3/8) are now confirmed against real infrastructure, not just
+  unit tests/mocks. Items 13 (setlist.fm live round trip), 14/18 (the
+  ephemeral-data policy — `raw_setlistfm` actually emptying), and 23
+  (the `postgres-test` integration suite) still need their own
+  integration runs once the corresponding ingestion/DAG code exists —
+  today's pass only validated the infrastructure layer, not the pipeline
+  logic on top of it.
