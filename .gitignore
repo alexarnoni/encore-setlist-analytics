@@ -1,0 +1,35 @@
+# Variáveis de ambiente (chaves de API)
+.env
+
+# Cache de dados brutos
+data/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Ambientes virtuais
+.venv/
+venv/
+env/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Specs internas (Kiro)
+.kiro/
