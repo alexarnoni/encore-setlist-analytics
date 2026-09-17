@@ -203,3 +203,12 @@ every task, marking items done and recording decisions made along the way
 - **2026-09-17** — Added `PyYAML==6.0.2` to the top-level `requirements.txt`
   (already an indirect dependency via `jupyter`, but `src/encore/config.py`
   now imports it directly so it needs its own pin).
+- **2026-09-17** — Fix (user-flagged): `infra/docker-compose.yml` fell back
+  to a hardcoded `airflow` default whenever `POSTGRES_PASSWORD`,
+  `AIRFLOW_FERNET_KEY`, `AIRFLOW_JWT_SECRET` or `AIRFLOW_WWW_USER_PASSWORD`
+  were unset — a real (if weak) password committed in a public repo.
+  Replaced every password/secret fallback with Compose's `${VAR:?message}`
+  syntax so `docker compose up` refuses to start instead of silently using
+  a guessable credential. Non-secret vars (`POSTGRES_USER`, `POSTGRES_DB`,
+  `AIRFLOW_WWW_USER_USERNAME`) keep their plain defaults. Updated
+  `.env.example` to mark these four as required with no default.
