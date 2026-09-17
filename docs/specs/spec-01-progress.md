@@ -151,9 +151,28 @@ every task, marking items done and recording decisions made along the way
       `jupyter nbconvert --clear-output --inplace` and verified empty.
       Sanity-checked that `CACHE_DIR`/`.env` path resolution still points
       at the repo root from the new location.
-- [ ] **15. MusicBrainz extraction (full)** — studio albums, representative
-      release tracks, all recordings with `first-release-date`; upsert into
-      `raw_musicbrainz`; skip if data younger than 30 days (configurable).
+- [x] **15. MusicBrainz extraction (full)** — added to
+      `src/encore/ingestion/musicbrainz.py` (alongside
+      `select_representative_release`): `ensure_tables()` creates
+      `raw_musicbrainz.albums` (PK `release_group_mbid`),
+      `.album_tracks` (PK `release_group_mbid, recording_mbid`, FK to
+      `.albums`) and `.recordings` (PK `recording_mbid`) — table design
+      not specified by R5, chosen to satisfy "no duplicates across runs"
+      (R5.5) via `ON CONFLICT ... DO UPDATE`. `fetch_studio_albums`
+      filters `primary-type == "Album"` with no `secondary-types` (R5.1),
+      paginated. `fetch_all_recordings` paginates with the R5.2 500-page
+      guard. `extract_band()` ties it together: skip via
+      `should_skip_band()` if data is younger than `refresh_after_days`
+      (default 30, R5.6), else upsert albums → representative release's
+      tracks → all recordings, one `conn.commit()` per band. 10 unit
+      tests with mocked client + mocked DB connection (pagination
+      filtering, skip logic fresh/stale/no-data, upsert SQL shape, empty
+      release-group edge case). **Not yet verified against a real
+      PostgreSQL** (no Docker in this environment) — the actual
+      no-duplicates-on-second-run behavior only mocks `ON CONFLICT`
+      syntax is present, it doesn't prove Postgres accepts/executes it
+      correctly. Follow-up integration test needed once Docker is
+      available (ties into item 23).
 - [ ] **16. setlist.fm extraction (ephemeral)** — paginate to last page,
       load `raw_setlistfm.setlists` and `raw_setlistfm.setlist_entries`,
       optional raw JSON in the same schema, abort above the request budget.
