@@ -1,7 +1,13 @@
 """
-src/clients.py
---------------
+notebooks/phase0_clients.py
+----------------------------
 Clientes reutilizáveis para as APIs setlist.fm e MusicBrainz.
+
+Frozen na Fase 0: usado apenas por notebooks/00_validacao.ipynb. O
+pipeline de produção (spec-01) usa src/encore/clients/ (sem cache em
+disco para setlist.fm, dados vão direto para o schema raw_setlistfm).
+Este arquivo não deve ganhar novas funcionalidades — mudanças aqui só
+para manter o notebook de validação executável.
 
 Regras implementadas:
 - Cache em disco: toda resposta é salva como JSON bruto antes de qualquer

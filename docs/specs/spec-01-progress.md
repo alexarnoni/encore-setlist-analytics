@@ -116,15 +116,32 @@ every task, marking items done and recording decisions made along the way
       `data/`, notebooks and caches out of the build.
 - [ ] **9. Airflow log cleanup** — logs older than 14 days removed.
 - [x] **10. `src/encore/db.py`** — done together with item 6 above.
-- [ ] **11. `src/encore/clients/musicbrainz.py`** — moved from
-      `src/clients.py`, keeps disk cache, rate limit, backoff, counters.
+- [x] **11. `src/encore/clients/musicbrainz.py`** — logic moved from
+      `src/clients.py`, keeps disk cache (R3.3), rate limit, backoff,
+      counters. Retry/backoff/counter logic factored out into a new
+      shared `src/encore/clients/_http.py` (`request_with_retry`,
+      `get_counters`, `reset_counters`) so `setlistfm.py` (item 12) reuses
+      it instead of duplicating ~50 lines — not explicitly required by
+      R3.1 but a direct consequence of moving both clients out of the
+      single `src/clients.py` file into separate modules. `get_cache_hits`
+      (Phase-0-only debugging counter) was **not** carried over — not a
+      spec-01 requirement.
 - [ ] **12. `src/encore/clients/setlistfm.py`** — moved from
       `src/clients.py`, disk cache removed, rate limit/backoff/counters kept.
-- [ ] **13. Unit tests for clients** — mocked HTTP: pagination, 429 retry,
-      request counters.
-- [ ] **14. Preserve Phase 0 client** — move `src/clients.py` to
-      `notebooks/phase0_clients.py`, update the notebook's import, keep
-      outputs cleared.
+- [x] **13. Unit tests for clients (MusicBrainz half)** — mocked HTTP
+      (`unittest.mock`, no `responses`/`requests-mock` dependency added):
+      real request writes cache + increments counter, cache hit skips
+      both, 429-then-success retry, pagination params. `time.sleep`
+      mocked so the suite stays fast. The setlist.fm half of this item
+      lands with item 12.
+- [x] **14. Preserve Phase 0 client** — `src/clients.py` moved
+      (`git mv`, history preserved) to `notebooks/phase0_clients.py`,
+      docstring updated to mark it frozen/Phase-0-only. Notebook's import
+      cell updated (`sys.path` now points at the notebook's own directory,
+      `from phase0_clients import ...`), outputs re-cleared with
+      `jupyter nbconvert --clear-output --inplace` and verified empty.
+      Sanity-checked that `CACHE_DIR`/`.env` path resolution still points
+      at the repo root from the new location.
 - [ ] **15. MusicBrainz extraction (full)** — studio albums, representative
       release tracks, all recordings with `first-release-date`; upsert into
       `raw_musicbrainz`; skip if data younger than 30 days (configurable).
@@ -228,6 +245,25 @@ every task, marking items done and recording decisions made along the way
   satisfy adjustment 5's requirement that the on-demand schema bootstrap
   command be documented there. Item 24 will expand it (architecture
   diagram, deploy steps, attribution, etc.) without redoing this section.
+- **2026-09-17** — Confirmed Docker is **not installed** in this dev
+  environment (no `docker` on PATH, no Docker Desktop under
+  `C:\Program Files`) — the user reformatted their machine and hasn't
+  reinstalled it yet. This blocks any integration test that needs a real
+  PostgreSQL: items 13 (setlist.fm client's disk-cache-removed behavior
+  is easy to unit-test, but a live setlist.fm/raw_setlistfm round trip
+  is not), 14/18 (proving the ephemeral-data policy — `raw_setlistfm`
+  actually empties at run end — needs a real DB), and 23
+  (`postgres-test` integration suite). Those pieces will be implemented
+  as code + unit tests now and flagged for a follow-up integration run
+  once Docker is available; item 25 (first real run) cannot happen at
+  all until then.
+- **2026-09-17** — Item 11 note: chose to factor retry/backoff/counter
+  logic into `src/encore/clients/_http.py` rather than duplicating it in
+  both `musicbrainz.py` and the upcoming `setlistfm.py`. Not asked for
+  explicitly, but keeping ~50 lines of retry logic in one place instead
+  of two seemed like the obviously correct call while splitting
+  `src/clients.py` apart — flagging it here in case it should be
+  reconsidered.
 - **2026-09-17** — Fix (user-flagged): `infra/docker-compose.yml` fell back
   to a hardcoded `airflow` default whenever `POSTGRES_PASSWORD`,
   `AIRFLOW_FERNET_KEY`, `AIRFLOW_JWT_SECRET` or `AIRFLOW_WWW_USER_PASSWORD`
