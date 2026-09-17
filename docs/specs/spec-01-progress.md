@@ -194,15 +194,42 @@ afterward.
       tracks → all recordings, one `conn.commit()` per band. 10 unit
       tests with mocked client + mocked DB connection (pagination
       filtering, skip logic fresh/stale/no-data, upsert SQL shape, empty
-      release-group edge case). **Not yet verified against a real
-      PostgreSQL** (no Docker in this environment) — the actual
-      no-duplicates-on-second-run behavior only mocks `ON CONFLICT`
-      syntax is present, it doesn't prove Postgres accepts/executes it
-      correctly. Follow-up integration test needed once Docker is
-      available (ties into item 23).
-- [ ] **16. setlist.fm extraction (ephemeral)** — paginate to last page,
-      load `raw_setlistfm.setlists` and `raw_setlistfm.setlist_entries`,
-      optional raw JSON in the same schema, abort above the request budget.
+      release-group edge case).
+      **Verified against a real PostgreSQL on 2026-09-17** (ad hoc script,
+      not a committed test — see decisions log): `ensure_tables()` runs
+      clean, `extract_band()` called twice with identical mocked API data
+      leaves exactly 1 album / 2 tracks / 1 recording (no duplicates,
+      R5.5 confirmed for real), and calling it a third time with the
+      default 30-day threshold correctly skips without touching the
+      client (R5.6 confirmed for real).
+- [x] **16. setlist.fm extraction (ephemeral)** — added
+      `src/encore/ingestion/setlistfm.py`. `ensure_tables()` creates
+      `raw_setlistfm.setlists` (PK `setlist_id`), `.setlist_entries` (PK
+      `setlist_id, set_idx, position`, FK to `.setlists`) and
+      `.raw_responses` (PK `setlist_id`, JSONB payload) — table design
+      not specified by R4, mirrors item 15's approach. `fetch_all_setlists`
+      paginates `/artist/{mbid}/setlists` to the last page (R4.1) and
+      raises `RuntimeError` if the real-request counter would exceed
+      `MAX_REQUESTS_PER_RUN = 1300` (R4.4) — a hard per-run safety net,
+      separate from the smarter cross-run budget estimate that item 19's
+      `check_api_budget` task will implement. `parse_setlist()` splits one
+      setlist.fm response object into a `setlists` row and its
+      `setlist_entries` rows: a "set" block is `is_encore=True` when the
+      API marks it with an `encore` field; a song is `is_cover` when it
+      has a `cover` object (with `cover_artist` from `cover.name`); `tape`
+      maps to `is_tape`. Raw JSON is stored only when
+      `ENCORE_STORE_RAW_SETLISTFM_JSON` is truthy (R4.3 — "only if needed
+      for debugging"), off by default. `extract_band()` ties it together,
+      one `conn.commit()` per band. 6 unit tests with mocked client + DB.
+      **Verified against a real PostgreSQL on 2026-09-17**: `ensure_tables()`
+      runs clean, `extract_band()` called twice with identical mocked data
+      leaves exactly 1 setlist / 2 entries (no duplicates), `run_id`
+      correctly updates to the latest run, and `TRUNCATE
+      raw_setlistfm.setlist_entries, raw_setlistfm.setlists,
+      raw_setlistfm.raw_responses` (the same statement `cleanup_raw_setlistfm`,
+      item 21, will run) empties every table — the first real proof that
+      the ephemeral-data mechanism actually works end to end, ahead of
+      items 18/21 building the DAG task around it.
 - [ ] **17. `ops.pipeline_runs`** — schema and `log_run(...)` writer.
 - [ ] **18. `airflow/dags/encore_pipeline.py`** — tasks in order:
       `truncate_raw_setlistfm_start`, `check_api_budget`,
@@ -391,3 +418,14 @@ afterward.
   integration runs once the corresponding ingestion/DAG code exists —
   today's pass only validated the infrastructure layer, not the pipeline
   logic on top of it.
+- **2026-09-17** — Ran ad hoc integration checks for items 15 and 16
+  against a real `docker compose up -d postgres` (mocked API client,
+  real DB): both ingestion modules' upserts don't duplicate on a second
+  run, MusicBrainz's 30-day skip logic works, and the exact `TRUNCATE`
+  statement `cleanup_raw_setlistfm` (item 21) will run does empty
+  `raw_setlistfm`. These were throwaway scripts run via `python -c`, not
+  committed as tests — a proper `tests/integration/` suite using the
+  `postgres-test` compose service (item 23) still needs to be written
+  before spec-01 can be considered fully tested per R8; today's checks
+  only reduce the risk that items 15/16's SQL is wrong, they don't
+  replace item 23.
