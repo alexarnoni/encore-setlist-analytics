@@ -1,0 +1,8 @@
+# Runtime dependencies baked into the Airflow image, used by src/encore/
+# (ingestion code and DAGs). Kept separate from the project's top-level
+# requirements.txt, which also carries notebook/analysis tooling
+# (jupyter, matplotlib, pytest) that has no place in the Airflow image.
+requests==2.32.3
+python-dotenv==1.0.1
+psycopg2-binary==2.9.10
+PyYAML==6.0.2

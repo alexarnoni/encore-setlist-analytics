@@ -61,7 +61,13 @@ every task, marking items done and recording decisions made along the way
       Docker is installed). `infra/postgres/init/01_create_encore_database.sh`
       creates the `encore` database alongside `airflow` (idempotent
       `WHERE NOT EXISTS`); full schema creation is still item 6.
-- [ ] **3. dbt in separate venv** — `/opt/dbt-venv` inside the Airflow image.
+- [x] **3. dbt in separate venv** — `airflow/Dockerfile` creates
+      `/opt/dbt-venv` with `dbt-core==1.12.3` + `dbt-postgres==1.11.0`
+      (latest stable pairing confirmed via web search on 2026-09-17,
+      compatible with Postgres 16). Not added to `PATH`; called via
+      `/opt/dbt-venv/bin/dbt` so it never shadows Airflow's own
+      `python`/`pip`. Merged with item 8 (same Dockerfile) — see decisions
+      log.
 - [ ] **4. `config/bands.yaml`** — 7 bands with name + MBID from Phase 0.
 - [ ] **5. `.env.example`** — including `ENCORE_BANDS_FILTER` and every var
       referenced by `infra/docker-compose.yml` (`AIRFLOW_IMAGE_NAME`,
@@ -73,9 +79,18 @@ every task, marking items done and recording decisions made along the way
       documented in README. `raw_setlistfm`, `raw_musicbrainz`, `staging`,
       `intermediate`, `analytics`, `ops` schemas still pending.
 - [x] **7. `infra/docker-compose.yml`** — done together with item 2 above.
-- [ ] **8. `airflow/Dockerfile`** — official Airflow 3.x base, project
-      requirements, dbt in its own venv; arm64-compatible, native build
-      (no buildx).
+- [x] **8. `airflow/Dockerfile`** — done together with item 3 above. Base
+      `apache/airflow:3.3.2-python3.12` (official image, multi-arch —
+      confirmed amd64+arm64 via web search, no buildx needed). Installs
+      `airflow/requirements.txt` (requests, python-dotenv, psycopg2-binary,
+      PyYAML — kept separate from the top-level `requirements.txt`, which
+      also carries notebook/analysis/test tooling not needed in this
+      image) constrained by the official Airflow 3.3.2/Python 3.12
+      constraints file. Copies `src/` and `config/` into the image.
+      `infra/docker-compose.yml` now builds this image via `build:` instead
+      of pulling `apache/airflow` directly. Added `.dockerignore` at repo
+      root (build context is now the repo root) to keep `.venv`, `.git`,
+      `data/`, notebooks and caches out of the build.
 - [ ] **9. Airflow log cleanup** — logs older than 14 days removed.
 - [ ] **10. `src/encore/db.py`** — connection helpers from env vars.
 - [ ] **11. `src/encore/clients/musicbrainz.py`** — moved from
@@ -158,3 +173,19 @@ every task, marking items done and recording decisions made along the way
   manually confirmed every `ports:` entry is bound to `127.0.0.1`. Full
   `docker compose up` verification is still needed on a machine with Docker
   before item 25 (first real run).
+- **2026-09-17** — dbt versions pinned: `dbt-core==1.12.3`,
+  `dbt-postgres==1.11.0` (latest stable pairing per web search on this
+  date, supports Postgres 16/17/18). Not re-verified by an actual build —
+  `docker build` for `airflow/Dockerfile` still needs to run on a machine
+  with Docker to confirm these versions resolve and install cleanly.
+- **2026-09-17** — Checklist items 3 and 8 were the same deliverable
+  (`airflow/Dockerfile`); implemented together and both marked done.
+- **2026-09-17** — `infra/docker-compose.yml` changed from pulling
+  `apache/airflow:3.3.2` directly to building `../airflow/Dockerfile`
+  (`build:` + `image:` on `x-airflow-common`), since the custom image
+  (project code + dbt venv) is required by `tech.md`, not optional.
+- **2026-09-17** — Added `.dockerignore` at the repo root: the Docker build
+  context became the repo root once `airflow/Dockerfile` needed to `COPY
+  src/` and `config/` (paths outside `airflow/`). Excludes `.venv`, `.git`,
+  `data/`, `notebooks/`, `.env`, caches and markdown files from the build
+  context.
