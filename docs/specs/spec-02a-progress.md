@@ -75,18 +75,47 @@ in the decisions log below.
       numbers exactly), MusicBrainz step correctly skipped (0
       requests), `ops.pipeline_runs` shows the `dev-fixture` row with
       timestamp, request counts and `setlists_per_band`.
-- [ ] **2. dbt project scaffold** — `dbt/dbt_project.yml`,
-      `dbt/profiles.yml` (adjustment 2: only `env_var()` references,
-      never literal credentials — verify nothing secret lands in the
-      repo), `models/staging/`, `models/intermediate/`,
-      `models/analytics/`, `macros/`, `seeds/`, `tests/`. Per-layer
-      materialization (staging/intermediate = view, analytics = table)
-      configured in `dbt_project.yml`, no per-model overrides.
-- [ ] **3. Enable the `unaccent` Postgres extension** — moved to
-      `infra/postgres/init/` (adjustment 3: `CREATE EXTENSION` needs
-      superuser, the dbt runtime role won't have it). The dbt
-      `on-run-start` hook only checks the extension exists and fails
-      with a clear message if it doesn't.
+- [x] **2. dbt project scaffold** — `dbt/dbt_project.yml`,
+      `dbt/profiles.yml`. `profiles.yml` has zero literal credentials —
+      every connection value is `env_var(...)` except `dbname: encore`
+      (a fixed application constant, not a secret, matching
+      `encore.db.DATABASE_NAME`) and `schema: staging` (the harmless
+      default; every model's real schema is set per-layer in
+      `dbt_project.yml`, see below). Verified nothing secret is in the
+      repo by reading the committed file back — plain `env_var()` calls
+      only (adjustment 2).
+      `dbt/macros/generate_schema_name.sql` overrides dbt's default
+      schema-naming (which would otherwise concatenate the profile's
+      target schema with each custom schema, e.g. `staging_analytics`
+      instead of `analytics`) — needed for `dbt_project.yml`'s
+      per-layer `+schema:` config (staging/intermediate = view,
+      analytics = table) to produce the exact schema names in
+      `structure.md`. `models/`, `seeds/`, `tests/` directories are not
+      pre-created empty (git doesn't track empty dirs; dbt doesn't
+      require them to pre-exist) — they'll appear with their first real
+      file in items 4/6/7.
+      **Verified for real**: `dbt debug` (via the Docker image's
+      `/opt/dbt-venv/bin/dbt`, `dbt/` mounted since it isn't copied into
+      the image until item 19) connects successfully to the real
+      `encore` database.
+- [x] **3. Enable the `unaccent` Postgres extension** —
+      `infra/postgres/init/03_create_unaccent_extension.sh` (adjustment
+      3: `CREATE EXTENSION` needs superuser; only runs on an empty
+      volume, same limitation as items 2/6 in spec-01). The dbt
+      `on-run-start` hook (`dbt/macros/assert_unaccent_extension_exists.sql`,
+      wired in `dbt_project.yml`) only checks the extension exists and
+      raises a clear compiler error if it doesn't — it never tries to
+      create it.
+      **Verified both states for real** against the dev Postgres (which
+      predates this script, so the init-on-empty-volume path couldn't
+      be exercised directly): ran the macro via `dbt run-operation
+      assert_unaccent_extension_exists` *before* the extension existed
+      → failed with the exact intended message; created the extension
+      manually (`CREATE EXTENSION IF NOT EXISTS unaccent`); re-ran the
+      same command → passed silently. Note: `dbt run`/`build` currently
+      report "Nothing to do" and skip `on-run-start` hooks entirely
+      since there are still zero models/seeds — the hook only actually
+      fires once item 4+ gives dbt something to run.
 - [ ] **4. Seeds** — `dbt/seeds/seed_album_exclusions.csv` (5 rows from
       Phase 0) and `dbt/seeds/seed_song_overrides.csv` (header only).
 - [ ] **5. `dbt/README.md`** — how to run dbt locally and inside
@@ -136,4 +165,18 @@ in the decisions log below.
 
 ## Decisions log
 
-(empty — filled in as each task lands)
+- **2026-09-18** — Note on adjustment 3's premise: in this project's
+  current setup, `POSTGRES_USER` (`airflow`, used by both dbt and
+  `encore.db`) is the official `postgres:16` image's bootstrap role,
+  which the image grants `SUPERUSER` by default — so `CREATE EXTENSION`
+  actually *would* succeed over the app's normal connection here.
+  Implemented the init-script-only approach anyway, per the adjustment:
+  it's correct defense-in-depth for a hardened/production setup with a
+  restricted app role, and costs nothing to build now.
+- **2026-09-18** — `dbt run`/`dbt build`/`dbt seed`/`dbt test` all
+  print "Nothing to do" and skip project-level hooks (`on-run-start`)
+  when the command's node selection is empty — with zero models/seeds
+  so far, there's nothing to validate the hook wiring against except by
+  calling the macro directly via `dbt run-operation
+  assert_unaccent_extension_exists`. Re-verify the hook fires as part
+  of a normal `dbt run` once item 7 (`stg_setlists`) exists.

@@ -33,3 +33,9 @@ ENV/
 
 # Specs internas (Kiro)
 .kiro/
+
+# dbt-generated (target/) and dbt's own user-tracking/logs
+dbt/target/
+dbt/logs/
+dbt/.user.yml
+dbt_packages/
