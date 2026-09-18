@@ -225,6 +225,67 @@ def _store_raw_json(cur, setlist: dict, run_id: str) -> None:
     )
 
 
+TABLES = ("setlist_entries", "setlists", "raw_responses")
+
+
+def truncate_all(conn) -> None:
+    """
+    Empty every table in raw_setlistfm (R4/R6.6 — the ephemeral-data
+    policy). Used both at the start of a run (before extraction, so a
+    previous run's leftovers never leak into this run's validation) and
+    at the end (`cleanup_raw_setlistfm`, trigger_rule=all_done).
+    """
+    qualified = ", ".join(f"raw_setlistfm.{table}" for table in TABLES)
+    with conn.cursor() as cur:
+        cur.execute(f"TRUNCATE {qualified}")
+    conn.commit()
+
+
+def validate_bands(conn, bands) -> list[dict]:
+    """
+    Row counts and % of setlists with at least one song, per band
+    (R6.4). Raises ValueError if any band has zero setlists — the DAG
+    task turns that into an AirflowFailException.
+
+    Only meaningful right after `truncate_all` + extraction in the same
+    run: raw_setlistfm is ephemeral and truncated at the start of every
+    run, so whatever is in it here belongs to this run only — no need to
+    filter by run_id.
+    """
+    results = []
+    with conn.cursor() as cur:
+        for band in bands:
+            cur.execute(
+                "SELECT count(*) FROM raw_setlistfm.setlists WHERE artist_mbid = %s",
+                (band.mbid,),
+            )
+            (total_setlists,) = cur.fetchone()
+
+            if total_setlists == 0:
+                raise ValueError(f"Band '{band.name}' returned zero setlists; aborting run.")
+
+            cur.execute(
+                """
+                SELECT count(DISTINCT s.setlist_id)
+                FROM raw_setlistfm.setlists s
+                JOIN raw_setlistfm.setlist_entries e ON e.setlist_id = s.setlist_id
+                WHERE s.artist_mbid = %s
+                """,
+                (band.mbid,),
+            )
+            (with_songs,) = cur.fetchone()
+
+            results.append(
+                {
+                    "band": band.name,
+                    "total_setlists": total_setlists,
+                    "setlists_with_songs": with_songs,
+                    "pct_with_songs": round(100 * with_songs / total_setlists, 1),
+                }
+            )
+    return results
+
+
 def extract_band(client, conn, band, run_id: str) -> dict:
     """
     Extract every setlist of one band into raw_setlistfm (R4).

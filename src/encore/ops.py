@@ -32,6 +32,43 @@ def ensure_tables(conn) -> None:
     conn.commit()
 
 
+def sum_setlistfm_requests_today(conn) -> int:
+    """
+    Real setlist.fm requests already logged today across all runs
+    (spec-01 R6/adjustment 7's check_api_budget input #1).
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT COALESCE(SUM(setlistfm_requests), 0)
+            FROM ops.pipeline_runs
+            WHERE started_at >= date_trunc('day', now())
+            """
+        )
+        (total,) = cur.fetchone()
+    return int(total)
+
+
+def estimate_next_run_setlistfm_cost(conn, default: int = 475) -> int:
+    """
+    Estimate this run's setlist.fm request cost from the last
+    successful run (adjustment 7's input #2); `default` (475, the full
+    7-band load per tech.md) is used when there is no successful run
+    yet to estimate from.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT setlistfm_requests FROM ops.pipeline_runs
+            WHERE status = 'success'
+            ORDER BY finished_at DESC
+            LIMIT 1
+            """
+        )
+        row = cur.fetchone()
+    return row[0] if row else default
+
+
 def log_run(
     conn,
     *,

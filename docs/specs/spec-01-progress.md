@@ -241,19 +241,48 @@ afterward.
       with a mocked connection. **Verified against a real PostgreSQL on
       2026-09-17**: logging the same `run_id` twice with different data
       leaves exactly one row with the second call's values.
-- [ ] **18. `airflow/dags/encore_pipeline.py`** — tasks in order:
-      `truncate_raw_setlistfm_start`, `check_api_budget`,
-      `extract_musicbrainz`, `extract_setlistfm` (mapped,
-      `max_active_tis_per_dag=1`), `validate_raw`, `transform` (placeholder),
-      `cleanup_raw_setlistfm` (`trigger_rule=all_done`), `log_run`;
-      `schedule="@monthly"`, `max_active_runs=1`, `catchup=False`.
-- [ ] **19. `check_api_budget` logic** — sum today's logged setlist.fm
-      requests + estimate from last successful run (default 475), fail
-      clearly above 1,300.
-- [ ] **20. `validate_raw`** — row counts per band, % setlists with ≥1 song,
-      fails if any band returns zero setlists.
-- [ ] **21. `cleanup_raw_setlistfm` (final)** — truncates every table in
-      `raw_setlistfm`, `trigger_rule=all_done`.
+- [x] **18. `airflow/dags/encore_pipeline.py`** — done together with
+      items 19, 20 and 21 below (same file, built as one working DAG
+      rather than four disconnected fragments — see decisions log).
+      TaskFlow API, `from airflow.sdk import dag, task` (the
+      non-deprecated Airflow 3 import; `airflow.decorators` still works
+      but warns). Task order verified via a live `airflow.models.DagBag`
+      load inside the built image (not just eyeballing the code):
+      `truncate_raw_setlistfm_start → check_api_budget →
+      extract_musicbrainz → extract_setlistfm → validate_raw → transform
+      → cleanup_raw_setlistfm → log_run`. Confirmed on the loaded DAG
+      object: `max_active_runs=1`, `catchup=False`, schedule
+      `0 0 1 * *` UTC (monthly), `extract_setlistfm.max_active_tis_per_dag
+      == 1` (adjustment 8), `cleanup_raw_setlistfm`/`log_run`
+      `trigger_rule=TriggerRule.ALL_DONE` with the right upstream sets so
+      both still run when an earlier task fails. `import_errors == {}`.
+      **Not yet triggered as a real DAG run** (needs real API keys/DB
+      and would spend real setlist.fm quota) — that's item 25.
+      **Known simplification**: `log_run`'s success/failure status uses
+      a heuristic (every upstream argument it receives is non-None) since
+      Airflow doesn't push an XCom for a task that raised; documented as
+      a judgment call in the decisions log, not verified against an
+      actual induced failure.
+- [x] **19. `check_api_budget` logic** — `ops.sum_setlistfm_requests_today()`
+      + `ops.estimate_next_run_setlistfm_cost()` (default 475, tech.md's
+      full 7-band load) added to `src/encore/ops.py`; the DAG task raises
+      `AirflowFailException` with the exact projected/logged/estimated
+      numbers if their sum exceeds 1,300. 4 unit tests with a mocked
+      connection.
+- [x] **20. `validate_raw`** — `sf_ingestion.validate_bands()` added to
+      `src/encore/ingestion/setlistfm.py`: per-band row counts and % of
+      setlists with ≥1 song; raises `ValueError` (turned into
+      `AirflowFailException` by the DAG task) if any band has zero
+      setlists. Relies on `raw_setlistfm` having been truncated at the
+      *start* of the run (item 18's `truncate_raw_setlistfm_start`), so
+      no `run_id` filter is needed — whatever's in the table belongs to
+      this run only. 2 unit tests with a mocked connection.
+- [x] **21. `cleanup_raw_setlistfm` (final)** — `sf_ingestion.truncate_all()`
+      added to `src/encore/ingestion/setlistfm.py`, shared by both the
+      start-of-run truncate (item 18) and this final cleanup
+      (`trigger_rule=all_done`) — one function, two call sites, so the
+      truncate logic can't drift between them. 1 unit test with a mocked
+      connection.
 - [ ] **22. Analytics schema guard test** — fails if any table in
       `analytics` has a column named `setlist_id`.
 - [ ] **23. Integration test setup** — `postgres-test` service added to
@@ -439,3 +468,53 @@ afterward.
   before spec-01 can be considered fully tested per R8; today's checks
   only reduce the risk that items 15/16's SQL is wrong, they don't
   replace item 23.
+- **2026-09-18** — Checklist items 18-21 were the same file
+  (`airflow/dags/encore_pipeline.py`); implemented and validated
+  together rather than as four separate, temporarily-broken fragments.
+- **2026-09-18** — Airflow 3 DAG-authoring import: confirmed via
+  `docker run` that `from airflow.sdk import dag, task,
+  get_current_context, TriggerRule` is the current, non-deprecated
+  surface for Airflow 3.3.2 (`from airflow.decorators import dag, task`
+  and `from airflow.exceptions import AirflowFailException` still work
+  but print `DeprecatedImportWarning`, pointing at `airflow.sdk` and
+  `airflow.sdk.exceptions` respectively). Used the non-deprecated forms.
+- **2026-09-18** — Fix: `encore.config.load_bands()` (item 4) computed
+  `config/bands.yaml`'s path as `Path(__file__).parents[2] / "config" /
+  "bands.yaml"`, which assumes `config/` sits next to `src/` — true
+  locally and in the notebook, but not inside the Airflow image, where
+  `config/` is copied to `/opt/airflow/config-data/` specifically to
+  avoid colliding with Airflow's own `/opt/airflow/config` directory.
+  Loading the DAG inside the built image failed with `FileNotFoundError:
+  /opt/airflow/config/bands.yaml` the first time it was tried. Fixed by
+  adding an `ENCORE_BANDS_FILE` env var override to `load_bands()`,
+  set to `/opt/airflow/config-data/bands.yaml` in `airflow/Dockerfile`.
+  Added a unit test for the override. This is exactly the kind of bug
+  that only surfaces by actually loading code inside the target
+  environment — found by testing the DAG in Docker, not by reasoning
+  about the code.
+- **2026-09-18** — `log_run`'s success/failure determination is a
+  judgment call, not specified by R6/R7: since a failed task never
+  pushes an XCom, a downstream `trigger_rule=all_done` task like
+  `log_run` sees `None`/missing values for anything upstream that
+  failed. `transform()` was changed to return `True` (not bare `None`)
+  specifically so a raised exception there is distinguishable from a
+  normal successful run in `log_run`'s heuristic
+  (`transformed is True`). This wasn't verified against an actual
+  induced failure (would need a real DAG run — item 25, or a dedicated
+  Airflow-level test using a live scheduler, which is out of scope for
+  a unit test). Flagging in case a future spec needs stronger
+  guarantees here (e.g. reading task instance states from the DAG run
+  directly instead of relying on XCom presence).
+- **2026-09-18** — Validated the built DAG structurally with a live
+  `airflow.models.DagBag(dag_folder=...)` load inside the
+  `encore-airflow:3.3.2` image (mounting `airflow/dags/` read-only) —
+  confirmed zero import errors, exact task order, dependency edges,
+  trigger rules, `max_active_tis_per_dag`, schedule, `max_active_runs`
+  and `catchup`. This is stronger than a mocked unit test would be for
+  DAG *structure*, but it is not a substitute for actually triggering a
+  run (item 25) or for `tests/` coverage — `apache-airflow` was
+  deliberately not added to the top-level `requirements.txt` (it's a
+  very heavy dependency tree for a notebook/analysis dev venv), so the
+  DAG file itself has no coverage in the fast local `pytest` suite;
+  only the plain Python functions it calls into
+  (`encore.ingestion.*`, `encore.ops`, `encore.clients.*`) do.

@@ -1,7 +1,12 @@
 from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
-from encore.ops import ensure_tables, log_run
+from encore.ops import (
+    ensure_tables,
+    estimate_next_run_setlistfm_cost,
+    log_run,
+    sum_setlistfm_requests_today,
+)
 
 
 def _cursor(conn) -> MagicMock:
@@ -66,3 +71,32 @@ def test_log_run_serializes_error_message_on_failure():
     _, params = _cursor(conn).execute.call_args[0]
     assert params[3] == "failed"
     assert params[7] == "setlist.fm request budget exceeded"
+
+
+def test_sum_setlistfm_requests_today_returns_coalesced_sum():
+    conn = MagicMock()
+    _cursor(conn).fetchone.return_value = (950,)
+
+    assert sum_setlistfm_requests_today(conn) == 950
+
+
+def test_sum_setlistfm_requests_today_returns_zero_when_no_runs():
+    conn = MagicMock()
+    _cursor(conn).fetchone.return_value = (0,)
+
+    assert sum_setlistfm_requests_today(conn) == 0
+
+
+def test_estimate_next_run_cost_uses_last_successful_run():
+    conn = MagicMock()
+    _cursor(conn).fetchone.return_value = (512,)
+
+    assert estimate_next_run_setlistfm_cost(conn) == 512
+
+
+def test_estimate_next_run_cost_falls_back_to_default_when_no_successful_run():
+    conn = MagicMock()
+    _cursor(conn).fetchone.return_value = None
+
+    assert estimate_next_run_setlistfm_cost(conn) == 475
+    assert estimate_next_run_setlistfm_cost(conn, default=999) == 999

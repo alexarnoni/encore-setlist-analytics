@@ -34,3 +34,13 @@ def test_every_mbid_is_a_well_formed_uuid():
 def test_mbids_match_phase_0_validated_values():
     bands_by_name = {band.name: band.mbid for band in load_bands()}
     assert bands_by_name == EXPECTED_MBIDS
+
+
+def test_encore_bands_file_env_var_overrides_the_default_path(tmp_path, monkeypatch):
+    custom_file = tmp_path / "custom-bands.yaml"
+    custom_file.write_text("bands:\n  - name: Test Band\n    mbid: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa\n")
+    monkeypatch.setenv("ENCORE_BANDS_FILE", str(custom_file))
+
+    bands = load_bands()
+
+    assert [b.name for b in bands] == ["Test Band"]

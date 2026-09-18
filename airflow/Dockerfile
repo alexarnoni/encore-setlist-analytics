@@ -22,6 +22,11 @@ RUN pip install --no-cache-dir \
 COPY src/ /opt/airflow/src/
 COPY config/ /opt/airflow/config-data/
 ENV PYTHONPATH="/opt/airflow/src"
+# encore.config.load_bands() otherwise assumes config/ sits next to src/
+# (true for local dev and the notebook), which doesn't hold here: config/
+# is copied to config-data/ specifically to avoid colliding with
+# Airflow's own /opt/airflow/config directory.
+ENV ENCORE_BANDS_FILE="/opt/airflow/config-data/bands.yaml"
 
 # --- dbt, isolated in its own venv ---
 # dbt-core/dbt-postgres pin their own dependency versions (e.g. Jinja2,

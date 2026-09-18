@@ -5,9 +5,12 @@ from encore.config import Band
 from encore.ingestion.setlistfm import (
     MAX_REQUESTS_PER_RUN,
     STORE_RAW_JSON_ENV_VAR,
+    TABLES,
     extract_band,
     fetch_all_setlists,
     parse_setlist,
+    truncate_all,
+    validate_bands,
 )
 
 BAND = Band(name="Muse", mbid="9c9f1380-2516-4fc9-a3e6-f9f61941d090")
@@ -168,3 +171,49 @@ def test_extract_band_stores_raw_json_when_enabled(monkeypatch):
     executed = [call.args[0] for call in _cursor(conn).execute.call_args_list]
     assert any("raw_responses" in stmt for stmt in executed)
     _reset_counters()
+
+
+# --- truncate_all / validate_bands -----------------------------------------
+
+
+def test_truncate_all_truncates_every_table_and_commits():
+    conn = MagicMock()
+
+    truncate_all(conn)
+
+    executed = _cursor(conn).execute.call_args[0][0]
+    assert executed.startswith("TRUNCATE")
+    for table in TABLES:
+        assert f"raw_setlistfm.{table}" in executed
+    conn.commit.assert_called_once()
+
+
+def test_validate_bands_raises_when_a_band_has_zero_setlists():
+    conn = MagicMock()
+    cursor = _cursor(conn)
+    # First band: total_setlists = 0 -> should raise before the 2nd query.
+    cursor.fetchone.side_effect = [(0,)]
+
+    try:
+        validate_bands(conn, [BAND])
+        assert False, "expected ValueError"
+    except ValueError as exc:
+        assert "Muse" in str(exc)
+
+
+def test_validate_bands_returns_counts_and_percentage():
+    conn = MagicMock()
+    cursor = _cursor(conn)
+    # (total_setlists,) then (setlists_with_songs,)
+    cursor.fetchone.side_effect = [(10,), (8,)]
+
+    results = validate_bands(conn, [BAND])
+
+    assert results == [
+        {
+            "band": "Muse",
+            "total_setlists": 10,
+            "setlists_with_songs": 8,
+            "pct_with_songs": 80.0,
+        }
+    ]
