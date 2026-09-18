@@ -331,10 +331,67 @@ afterward.
       Diagram syntax verified for real: rendered it with
       `npx @mermaid-js/mermaid-cli` to a 27KB SVG with no errors, not
       just eyeballed.
-- [ ] **25. First real run** — single band via `ENCORE_BANDS_FILTER`,
-      verify all acceptance criteria (raw_setlistfm empty at the end,
-      raw_musicbrainz populated without duplicates, no port on 0.0.0.0,
-      `ops.pipeline_runs` request counts, full test suite passing).
+- [x] **25. First real run** — `ENCORE_BANDS_FILTER=Oasis` (958 shows,
+      the smallest band in the Phase 0 table, to spend the least real
+      setlist.fm quota). Rebuilt the image, brought up the full stack,
+      unpaused `encore_pipeline`. Unpausing itself triggered a
+      `scheduled__2026-09-01` run (the most recent monthly boundary,
+      expected with `catchup=False`) in addition to a `manual` trigger —
+      `max_active_runs=1` queued the second behind the first, giving two
+      real, real-API runs back to back instead of one.
+
+      **Run 1** (`scheduled__2026-09-01`): all 8 tasks succeeded.
+      `extract_musicbrainz` → Oasis: 9 albums, 78 tracks, 5,596
+      recordings, 66 MusicBrainz requests. `extract_setlistfm` → 958
+      setlists, 13,170 entries, 48 setlist.fm requests. `validate_raw` →
+      "Oasis: 891/958 setlists with songs (93.0%)" — **958 shows / 93.0%
+      matches the Phase 0 validated table exactly**
+      (`.kiro/specs/encore-fase0-validacao/requirements.md`), a strong
+      real-world cross-check that the production pipeline reproduces
+      Phase 0's numbers.
+
+      **Run 2** (`manual`, ran immediately after): also succeeded.
+      MusicBrainz requests = 0 (the 30-day skip logic correctly skipped
+      re-fetching Oasis's fresh data) and `raw_musicbrainz` row counts
+      were unchanged after the second run (9/78/5,596) — no duplicates,
+      confirmed via the real Airflow DAG, not just the ad hoc/mocked
+      checks from earlier items.
+
+      **All acceptance criteria checked directly against the running
+      containers and the database, not inferred:**
+      - `raw_setlistfm.setlists`/`.setlist_entries`: 0 rows after both
+        runs (`cleanup_raw_setlistfm` confirmed working end to end).
+      - `raw_musicbrainz`: 9/78/5,596 after both runs, unchanged.
+      - `ops.pipeline_runs`: 2 rows, both `status='success'`,
+        `setlistfm_requests` 48 and 48 (96 total today — well under the
+        1,300 budget check's threshold), `musicbrainz_requests` 66 then
+        0.
+      - `docker compose ps --format "table {{.Names}}\t{{.Ports}}"` on
+        the live containers: every published port is `127.0.0.1:*`,
+        nothing on `0.0.0.0` (`airflow-scheduler`/`airflow-dag-processor`
+        don't even publish 8080 to the host at all, only
+        `airflow-api-server` and `postgres` do).
+      - Full test suite: 55 unit + 12 integration (with `postgres-test`
+        up) = 67 passing.
+
+      **Found and fixed during this run**: `raw_musicbrainz` had 1 extra
+      album/track/recording beyond Oasis's — leftover fake test data
+      (`band_name='Muse'`, ids `rg1`/`rec1`) from this session's earlier
+      ad hoc integration checks for items 15/16 (run against this same
+      main Postgres, not `postgres-test`). Not a pipeline bug — deleted
+      the 3 leftover rows by hand and re-verified the counts matched
+      `extract_musicbrainz`'s own reported numbers exactly (9/78/5,596)
+      afterward. Lesson for next time: ad hoc verification scripts
+      against the main `encore` database (as opposed to `postgres-test`)
+      should clean up after themselves, or use `postgres-test` even for
+      one-off checks.
+
+      Reset `ENCORE_BANDS_FILTER` back to empty in the local `.env`
+      afterward (it was only for this run) and tore the stack down with
+      `docker compose down` (not `-v`, so the volume — including this
+      real Oasis/ops data — persists).
+
+      **This closes spec-01.** All 25 checklist items are done.
 
 ## Decisions log
 
