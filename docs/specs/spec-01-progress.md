@@ -230,7 +230,17 @@ afterward.
       item 21, will run) empties every table — the first real proof that
       the ephemeral-data mechanism actually works end to end, ahead of
       items 18/21 building the DAG task around it.
-- [ ] **17. `ops.pipeline_runs`** — schema and `log_run(...)` writer.
+- [x] **17. `ops.pipeline_runs`** — added `src/encore/ops.py`:
+      `ensure_tables()` creates the table (PK `run_id`, `started_at`,
+      `finished_at`, `status`, `setlistfm_requests`,
+      `musicbrainz_requests`, `setlists_per_band` JSONB,
+      `error_message`), `log_run(...)` upserts one row per run (`ON
+      CONFLICT (run_id) DO UPDATE`) so a retried/re-logged run doesn't
+      duplicate. One row is written once at the end by the DAG's
+      `log_run` task (R6.7), not incrementally per task. 3 unit tests
+      with a mocked connection. **Verified against a real PostgreSQL on
+      2026-09-17**: logging the same `run_id` twice with different data
+      leaves exactly one row with the second call's values.
 - [ ] **18. `airflow/dags/encore_pipeline.py`** — tasks in order:
       `truncate_raw_setlistfm_start`, `check_api_budget`,
       `extract_musicbrainz`, `extract_setlistfm` (mapped,
