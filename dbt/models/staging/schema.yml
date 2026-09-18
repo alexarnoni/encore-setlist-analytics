@@ -1,0 +1,163 @@
+version: 2
+
+# Staging tests (spec-02a R7.1) and column docs.
+#
+# Severity policy: a column that is NULL *by design* (the date parsers
+# return NULL for malformed input rather than raising, so the pipeline
+# survives one bad row) is tested with severity: warn — the problem is
+# surfaced without failing the whole run. Columns that must never be NULL
+# fail the run.
+#
+# Deliberately not here:
+# - accepted_values on the boolean flags: redundant with the column type
+#   (not_null already covers them). The real accepted_values candidate,
+#   int_song_catalog.catalog_source, is added with that model.
+# - accepted_values on `band` against the 7 in-scope names: it would copy
+#   config/bands.yaml into the dbt project (tech.md: the band list lives
+#   in ONE versioned place), and the ingestion writes band names straight
+#   from that file, so the two cannot drift.
+# - composite-key uniqueness: the built-in `unique` is single-column and
+#   there is no dbt_utils, so those are singular tests in dbt/tests/.
+
+models:
+
+  - name: stg_setlists
+    description: >
+      One row per show. View over raw_setlistfm.setlists — EPHEMERAL, so it
+      returns no rows once the pipeline's cleanup has run.
+    columns:
+      - name: setlist_id
+        description: setlist.fm's id for the show. Unique per show.
+        data_tests:
+          - not_null
+          - unique
+      - name: band
+        data_tests:
+          - not_null
+      - name: show_date
+        description: >
+          Parsed from setlist.fm's DD-MM-YYYY. NULL when the source date is
+          malformed or impossible (see parse_setlistfm_date).
+        data_tests:
+          - not_null:
+              config:
+                severity: warn
+      - name: show_year
+        data_tests:
+          - not_null:
+              config:
+                severity: warn
+      - name: tour_name
+        description: NULL when setlist.fm has no tour for the show (~11-19% of shows).
+      - name: setlist_url
+        description: >
+          Link to the show's page on setlist.fm — required by the data
+          policy (attribution / "link, don't reproduce").
+        data_tests:
+          - not_null
+
+  - name: stg_setlist_entries
+    description: >
+      One row per performed song. Medleys are split into one row per song
+      sharing the entry's position; medley_part tells the siblings apart.
+      View over EPHEMERAL raw_setlistfm data.
+    columns:
+      - name: setlist_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_setlists')
+                field: setlist_id
+      - name: band
+        data_tests:
+          - not_null
+      - name: song_name_raw
+        description: Trimmed name as setlist.fm recorded it (one piece, for a medley).
+        data_tests:
+          - not_null
+      - name: position
+        data_tests:
+          - not_null
+      - name: set_index
+        data_tests:
+          - not_null
+      - name: is_encore
+        data_tests:
+          - not_null
+      - name: is_cover
+        data_tests:
+          - not_null
+      - name: is_tape
+        data_tests:
+          - not_null
+      - name: is_medley
+        data_tests:
+          - not_null
+      - name: medley_part
+        description: 1 for a plain entry; 1, 2, 3... for the pieces of a medley.
+        data_tests:
+          - not_null
+
+  - name: stg_albums
+    description: >
+      Studio albums from raw_musicbrainz.albums minus seed_album_exclusions.
+      View over PERSISTENT raw data.
+    columns:
+      - name: release_group_mbid
+        data_tests:
+          - not_null
+          - unique
+      - name: band
+        data_tests:
+          - not_null
+      - name: album_title
+        data_tests:
+          - not_null
+      - name: release_year
+        description: NULL when MusicBrainz has no usable date for the album.
+        data_tests:
+          - not_null:
+              config:
+                severity: warn
+
+  - name: stg_album_tracks
+    description: Tracks of each kept studio album's representative release.
+    columns:
+      - name: release_group_mbid
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_albums')
+                field: release_group_mbid
+      - name: recording_mbid
+        data_tests:
+          - not_null
+      - name: track_title_normalized
+        data_tests:
+          - not_null
+
+  - name: stg_recordings
+    description: >
+      One row per (band, normalized title), keeping the earliest release —
+      i.e. one row per song, not per release of it.
+    columns:
+      - name: recording_mbid
+        data_tests:
+          - not_null
+          - unique
+      - name: band
+        data_tests:
+          - not_null
+      - name: title_normalized
+        data_tests:
+          - not_null
+      - name: release_year
+        description: >
+          NULL for songs with no dated recording at all (63 of 738 in the
+          Oasis data).
+        data_tests:
+          - not_null:
+              config:
+                severity: warn

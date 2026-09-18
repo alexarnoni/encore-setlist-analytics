@@ -335,8 +335,49 @@ in the decisions log below.
       inclination: `is_matched` = resolved to the catalog; the age
       average additionally requires a non-NULL year, and the gap shows up
       in `matched_performances` vs the rows actually averaged).
-- [ ] **11. Staging schema tests** — `not_null`/`accepted_values` in
-      `dbt/models/staging/schema.yml` (R7.1).
+- [x] **11. Staging schema tests** — `dbt/models/staging/schema.yml`
+      (R7.1), plus column/model descriptions: `not_null` on every key and
+      flag column, `unique` on `setlist_id` / `release_group_mbid` /
+      `recording_mbid`, and `relationships` for entries → setlists and
+      tracks → albums. 38 tests total across the project after this
+      item. **Severity policy**: columns that are NULL *by design* — the
+      date/year columns, since the parsers return NULL instead of
+      raising — use `severity: warn` so a bad row is surfaced without
+      failing the whole run (a `not_null` that broke the pipeline would
+      undo the reason `parse_setlistfm_date` exists). New singular test
+      `assert_stg_setlist_entries_unique_key.sql`: the composite key was
+      only checked ad hoc in item 8, now it's a permanent guard.
+      **Deviations from the spec's literal "not_null and
+      accepted_values", stated rather than buried** (also in a comment at
+      the top of `schema.yml`): no `accepted_values` on the boolean flags
+      (redundant with the column type; `not_null` covers them), none on
+      `band` against the 7 names (it would copy `config/bands.yaml` into
+      the dbt project, against tech.md's "one versioned place" rule, and
+      ingestion writes band names straight from that file so they can't
+      drift). The real `accepted_values` candidate, `catalog_source`,
+      arrives with `int_song_catalog` in item 12.
+      **Verified for real**: `dbt build` → 48 pass + 1 warn, and the
+      warn is `not_null_stg_recordings_release_year` with exactly **63**
+      rows — the same 63 songs with no dated recording found in item 10,
+      so the warn severity is surfacing a known data gap as designed.
+      Then proved the tests can actually fail, by mutating raw data
+      (checksums of `raw_setlistfm.setlists`/`setlist_entries` identical
+      before and after, so restoration was exact): (1) event_date →
+      `'garbage'`: `show_date` and `show_year` each WARN with 1 row,
+      dbt exit code **0**; (2) `setlistfm_url` → NULL: FAIL, exit code
+      **1**; (3) inserted a synthetic medley entry
+      `Rock ’n’ Roll Star / Live Forever / ` (tape) into the raw table
+      and read it back through the real `stg_setlist_entries`: 2 rows,
+      both `position` 9999, `is_medley` true, `medley_part` 1 and 2,
+      `is_tape` inherited, the trailing separator did NOT become a third
+      part, and all 13 tests in the model's tree passed. **That closes
+      part of the item-8 caveat**: the split has now run through the real
+      model on a real table row, not only through the fixture — though
+      still with a synthetic entry, since no real setlist.fm data with a
+      medley exists in this database yet. `relationships` and the
+      `unique` tests on raw-PK-backed columns can't be made to fail from
+      raw data (FKs/PKs prevent the bad state); they guard against a
+      future model change, not against current data.
 - [ ] **12. `int_song_catalog`** — `dbt/models/intermediate/`.
 - [ ] **13. `int_performances`** — excludes tape/cover, seed overrides
       take precedence over automatic matching, `is_matched` flag.
