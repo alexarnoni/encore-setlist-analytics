@@ -521,8 +521,51 @@ in the decisions log below.
         methodology choice, so I am stopping before item 14 to ask
         rather than picking. Separately: do you want the jam/generic-name
         artifacts left alone (they are ~3 performances) or handled?
-- [ ] **14. `mart_repertoire_age`** — `dbt/models/analytics/`, grain
-      band/tour/year, no `setlist_id`/`show_date`/`venue`/`song_name_raw`.
+- [x] **14. `mart_repertoire_age`** —
+      `dbt/models/analytics/mart_repertoire_age.sql` (+ `schema.yml`),
+      a real **table** (`BASE TABLE`), grain band/tour/year, exactly R5's
+      12 columns — no `setlist_id`, `show_date`, `venue` or song title.
+      **Decisions you made** (recorded here, from the item-13 question):
+      negative ages are **clamped to 0** (option a — a song played before
+      its release is new material), and the jam/generic-name matching
+      artifacts are **left as they are**. Other rules, all stated in the
+      model header: only *matched* performances with a *known* age enter
+      avg/median/oldest/newest; `performances` and `matched_performances`
+      count every non-tape/non-cover performance so `match_rate` is
+      honest; no tour → `'Unknown tour'`; performances with an unknown
+      `show_year` can't be placed in a year and are left out (the warn on
+      `stg_setlists.show_year` surfaces them; 0 for Oasis); `shows` =
+      distinct shows with ≥1 performance in the cell. Values are rounded
+      to 4 decimals. New singular test on the grain
+      (`assert_mart_repertoire_age_unique_grain`) plus `not_null` on the
+      key/count columns. The R7.2-7.4 singular tests are items 16-18.
+      **A technical trap, avoided and then proven real**: the clamp is a
+      `CASE`, not `greatest(age, 0)`, because Postgres `GREATEST` ignores
+      NULLs — `greatest(NULL, 0)` is `0`, which would turn "no age" into
+      "age 0" and let it into the average.
+      **Verified for real.** (1) Independent Python recomputation of the
+      whole mart from the raw tables: 36 cells, same key set, **0
+      mismatches across all 8 value columns** (shows, performances,
+      matched, match_rate, avg, median, oldest, newest — including the
+      clamp and the rounding). (2) **Idempotent**: two rebuilds give an
+      identical content md5 (excluding `computed_at`) and a later
+      `computed_at`; it also returned to the same md5 after the
+      experiments below. (3) The clamp is what keeps R7.3 true: without
+      it three cells go negative (1991 −9.0000, 1993 −0.9250, 1992
+      −0.8750). (4) The GREATEST claim, tested rather than asserted: with
+      a temporary alias making one performance matched-but-yearless
+      (the catalog song `1994/06/26: Glastonbury Festival`, a recording
+      with no date), the `CASE` leaves the 1995 Morning Glory cell's avg
+      at 0.4180 while `greatest()` drops it to 0.4173. (5) Reconciled
+      totals: `sum(performances)` 11,969 and `sum(matched)` 11,968 equal
+      the performance model; `sum(shows)` is 884, not the 891 setlists
+      that have any entry, because 7 shows have only tape/cover/blank
+      entries (checked directly against raw, not assumed). All restored
+      (`dbt seed` → 0 rows, model `diff` identical); full `dbt test`
+      68 pass + 2 warn.
+      Result for Oasis: 36 cells, 13 distinct tours, 17 `Unknown tour`
+      cells holding 413 performances; average age starts ~0 in 1991-94
+      (the band is playing its own new songs) and rises through 1998.
 - [ ] **15. `mart_match_quality`** — grain band/year.
 - [ ] **16. Singular test: no forbidden columns in `analytics`** (R7.2).
 - [ ] **17. Singular test: `avg_repertoire_age` never negative** (R7.3).

@@ -1,0 +1,56 @@
+version: 2
+
+# analytics = PERSISTENT aggregated marts. Nothing here may carry a
+# setlist id, show date, venue or song title (docs/context/structure.md);
+# the R7.2 singular test guards that.
+
+models:
+
+  - name: mart_repertoire_age
+    description: >
+      Average repertoire age by band, tour and year. Repertoire age of a
+      performance is show_year minus the song's release year, with a
+      negative value (song played before its release year) clamped to 0.
+      Only matched, non-tape, non-cover performances with a known year
+      enter the average. Rebuilt from scratch on every run;
+      computed_at is the only column expected to differ between two
+      runs on the same data.
+    columns:
+      - name: band
+        data_tests:
+          - not_null
+      - name: tour_name
+        description: "'Unknown tour' when the show has no tour name."
+        data_tests:
+          - not_null
+      - name: show_year
+        data_tests:
+          - not_null
+      - name: shows
+        description: Distinct shows with at least one performance in the cell.
+        data_tests:
+          - not_null
+      - name: performances
+        description: All non-tape, non-cover performances in the cell.
+        data_tests:
+          - not_null
+      - name: matched_performances
+        description: Performances that resolved to the song catalog.
+        data_tests:
+          - not_null
+      - name: match_rate
+        description: matched_performances / performances, between 0 and 1.
+        data_tests:
+          - not_null
+      - name: avg_repertoire_age
+        description: >
+          NULL only when no matched performance in the cell has a known
+          release year.
+      - name: median_repertoire_age
+      - name: oldest_song_year
+        description: Smallest release year among the averaged performances.
+      - name: newest_song_year
+        description: Largest release year among the averaged performances.
+      - name: computed_at
+        data_tests:
+          - not_null
