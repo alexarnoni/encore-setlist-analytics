@@ -378,7 +378,74 @@ in the decisions log below.
       `unique` tests on raw-PK-backed columns can't be made to fail from
       raw data (FKs/PKs prevent the bad state); they guard against a
       future model change, not against current data.
-- [ ] **12. `int_song_catalog`** — `dbt/models/intermediate/`.
+- [x] **12. `int_song_catalog`** —
+      `dbt/models/intermediate/int_song_catalog.sql` (+ `schema.yml`).
+      Key `(band, title_normalized)`; columns `band, title_normalized,
+      song_title, reference_album, release_year, catalog_source`.
+      Precedence **override > album > recording**. `album`: earliest
+      studio album containing the song (ties: album title, then mbid),
+      year = that album's year. `recording`: no album has it, year =
+      earliest recording's. `override`: a `seed_song_overrides` row **with
+      an `album_title`** replaces the automatic row and takes its
+      album/year from `stg_albums`. **My reading of an underspecified
+      rule, flagged**: an override row with a *blank* `album_title` is an
+      alias only (raw name → canonical) — it creates no catalog row; item
+      13 applies the alias when matching. `catalog_source` gets the real
+      `accepted_values` test (the one deferred from item 11). Five new
+      tests: unique key, `catalog_source`/`reference_album` consistency,
+      and — since the seed is empty and must stay empty (adjustment 5) —
+      two seed guards: an override naming an album `stg_albums` doesn't
+      have (would silently give a NULL year) and one canonical song given
+      two different albums.
+      **Verified for real.** (1) Independent Python recomputation from
+      the RAW tables: 738 songs (78 `album` + 660 `recording`), same key
+      set, **0 rows differing** in (source, album, year); all 63 NULL-year
+      songs are `recording`-sourced. (2) Exercised the override path with
+      temporary seed rows: `Live Forever → Be Here Now` overrode the
+      automatic `Definitely Maybe`/1994 to `override`/`Be Here Now`/1997
+      and *replaced* the row (album 77, override 1, total still 738); a
+      blank-album alias for Wonderwall changed nothing; an override to a
+      nonexistent album gave a NULL-year row and made
+      `assert_song_override_albums_exist` FAIL; a contradicting second
+      album made `assert_song_overrides_one_album_per_canonical` FAIL;
+      and mutating the model to drop the "override beats album" clause
+      produced a duplicate key and made the unique test FAIL. All restored
+      (`dbt seed` → 0 rows, model `diff` identical, catalog back to
+      78/660, full `dbt test` 47 pass + 2 warn).
+      **Measured for real, as promised — three findings for you**
+      (preliminary: a direct join of non-tape/non-cover entries to the
+      catalog; `int_performances` doesn't exist yet):
+      1. **NULL year is a non-issue for Oasis**: 11,968 of 11,969
+         performances match and **0 of the matched ones lack a year** —
+         the 63 no-year songs are obscure recordings never played live.
+         The open question (should a matched-but-yearless song count?) is
+         moot for this band; it can still bite for the other six, so my
+         inclination stands (`is_matched` = resolves to the catalog; the
+         age average additionally needs a year) but nothing rides on it
+         yet.
+      2. **Preliminary match rate 11,968 / 11,969 = 0.9999** (gate:
+         0.90); the one miss is `Chipper S.O.B.` (1 play). **Read it with
+         care**: 10,400 (86.9%) match through an *album*, 1,568 (13.1%)
+         only through a *recording* — and the recording source is every
+         release, live take and reissue MusicBrainz has for the artist, so
+         "matched to a recording" is a low bar. The spec's gate is about
+         matching the catalog as R4.1 defines it (which includes
+         recordings), so it passes; but an album-only rate would be 0.869.
+         If you want that visible, a second rate in `mart_match_quality`
+         is an addition to R6's fixed column list — your call, I have not
+         added it.
+      3. **Album year vs earliest recording year (spec rule vs project
+         brief)**: R4.1 takes the *album's* year when matched, while
+         `encore-projeto.md` says "first official release found (album,
+         single or EP)". They differ for **8 of 78 album songs** — the
+         earliest recording predates the album by 1 year in 7 cases (the
+         1993 demos/singles of *Definitely Maybe*, `Go Let It Out`,
+         `My Big Mouth`) and by 4 in one (`Let There Be Love`, 2001 vs
+         2005). Those 8 songs are **2,361 of the 10,400 album-matched
+         plays (22.7%)**, so following the spec biases the average
+         repertoire age *low* by roughly 0.2 years. I implemented the
+         spec as written; whether the brief's definition should win is a
+         methodology decision that isn't mine to make silently.
 - [ ] **13. `int_performances`** — excludes tape/cover, seed overrides
       take precedence over automatic matching, `is_matched` flag.
 - [ ] **14. `mart_repertoire_age`** — `dbt/models/analytics/`, grain

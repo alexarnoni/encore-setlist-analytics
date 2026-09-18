@@ -1,0 +1,41 @@
+version: 2
+
+models:
+
+  - name: int_song_catalog
+    description: >
+      One row per distinct catalog song per band, keyed by
+      (band, title_normalized). Precedence: seed override > studio album >
+      MusicBrainz recording. Built from PERSISTENT MusicBrainz data only —
+      no setlist.fm data touches this model.
+    columns:
+      - name: band
+        data_tests:
+          - not_null
+      - name: title_normalized
+        description: Join key; normalize_title() of the song title.
+        data_tests:
+          - not_null
+      - name: song_title
+        description: Canonical display title.
+        data_tests:
+          - not_null
+      - name: reference_album
+        description: >
+          Earliest studio album containing the song. NULL for
+          catalog_source = 'recording' (no album has it).
+      - name: release_year
+        description: >
+          From the reference album for 'album' / 'override', from the
+          earliest recording for 'recording'. NULL when there is no usable
+          date — such a song can be matched but has no age.
+        data_tests:
+          - not_null:
+              config:
+                severity: warn
+      - name: catalog_source
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['album', 'recording', 'override']
