@@ -39,3 +39,55 @@ models:
           - accepted_values:
               arguments:
                 values: ['album', 'recording', 'override']
+
+  - name: int_performances
+    description: >
+      One row per performed song (medleys already split), excluding tape
+      entries and covers, joined to int_song_catalog. Unmatched songs are
+      KEPT (is_matched = false) so the match rate can be measured. A view
+      over EPHEMERAL setlist.fm data; carries setlist_id and song names,
+      which is allowed here and never in `analytics`.
+    columns:
+      - name: setlist_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_setlists')
+                field: setlist_id
+      - name: band
+        data_tests:
+          - not_null
+      - name: show_year
+        data_tests:
+          - not_null:
+              config:
+                severity: warn
+      - name: song_name_raw
+        data_tests:
+          - not_null
+      - name: title_normalized
+        description: >
+          The key actually used to join the catalog: the normalized raw
+          name, or the normalized CANONICAL title when a seed override maps
+          this raw name.
+        data_tests:
+          - not_null
+      - name: catalog_source
+        description: NULL for unmatched songs.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['album', 'recording', 'override']
+      - name: is_matched
+        data_tests:
+          - not_null
+      - name: repertoire_age
+        description: >
+          show_year - release_year, SIGNED. Negative when the song was
+          played before its release year (an unreleased song at that
+          show). NULL when unmatched or when either year is unknown.
+      - name: used_override_alias
+        description: True when a seed_song_overrides row mapped this raw name.
+        data_tests:
+          - not_null

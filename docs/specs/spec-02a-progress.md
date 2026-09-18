@@ -446,8 +446,81 @@ in the decisions log below.
          repertoire age *low* by roughly 0.2 years. I implemented the
          spec as written; whether the brief's definition should win is a
          methodology decision that isn't mine to make silently.
-- [ ] **13. `int_performances`** — excludes tape/cover, seed overrides
-      take precedence over automatic matching, `is_matched` flag.
+- [x] **13. `int_performances`** —
+      `dbt/models/intermediate/int_performances.sql`. One row per
+      performed song (medley parts already split), **tape and cover
+      entries excluded** (R4.2), unmatched songs **kept** with
+      `is_matched = false` so the match rate is measurable. Columns:
+      `setlist_id, band, show_date, show_year, tour_name, set_index,
+      position, medley_part, is_encore, is_medley, song_name_raw,
+      title_normalized, song_title, reference_album, release_year,
+      catalog_source, is_matched, repertoire_age, used_override_alias`.
+      Matching key is `normalize_title` of the raw name — unless a seed
+      row maps that raw name to a canonical title, in which case the
+      **canonical** title is the key (R4.3: overrides beat automatic
+      matching). `used_override_alias` records when that happened, so it
+      is auditable (an alias-only override leaves no trace in
+      `catalog_source`). **`repertoire_age` is deliberately the plain
+      SIGNED `show_year - release_year`** — the model makes no decision
+      about negative ages; see the pending decision below. Three tests:
+      unique key, row count equals stg non-tape/non-cover entries
+      (unmatched must stay in), and a contradiction guard
+      `assert_song_overrides_unique_raw_name` (one raw name → one
+      canonical per band).
+      **Verified for real.** (1) Independent Python recomputation **per
+      performance** from the raw tables (raw name → normalize →
+      catalog recomputed from raw → year → age): 11,969 rows, same key
+      set, **0 rows differing** on (matched, source, release_year, age);
+      11,968 matched (10,400 `album` + 1,568 `recording`). (2) Alias path
+      with temporary seed rows, restored with `dbt seed` each time:
+      alias-only `Chipper S.O.B. → Whatever` matched the 1 previously
+      unmatched play (matched 11,969, age 2, `used_override_alias`);
+      alias *with* an album created an `override` catalog row (year 1997,
+      age −2); `Wonderwall → Live Forever` **beat the automatic match**
+      for all 550 Wonderwall plays with `matched` unchanged at 11,968;
+      two contradictory aliases made the raw-name test FAIL. (3)
+      Mutations: dropping the cover exclusion → row-count test FAIL;
+      removing the alias `rn = 1` dedupe with two contradictory aliases
+      seeded → unique-key test FAIL with **550** rows and row-count FAIL.
+      **One mutation was NOT caught, stated plainly**: removing the
+      `c.band = r.band` condition from the catalog join went undetected —
+      not because the tests are weak but because only one band is loaded,
+      so the mutation changes nothing observable. That guard can only be
+      exercised once a second band exists; until then the tests do not
+      cover cross-band fan-out. Everything restored (model `diff`
+      identical, seed 0 rows, full `dbt test` 59 pass + 2 warn).
+      **Findings, and a decision I am NOT making (it belongs to item 14
+      and to you)**:
+      - **89 of 11,968 dated performances (0.74%) have a negative age** —
+        a song played in a year before its release year. Most are −1:
+        live debuts one year ahead of the record (Definitely Maybe songs
+        in 1993, Be Here Now in 1996, Heathen Chemistry in 2001...).
+        That is real, legitimate "new material".
+      - **Three are matching artifacts**: `Acoustic Song (Live)` (a 1991
+        show matched to a 2023 recording → −32) and `Instrumental Jam`
+        (1994-98 shows matched to a 2003 recording → −9): generic
+        setlist names landing on an arbitrary MusicBrainz recording via
+        the `recording` source. `product.md` says jams/solos are excluded
+        from catalog KPIs, but setlist.fm gives no flag for them and R4.2
+        only excludes tape/cover, so nothing removes them.
+      - **Why it matters: R7.3 ("`avg_repertoire_age` is never
+        negative") will FAIL on real data** at the band/tour/year grain
+        for the earliest years: mean age by show year is −9.00 (1991, 4
+        plays), −0.88 (1992, 8) and −0.93 (1993, 40). The overall mean
+        is barely touched (6.226 as-is, 6.237 clamped at 0, 6.284
+        excluding negatives).
+      - **Options for item 14**: (a) clamp each performance's age at 0 —
+        a song played before release *is* new material, which is what
+        the KPI asks; every matched dated performance stays in the
+        average, consistent with R5's "matched, non-tape, non-cover
+        performances enter the average"; (b) exclude negative-age
+        performances from the average (still counted in `performances`
+        and `matched_performances`) — drops real new-material plays and
+        biases the mean up; (c) allow negatives and change R7.3 —
+        contradicts the spec. **My recommendation is (a)**, but it is a
+        methodology choice, so I am stopping before item 14 to ask
+        rather than picking. Separately: do you want the jam/generic-name
+        artifacts left alone (they are ~3 performances) or handled?
 - [ ] **14. `mart_repertoire_age`** — `dbt/models/analytics/`, grain
       band/tour/year, no `setlist_id`/`show_date`/`venue`/`song_name_raw`.
 - [ ] **15. `mart_match_quality`** — grain band/year.
