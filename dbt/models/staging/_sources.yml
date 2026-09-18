@@ -24,3 +24,4 @@ sources:
     tables:
       - name: albums
       - name: album_tracks
+      - name: recordings

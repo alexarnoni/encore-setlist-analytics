@@ -290,8 +290,51 @@ in the decisions log below.
       left. Then planted a bogus `Oasis / Nonexistent Album` and the
       guard test went red (1 row). Restored with `dbt seed` (5 seed
       rows, 7 albums, 78 tracks) and the guard test is green again.
-- [ ] **10. `stg_recordings`** — deduplicated by `normalize_title(title)`,
-      earliest `first_release_date` wins.
+- [x] **10. `stg_recordings`** — `dbt/models/staging/stg_recordings.sql`
+      (`band, recording_mbid, title, title_normalized,
+      first_release_date, release_year`), one row per `(band,
+      title_normalized)` via `row_number()`. "Earliest" orders by
+      `release_year` (int, NULL last) and only then by the raw date text
+      — MusicBrainz dates are mixed precision and text ordering of
+      anything unparseable is meaningless — with `recording_mbid` as
+      the last tie-break so the result is deterministic. A title that
+      normalizes to `''` is dropped instead of collapsed into one bucket
+      (1 row in the Oasis data: a `-------------------` recording).
+      Two singular tests added:
+      `assert_stg_recordings_unique_per_band_title` (composite
+      uniqueness; the built-in `unique` is single-column and there's no
+      dbt_utils) and `assert_stg_recordings_keeps_earliest_release_year`
+      (recomputes the earliest year with a plain `min()` aggregate over
+      the raw table, deliberately not reusing the model's window
+      function).
+      **Verified for real, in three independent ways.** (1) `dbt run` +
+      all 7 tests green. (2) Reimplemented the R3.1 rules in Python
+      (`re` + `unicodedata`, written from the spec) and compared it with
+      the SQL `normalize_title` on every distinct real title: 1,080
+      MusicBrainz + 129 setlist.fm = 1,209 titles, **1 disagreement**
+      — `Falling Down (「東のエデン」Ver.)`, where the SQL correctly kept
+      `エデン` and my *reference* corrupted it to `エテン` (Python's NFKD
+      splits kana `デ` into `テ` + a dakuten mark, which I then stripped
+      as if it were an accent). The bug was in the reference, not the
+      macro; fixed the reference (recompose with NFC) and moved on.
+      (3) Recomputed the dedup in Python from the raw rows: 5,596 raw
+      recordings → **738 songs**, identical `(band, title)` key set to
+      `stg_recordings`, 0 mismatches on the kept release year. Tests
+      verified against two injected regressions: earliest → latest
+      (the earliest-year test failed with 163 rows while the uniqueness
+      test correctly stayed green — the two are independent) and
+      `rn = 1` → `rn <= 2` (uniqueness failed with 240 rows, earliest
+      with 99); both restored (`diff` identical), 7/7 green.
+      **Finding for items 12-13**: 63 of the 738 songs (8.5%) have NO
+      dated recording at all, so `release_year` is NULL for them. When
+      such a song also has no album match, `int_song_catalog` can only
+      give it a NULL year, and a NULL year can't enter an
+      `avg_repertoire_age`. R5 says only "matched" performances enter the
+      average, and doesn't say what "matched" means for a catalog song
+      with no known year — decide this explicitly in item 12/13 (my
+      inclination: `is_matched` = resolved to the catalog; the age
+      average additionally requires a non-NULL year, and the gap shows up
+      in `matched_performances` vs the rows actually averaged).
 - [ ] **11. Staging schema tests** — `not_null`/`accepted_values` in
       `dbt/models/staging/schema.yml` (R7.1).
 - [ ] **12. `int_song_catalog`** — `dbt/models/intermediate/`.
