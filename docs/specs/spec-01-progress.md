@@ -283,12 +283,28 @@ afterward.
       (`trigger_rule=all_done`) — one function, two call sites, so the
       truncate logic can't drift between them. 1 unit test with a mocked
       connection.
-- [ ] **22. Analytics schema guard test** — fails if any table in
-      `analytics` has a column named `setlist_id`.
-- [ ] **23. Integration test setup** — `postgres-test` service added to
-      `infra/docker-compose.yml` (done, in item 2). Still pending: actual
-      integration tests that use it, and documented run instructions in
-      README (item 24).
+- [x] **22. Analytics schema guard test** — done together with item 23
+      (`tests/integration/test_analytics_schema_guard.py`, same
+      infrastructure). Queries `information_schema.columns` for
+      `table_schema = 'analytics' AND column_name = 'setlist_id'`.
+      Passes vacuously today (no tables in `analytics` yet — marts land
+      in spec 02); a second test plants a throwaway violating table and
+      confirms the guard actually detects it (then cleans up), so the
+      passing-today result isn't just "nothing to check yet" masquerading
+      as coverage.
+- [x] **23. Integration test setup** — `postgres-test` service was
+      already in `infra/docker-compose.yml` (item 2). Added
+      `tests/integration/` (excluded from the default `pytest` run via
+      `norecursedirs = integration` in `pytest.ini`, so the fast suite
+      never needs Docker): `conftest.py`'s `pg_connection` fixture
+      connects to `postgres-test` and calls `pytest.skip(...)` if it
+      isn't reachable (session-scoped, so a full skip run costs ~5s, not
+      ~50s — the first version reconnected per test). 12 tests total,
+      promoting this session's earlier ad hoc `python -c` integration
+      checks (items 6, 15, 16, 17) into committed, repeatable tests, plus
+      the item 22 schema guard. All 12 pass against a real
+      `postgres-test`; all 12 skip cleanly when it isn't running.
+      Documented in `README.md`'s new "Integration tests" section.
 - [ ] **24. `README.md`** — summary, Mermaid architecture diagram, data
       policy, local run instructions (including idempotent schema
       creation and `ENCORE_BANDS_FILTER`), VM deploy steps, setlist.fm

@@ -70,3 +70,23 @@ two ways:
    Safe to run repeatedly — verified against a real PostgreSQL container:
    running it a second time against the schemas created by
    `infra/postgres/init/` on first boot produces no errors.
+
+## Integration tests
+
+Unit tests (`pytest`, no arguments) run against mocked HTTP and mocked
+DB connections — no Docker required. `tests/integration/` instead runs
+the same ingestion/ops code against a **real** PostgreSQL, to catch bugs
+mocks can't (wrong SQL syntax, a broken foreign key, an upsert that
+doesn't actually dedupe). It's excluded from the default `pytest` run
+(see `pytest.ini`'s `norecursedirs`), so it needs to be invoked
+explicitly, and it needs `postgres-test` running first:
+
+```bash
+docker compose -f infra/docker-compose.yml --env-file .env --profile test up -d postgres-test
+PYTHONPATH=src python -m pytest tests/integration -v
+docker compose -f infra/docker-compose.yml --env-file .env --profile test down
+```
+
+If `postgres-test` isn't running, every test in `tests/integration/`
+skips (rather than erroring) — the connection attempt happens once per
+session, so a skip run finishes in a few seconds, not minutes.
