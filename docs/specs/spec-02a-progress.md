@@ -566,7 +566,52 @@ in the decisions log below.
       Result for Oasis: 36 cells, 13 distinct tours, 17 `Unknown tour`
       cells holding 413 performances; average age starts ~0 in 1991-94
       (the band is playing its own new songs) and rises through 1998.
-- [ ] **15. `mart_match_quality`** — grain band/year.
+- [x] **15. `mart_match_quality`** —
+      `dbt/models/analytics/mart_match_quality.sql`, a table, grain
+      band/year, exactly R6's 9 columns (counts and rates only). The
+      headline metric is `match_rate_by_performance` (weighted by plays,
+      per `product.md`); `match_rate_by_title` counts each distinct song
+      once and is the harsher view. "Matched" is the same `is_matched`
+      flag `mart_repertoire_age` uses. `distinct_songs` counts distinct
+      `title_normalized` — the key actually used to join the catalog — so
+      two raw names an override maps to one canonical song count once; a
+      key that normalizes to `''` is not a title and is not counted (0
+      such performances in the Oasis data, so that guard is defensive
+      only). `match_rate_by_title` divides by `nullif(distinct_songs, 0)`.
+      **I did not add an album-only rate** — that is still your open
+      question from item 12.
+      Tests: grain uniqueness, an internal-arithmetic guard (matched ≤
+      performances, distinct matched ≤ distinct, distinct ≤
+      performances), and — new kind — **a cross-mart test**
+      `assert_marts_performance_counts_agree`: both marts are built from
+      the same performances, so for every (band, year) their performance
+      and matched counts must be equal (`mart_repertoire_age` summed over
+      tours); a full outer join, so a missing row fails too.
+      **Verified for real.** (1) Independent Python recomputation from the
+      raw tables: 20 cells, same key set, **0 mismatches across all 6
+      value columns**. (2) Idempotent: identical content md5 across
+      rebuilds (excluding `computed_at`), and again after the
+      experiments. (3) Alias effect on the title counts, checked against
+      an independent list: with a temporary `Wonderwall → Live Forever`
+      alias `distinct_songs` fell by exactly 1 in exactly the 12 years
+      where both raw names were played (1995-98, 2000-02, 2004-06, 2009,
+      2025 — the list computed straight from the raw table), unchanged in
+      the other 8, with performances/matched untouched. (4) Mutations:
+      filtering years < 1995 out of the quality mart → only the
+      cross-mart test fails (4 rows, the missing years; internal
+      consistency correctly passes); `matched_performances = count(*)+1`
+      → internal-consistency **and** cross-mart both fail (20 rows).
+      Everything restored (model `diff` identical, seed 0 rows, full
+      `dbt test` 77 pass + 2 warn).
+      Reading the Oasis result: overall 11,968 / 11,969 = **0.9999** by
+      performance. The two views differ visibly only in 1995 — 0.9989 by
+      performance vs **0.9706 by title** — because the single unmatched
+      song (`Chipper S.O.B.`, 1 play) is 1 of 34 titles that year but 1
+      of 940 plays. 2025 has 943 performances, the reunion tour after the
+      2009-2025 gap (consistent with Phase 0's 193-month longest pause).
+      The by-title rate is the number that would move first if matching
+      degraded; the by-performance rate barely can, because a few hit
+      songs dominate plays.
 - [ ] **16. Singular test: no forbidden columns in `analytics`** (R7.2).
 - [ ] **17. Singular test: `avg_repertoire_age` never negative** (R7.3).
 - [ ] **18. Singular test: `match_rate` between 0 and 1** (R7.4).

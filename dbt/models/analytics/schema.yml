@@ -54,3 +54,39 @@ models:
       - name: computed_at
         data_tests:
           - not_null
+
+  - name: mart_match_quality
+    description: >
+      How well setlist songs resolve to the song catalog, by band and
+      year. The headline metric is match_rate_by_performance (weighted by
+      plays); match_rate_by_title counts every distinct song once and is
+      the harsher view. Counts and rates only — no titles.
+    columns:
+      - name: band
+        data_tests:
+          - not_null
+      - name: show_year
+        data_tests:
+          - not_null
+      - name: performances
+        description: All non-tape, non-cover performances in the band/year.
+        data_tests:
+          - not_null
+      - name: matched_performances
+        data_tests:
+          - not_null
+      - name: match_rate_by_performance
+        description: matched_performances / performances, between 0 and 1.
+        data_tests:
+          - not_null
+      - name: distinct_songs
+        description: >
+          Distinct normalized titles played (after override aliases).
+      - name: distinct_songs_matched
+      - name: match_rate_by_title
+        description: >
+          distinct_songs_matched / distinct_songs. NULL only if no
+          performance in the cell has a usable title.
+      - name: computed_at
+        data_tests:
+          - not_null
