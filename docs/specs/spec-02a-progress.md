@@ -137,8 +137,26 @@ in the decisions log below.
       **Also resolved the item-3 pending note**: this `dbt seed` run is
       the first one with something to run, and the `on-run-start` hook
       fired for real (`1 of 1 OK hook: encore.on-run-start.0`).
-- [ ] **5. `dbt/README.md`** — how to run dbt locally and inside
-      Airflow.
+- [x] **5. `dbt/README.md`** — layout/schema table, prerequisites
+      (including the `unaccent` caveat for databases that predate the
+      init script), how to run dbt locally via the Airflow image's
+      `/opt/dbt-venv` (dbt isn't in the project venv), and the
+      dev-fixture section from item 1. The "inside Airflow" section
+      says explicitly that it is **not wired up yet** (items 19-20)
+      rather than describing behaviour that doesn't exist; revisit in
+      item 20.
+      **Verified by executing the README, not just writing it** — and
+      that caught two bugs in my first draft: (1) `dbt debug` exited 2
+      because it doesn't accept `--target-path` (only some subcommands
+      do), so artifact redirection moved to the `DBT_TARGET_PATH` /
+      `DBT_LOG_PATH` env vars, which work for every subcommand; (2)
+      dbt kept dropping a `.user.yml` (anonymous-user id) into `dbt/`
+      next to `profiles.yml`, fixed with
+      `DBT_SEND_ANONYMOUS_USAGE_STATS=false`. Final check extracted the
+      `dbt()` function verbatim from the committed README with `awk`
+      and ran `debug`/`seed`/`run`/`test` through it: all exit 0, and
+      `dbt/` contains only tracked files afterwards. (`run` and `test`
+      exit 0 with "Nothing to do" until models exist in item 7.)
 - [ ] **6. `normalize_title(column)` macro** — `dbt/macros/`. Per
       adjustment 4, dbt unit tests apply to models, not macros
       directly: add a small test model applying the macro to fixed
