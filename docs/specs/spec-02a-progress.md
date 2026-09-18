@@ -183,7 +183,39 @@ in the decisions log below.
       extra space collapses to the same string), so they don't actually
       discriminate the "no space" rule — the five other apostrophe
       cases (`Don't` x2, `Editor's`, `What's`, `Ain't`) do.
-- [ ] **7. `stg_setlists`** — `dbt/models/staging/`.
+- [x] **7. `stg_setlists`** — `dbt/models/staging/stg_setlists.sql`
+      plus `_sources.yml` declaring `raw_setlistfm.setlists` as a dbt
+      source (the other raw tables get declared as items 8-10 need
+      them). Columns exactly as R2.1: `setlist_id, band, show_date,
+      show_year, tour_name, venue, city, country, setlist_url`.
+      `tour_name` is `nullif(btrim(...), '')` so an empty string and NULL
+      both mean "no tour"; labelling those `Unknown tour` is the mart's
+      job (R5), not staging's.
+      **Scope addition, flagged**: profiled the raw data first (all 958
+      Oasis dates are valid `DD-MM-YYYY`), but Postgres `to_date()` /
+      `make_date()` RAISE on an impossible date (`31-02-2001`) rather
+      than returning NULL, and these are views — one bad date in any of
+      the six not-yet-loaded bands would only blow up when a downstream
+      mart is built, failing the whole pipeline run. Phase 0 treated an
+      invalid date as NaT. So added `dbt/macros/parse_setlistfm_date.sql`
+      (nested `CASE`s, because Postgres doesn't guarantee `AND`
+      short-circuiting but does evaluate a `THEN` only when its `WHEN`
+      matched) with the same fixture-model + singular-test pattern as
+      item 6: `test_parse_setlistfm_date_cases` (17 cases: valid, leap
+      day, non-leap Feb 29, April 31, day/month/year 0, month 13,
+      wrong shapes, empty, NULL) and
+      `assert_parse_setlistfm_date_expected_outputs`.
+      **Verified for real**: `dbt run` + `dbt test` green; read back all
+      17 actual date outputs; reconciled `stg_setlists` against
+      `raw_setlistfm.setlists` — 958 rows / 958 distinct ids (same as
+      raw), zero null `show_date`/`show_year`, min/max
+      1991-08-14/2025-11-23 (matches the raw profile), 169 null
+      `tour_name` (matches), and 0 rows where any mapped column differs
+      from the raw value. Test verified too: removed the day-of-month
+      guard from the macro and the test went red with `ERROR: date field
+      value out of range: 2023-02-29` (the exact failure the macro
+      exists to prevent), then restored it (`diff` identical) and
+      confirmed green again.
 - [ ] **8. `stg_setlist_entries`** — medley split via
       `string_to_array` + `unnest WITH ORDINALITY`.
 - [ ] **9. `stg_albums` + `stg_album_tracks`** — album exclusions

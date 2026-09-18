@@ -1,0 +1,15 @@
+version: 2
+
+# Raw tables written by the ingestion code (src/encore/ingestion/).
+# Declared as dbt sources so staging models reference them with
+# source(), not a hard-coded schema.table.
+sources:
+  - name: raw_setlistfm
+    schema: raw_setlistfm
+    description: >
+      EPHEMERAL. Truncated at the end of every pipeline run, so any model
+      reading it must be a view and only produces meaningful results
+      while a run is in progress (or against the dev fixture, see
+      dbt/README.md).
+    tables:
+      - name: setlists
