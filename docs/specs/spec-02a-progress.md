@@ -116,8 +116,27 @@ in the decisions log below.
       report "Nothing to do" and skip `on-run-start` hooks entirely
       since there are still zero models/seeds — the hook only actually
       fires once item 4+ gives dbt something to run.
-- [ ] **4. Seeds** — `dbt/seeds/seed_album_exclusions.csv` (5 rows from
-      Phase 0) and `dbt/seeds/seed_song_overrides.csv` (header only).
+- [x] **4. Seeds** — `dbt/seeds/seed_album_exclusions.csv` (5 rows) and
+      `dbt/seeds/seed_song_overrides.csv` (header only). The exclusion
+      titles are the exact strings from the Phase 0 notebook's
+      `ALBUNS_EXCLUIR` dict (not retyped from the spec's prose
+      descriptions, which are paraphrases — e.g. the spec says "Oasis
+      Manchester 1994" but the real MusicBrainz title is
+      `Definitely Maybe Tour - 1994-12-18 - Manchester Academy -
+      Homedown Showdown`); the Avenged Sevenfold one contains commas so
+      it's quoted in the CSV. `dbt_project.yml` now pins every seed
+      column to `text` explicitly: dbt infers seed types from the data,
+      so a title like "1984" would silently become an integer, and the
+      overrides seed is empty (header only) so inference has nothing to
+      work from.
+      **Verified for real**: `dbt seed` → `INSERT 5` and `INSERT 0`;
+      `information_schema` confirms every column is `text`; a join of
+      the exclusions against `raw_musicbrainz.albums` shows both Oasis
+      titles match exactly 1 real album each (the Muse/A7X/Metallica
+      ones show 0 only because those bands aren't loaded yet).
+      **Also resolved the item-3 pending note**: this `dbt seed` run is
+      the first one with something to run, and the `on-run-start` hook
+      fired for real (`1 of 1 OK hook: encore.on-run-start.0`).
 - [ ] **5. `dbt/README.md`** — how to run dbt locally and inside
       Airflow.
 - [ ] **6. `normalize_title(column)` macro** — `dbt/macros/`. Per

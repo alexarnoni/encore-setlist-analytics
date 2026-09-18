@@ -31,6 +31,21 @@ models:
 seeds:
   encore:
     +schema: staging
+    # Explicit text types: dbt infers seed column types from the data,
+    # so a title like "1984" or "21" would silently become an integer
+    # and break string matching against MusicBrainz titles. The overrides
+    # seed is also empty (header only), where inference has nothing to
+    # go on at all.
+    seed_album_exclusions:
+      +column_types:
+        band: text
+        album_title: text
+    seed_song_overrides:
+      +column_types:
+        band: text
+        raw_song_name: text
+        canonical_song_title: text
+        album_title: text
 
 # adjustment 3: CREATE EXTENSION needs superuser, which dbt's own
 # connection doesn't have — the extension itself is created by
