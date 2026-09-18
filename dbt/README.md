@@ -14,6 +14,10 @@ for what exists so far and the decisions behind it.
 | `models/analytics/` | `analytics` | **table** |
 | `seeds/` | `staging` | table (dbt seeds) |
 
+`models/staging/test_fixtures/` holds models that exist only to test
+macros (literal inputs, no raw data). They build as ordinary staging
+views; their tests live in `tests/`.
+
 Views for staging/intermediate are deliberate: they read
 `raw_setlistfm`, which is truncated at the end of every pipeline run, so
 they break harmlessly once that data is gone instead of holding a stale

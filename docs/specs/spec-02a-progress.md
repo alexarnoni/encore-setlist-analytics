@@ -157,12 +157,32 @@ in the decisions log below.
       and ran `debug`/`seed`/`run`/`test` through it: all exit 0, and
       `dbt/` contains only tracked files afterwards. (`run` and `test`
       exit 0 with "Nothing to do" until models exist in item 7.)
-- [ ] **6. `normalize_title(column)` macro** — `dbt/macros/`. Per
-      adjustment 4, dbt unit tests apply to models, not macros
-      directly: add a small test model applying the macro to fixed
-      input values (`dbt/models/staging/` or a dedicated test-fixture
-      model), covered by a dbt unit test, plus a singular test
-      comparing expected vs. actual normalized outputs.
+- [x] **6. `normalize_title(column)` macro** —
+      `dbt/macros/normalize_title.sql`. Per adjustment 4 there is no
+      `unit_tests:` block (those apply to models): the macro is exercised
+      by `dbt/models/staging/test_fixtures/test_normalize_title_cases.sql`
+      (25 literal inputs with hand-written expected outputs, plus the
+      macro's `actual_title`) and the singular test
+      `dbt/tests/assert_normalize_title_expected_outputs.sql`, which
+      returns any row where `actual_title is distinct from
+      expected_title` (`is distinct from` so NULL -> NULL compares
+      equal). The macro builds its expression one rule per Jinja
+      variable, in this order: lowercase+unaccent, apostrophes removed
+      without a space, `&` -> `and`, edition segments dropped, trailing
+      `feat.` clause dropped, remaining punctuation -> space,
+      whitespace collapsed. (My first version was one deeply nested
+      call and I miscounted the parentheses by hand — rewritten as
+      stepwise variables before it ever ran.)
+      **Verified for real, and the test itself verified**: `dbt run` +
+      `dbt test` passed; read back all 25 actual outputs from the view
+      (not just the pass/fail); then injected a regression (apostrophes
+      -> space instead of nothing) and confirmed the test FAILS with 5
+      rows, then restored the macro (`diff` against the backup empty)
+      and confirmed it passes again. Caveat found doing that: the two
+      `Rock 'n' Roll Star` cases still pass under the regression (the
+      extra space collapses to the same string), so they don't actually
+      discriminate the "no space" rule — the five other apostrophe
+      cases (`Don't` x2, `Editor's`, `What's`, `Ain't`) do.
 - [ ] **7. `stg_setlists`** — `dbt/models/staging/`.
 - [ ] **8. `stg_setlist_entries`** — medley split via
       `string_to_array` + `unnest WITH ORDINALITY`.
@@ -217,3 +237,30 @@ in the decisions log below.
   calling the macro directly via `dbt run-operation
   assert_unaccent_extension_exists`. Re-verify the hook fires as part
   of a normal `dbt run` once item 7 (`stg_setlists`) exists.
+  **Resolved during item 4**: the first `dbt seed` run had seeds to run
+  and the hook fired (`1 of 1 OK hook: encore.on-run-start.0`), and it
+  fires on every run since.
+- **2026-09-18** — **Interpretation call in `normalize_title` (item 6),
+  flagged rather than silently chosen.** R3.1 says to "strip suffixes
+  such as remastered, live, demo, edit, and `feat.` segments" while also
+  saying it implements "the Phase 0 rules" — but Phase 0's actual rule
+  (spec-01 R11.1(c)) deleted *all* bracketed content. Those two
+  readings conflict. I implemented the keyword-based one: only a
+  `(...)`/`[...]` group, or text after a `" - "`, that contains one of
+  `remaster(ed)|live|ao vivo|demo|edit|feat|ft|featuring|single|bonus|
+  NNNN version` (whole words) is dropped. Why: deleting every
+  parenthesis would turn `(What's the Story) Morning Glory?` into
+  `morning glory` and merge `Song (Part 1)` with `Song (Part 2)`. Cost:
+  a mismatch like `Morning Glory` (setlist.fm) vs `(What's the Story)
+  Morning Glory?` (MusicBrainz) is not fixed by normalization and must
+  show up in `mart_match_quality` and be fixed via
+  `seed_song_overrides.csv`. The keyword list is Phase 0's list plus
+  `demo` and `edit` from the spec. Cheap to flip if the 0.90 gate in
+  item 22 says recall is too low — but that is a call for review, per
+  the adjustment-5 stop rule, not for me to tune quietly.
+- **2026-09-18** — Test-fixture model placement (item 6): put
+  `test_normalize_title_cases` in `models/staging/test_fixtures/` so it
+  inherits the staging view config instead of adding a fourth layer
+  folder to `dbt_project.yml`. Consequence: it builds as a real view,
+  `staging.test_normalize_title_cases`, in the database on every full
+  `dbt run` (harmless — literal values only).
