@@ -316,10 +316,21 @@ afterward.
       the item 22 schema guard. All 12 pass against a real
       `postgres-test`; all 12 skip cleanly when it isn't running.
       Documented in `README.md`'s new "Integration tests" section.
-- [ ] **24. `README.md`** — summary, Mermaid architecture diagram, data
-      policy, local run instructions (including idempotent schema
-      creation and `ENCORE_BANDS_FILTER`), VM deploy steps, setlist.fm
-      attribution.
+- [x] **24. `README.md`** — expanded the minimal version from items 6/9
+      into the full R9 document: project summary, a Mermaid architecture
+      diagram (solid = built in spec-01, dashed = later specs — encore
+      pipeline DAG, dbt/marts/API/frontend), a "Data policy" section
+      condensed from `product.md` (ephemeral setlist.fm data, no
+      per-show pages, the `setlist_id`-in-`analytics` guard, mandatory
+      attribution — flagged as not yet implemented since there's no
+      frontend until spec 04), local run instructions (now mentioning
+      `ENCORE_BANDS_FILTER` and the Airflow UI), the existing schema
+      bootstrap and integration test sections, and a new "Deploying to
+      the VM" section (manual, per `tech.md`'s Oracle VM/port/SSH-tunnel
+      details — spec-01 explicitly leaves deploy automation for later).
+      Diagram syntax verified for real: rendered it with
+      `npx @mermaid-js/mermaid-cli` to a 27KB SVG with no errors, not
+      just eyeballed.
 - [ ] **25. First real run** — single band via `ENCORE_BANDS_FILTER`,
       verify all acceptance criteria (raw_setlistfm empty at the end,
       raw_musicbrainz populated without duplicates, no port on 0.0.0.0,
