@@ -216,8 +216,41 @@ in the decisions log below.
       value out of range: 2023-02-29` (the exact failure the macro
       exists to prevent), then restored it (`diff` identical) and
       confirmed green again.
-- [ ] **8. `stg_setlist_entries`** — medley split via
-      `string_to_array` + `unnest WITH ORDINALITY`.
+- [x] **8. `stg_setlist_entries`** — `dbt/models/staging/stg_setlist_entries.sql`;
+      the split lives in `dbt/macros/split_medley.sql` (a lateral
+      subquery over `string_to_array(..., ' / ')` +
+      `unnest ... WITH ORDINALITY`) so it can be tested in isolation.
+      Columns: R2.2's nine plus `medley_part`. Resolves open question 1
+      as proposed: every part of a medley keeps the original `position`
+      and `set_index`, and `medley_part` (1, 2, ...) tells siblings
+      apart — `(setlist_id, set_index, position, medley_part)` is a
+      unique key. Flags (`is_tape`/`is_cover`/`is_encore`) are
+      inherited by every part. `is_medley = part_count > 1`, with empty
+      pieces dropped *before* numbering, so `A /  / B` is a 2-part
+      medley numbered 1, 2 (no gap) and a trailing `Song / ` is a
+      1-part non-medley.
+      **Real data caveat, stated plainly: the Oasis data contains zero
+      medleys** (0 of 13,170 entries contain `" / "`), so the split
+      logic cannot be exercised on real rows. It is covered only by
+      the synthetic fixture `test_split_medley_cases` (11 inputs: plain,
+      2- and 3-part, whitespace, bare-slash `AC/DC`, empty piece,
+      trailing separator, keyword-looking title, `''`, blank, NULL) and
+      `assert_split_medley_expected_outputs`, which diffs actual against
+      hand-written expected rows in both directions. Also unverified:
+      that setlist.fm really uses `" / "` for medleys — that convention
+      comes from `product.md`, and no medley appears in this data to
+      confirm it. Worth checking when another band is loaded.
+      **Decision, flagged**: entries with an empty/blank name produce no
+      rows (they aren't identifiable songs). 3 of Oasis's 13,170 raw
+      entries; 2 of those 3 were `is_tape` and would have been excluded
+      from the KPIs anyway.
+      **Verified for real**: `dbt run` + `dbt test` green; read back all
+      13 fixture rows; reconciled against raw — 13,170 raw − 3 blank =
+      13,167 staging rows; tape 531 → 529 (exactly the 2 dropped tape
+      entries), cover 729 and encore 1,593 unchanged; 0 unique-key
+      violations; 0 rows whose name differs from the raw trimmed name.
+      Test verified: removed the empty-piece filter from the macro and
+      the test failed with 9 rows, restored (`diff` identical), green.
 - [ ] **9. `stg_albums` + `stg_album_tracks`** — album exclusions
       applied via anti-join against the seed.
 - [ ] **10. `stg_recordings`** — deduplicated by `normalize_title(title)`,

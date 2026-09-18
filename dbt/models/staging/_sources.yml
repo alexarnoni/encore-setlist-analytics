@@ -13,3 +13,4 @@ sources:
       dbt/README.md).
     tables:
       - name: setlists
+      - name: setlist_entries
