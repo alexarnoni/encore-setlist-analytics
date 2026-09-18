@@ -251,8 +251,45 @@ in the decisions log below.
       violations; 0 rows whose name differs from the raw trimmed name.
       Test verified: removed the empty-piece filter from the macro and
       the test failed with 9 rows, restored (`diff` identical), green.
-- [ ] **9. `stg_albums` + `stg_album_tracks`** — album exclusions
-      applied via anti-join against the seed.
+- [x] **9. `stg_albums` + `stg_album_tracks`** —
+      `dbt/models/staging/stg_albums.sql` (`release_group_mbid,
+      band_mbid, band, album_title, first_release_date, release_year`)
+      and `stg_album_tracks.sql` (`band, release_group_mbid,
+      album_title, album_release_year, recording_mbid, track_title,
+      track_title_normalized, track_position`). R2.3 doesn't list
+      columns for either; these are what items 12-13 need, with
+      `track_title_normalized` carried so the intermediate layer joins
+      without re-normalizing. Exclusions are a per-band anti-join
+      (`not exists`) against `seed_album_exclusions`, comparing
+      `normalize_title()` on BOTH sides per R3.2 — so a curly-vs-straight
+      apostrophe can't make an exclusion silently miss.
+      `stg_album_tracks` is an inner join to `stg_albums`, so an excluded
+      album's tracks go with it. New `dbt/macros/release_year.sql`
+      (MusicBrainz dates are `YYYY` / `YYYY-MM` / `YYYY-MM-DD` / NULL;
+      takes the first 4 digits when they look like a real year, else
+      NULL, never raises) — also used by item 10. `_sources.yml` now
+      declares `raw_musicbrainz.albums` and `album_tracks`.
+      **Addition beyond the plan, flagged**:
+      `dbt/tests/assert_album_exclusions_match_when_band_loaded.sql` —
+      fails if an exclusion for a band that IS loaded matches no album
+      (MusicBrainz renamed it, or a typo in the seed), which would
+      otherwise let the unwanted album flow into the marts with no
+      error. It skips bands with no albums loaded, so for
+      Muse/A7X/Metallica it is a no-op — not a pass — until their data
+      exists.
+      **Verified for real**: raw 9 albums → 7 in staging, and the two
+      excluded are exactly `Eden Project 2009` and the Manchester
+      Academy one; all 78 tracks kept (both excluded albums have 0
+      tracks in the raw data); 0 `release_year` mismatches against an
+      independent `left(first_release_date, 4)::int`; sample normalized
+      track titles read back (`Rock ’n’ Roll Star` → `rock n roll
+      star`). Because the real exclusions have no tracks, "an excluded
+      album's tracks drop with it" was NOT exercised by real data — so
+      I planted a temporary seed row `Oasis / Be Here Now` (12 tracks):
+      stg_albums 7 → 6, stg_album_tracks 78 → 66, 0 tracks of that album
+      left. Then planted a bogus `Oasis / Nonexistent Album` and the
+      guard test went red (1 row). Restored with `dbt seed` (5 seed
+      rows, 7 albums, 78 tracks) and the guard test is green again.
 - [ ] **10. `stg_recordings`** — deduplicated by `normalize_title(title)`,
       earliest `first_release_date` wins.
 - [ ] **11. Staging schema tests** — `not_null`/`accepted_values` in

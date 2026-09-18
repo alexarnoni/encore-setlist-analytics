@@ -14,3 +14,13 @@ sources:
     tables:
       - name: setlists
       - name: setlist_entries
+
+  - name: raw_musicbrainz
+    schema: raw_musicbrainz
+    description: >
+      PERSISTENT (MusicBrainz data is CC0). Survives between pipeline
+      runs; the ingestion re-fetches a band only when it is older than 30
+      days.
+    tables:
+      - name: albums
+      - name: album_tracks
