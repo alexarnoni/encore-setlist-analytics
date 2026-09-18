@@ -83,22 +83,28 @@ Non-negotiable, from [docs/context/product.md](docs/context/product.md):
 
 ```bash
 cp .env.example .env   # fill in real values, see comments in the file
-docker compose -f infra/docker-compose.yml --env-file .env up
+make up
 ```
 
-The `--env-file .env` is required, not optional: Docker Compose resolves
-the `${VAR}` placeholders in `infra/docker-compose.yml` (including the
-required-variable checks) against a `.env` file in the compose file's own
-directory (`infra/`) by default, not against the repo root where this
-project's `.env` actually lives. Without `--env-file .env`, `docker
-compose up` fails immediately with "variable is missing a value" even
-though `.env` exists one level up. Run every `docker compose` command
-for this project the same way, e.g.:
+`make up`/`down`/`ps`/`logs` (see the [Makefile](Makefile)) exist
+because Docker Compose resolves the `${VAR}` placeholders in
+`infra/docker-compose.yml` (including the required-variable checks)
+against a `.env` file in the compose file's own directory (`infra/`) by
+default, not against the repo root where this project's `.env` actually
+lives. Without an explicit `--env-file .env`, a bare `docker compose up`
+fails immediately with "variable is missing a value" even though `.env`
+exists one level up — the Makefile targets pass it consistently so
+nobody has to remember or retype the full invocation:
 
 ```bash
-docker compose -f infra/docker-compose.yml --env-file .env ps
-docker compose -f infra/docker-compose.yml --env-file .env down
+make ps
+make logs   # follow every service's logs; Ctrl-C to stop following
+make down
 ```
+
+Anything beyond these four (e.g. `--build`, `--profile test`, targeting
+a single service) still needs the full command — see "Deploying to the
+VM" and "Integration tests" below for examples.
 
 Once the stack is up, the Airflow UI is at http://localhost:8080
 (`AIRFLOW_WWW_USER_USERNAME`/`AIRFLOW_WWW_USER_PASSWORD` from `.env`).
@@ -195,9 +201,13 @@ nano .env
 docker compose -f infra/docker-compose.yml --env-file .env up -d --build
 ```
 
+`--build` (not covered by `make up`, which never rebuilds) forces a
+fresh image on first deploy and after any later `git pull`.
 `airflow/Dockerfile` needs no cross-compilation setup: its base image
 (`apache/airflow:3.3.2-python3.12`) is official and multi-arch, so a
 native `docker build` on the VM produces a working arm64 image directly.
+Once the image is built, `make up`/`make down`/`make ps`/`make logs`
+work the same way they do locally.
 
 Every port in `infra/docker-compose.yml` binds to `127.0.0.1` only
 (never `0.0.0.0`), matching the ports table in `tech.md`. Nginx on the
