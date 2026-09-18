@@ -141,7 +141,18 @@ metadatabase; triggerer `null` as expected, none configured);
 `airflow dags list-import-errors` → none (only `.gitkeep` in
 `airflow/dags/` so far). Stack torn down with `docker compose down`
 afterward.
-- [ ] **9. Airflow log cleanup** — logs older than 14 days removed.
+- [x] **9. Airflow log cleanup** — logic in `src/encore/log_cleanup.py`
+      (`delete_old_logs()`, pure filesystem function, no Airflow import
+      — covered by the fast unit suite, 6 tests: missing dir, age
+      threshold with a just-under-boundary case, default 14-day
+      constant, and empty-directory cleanup after deletion). Wrapped in
+      a separate daily DAG, `airflow/dags/log_cleanup.py`
+      (`schedule="@daily"`), rather than a task inside
+      `encore_pipeline` — log retention runs on its own cadence,
+      independent of the monthly ingestion schedule. Verified via a
+      live `DagBag` load in the built image: zero import errors,
+      correct daily cron schedule, one task
+      (`clean_airflow_logs`).
 - [x] **10. `src/encore/db.py`** — done together with item 6 above.
 - [x] **11. `src/encore/clients/musicbrainz.py`** — logic moved from
       `src/clients.py`, keeps disk cache (R3.3), rate limit, backoff,
