@@ -214,7 +214,7 @@ to Q1-Q9; the recommended defaults let work start without them.
 - [x] Plan approved (D1-D4, Q1-Q9 answered or defaults accepted) — section 4a
 - [x] T0 workspace and guardrails
 - [x] T1 synthetic histories
-- [ ] T2 `int_show_song_sets`
+- [x] T2 `int_show_song_sets`
 - [ ] T3 `int_show_pairs` + Jaccard test
 - [ ] T4 `mart_tour_rotation`
 - [ ] T5 `mart_band_rotation_by_year`
@@ -283,3 +283,37 @@ abandoned with duration 1 not censored); the oracle was right each time and the
 tests were corrected. Loaded into the spec-03 database through the raw tables:
 536 setlists and 3,793 entries (104 covers, 104 tape entries), equal to what
 the builders produce per band; the real database was not touched (0 raw rows).
+
+### T2 — `int_show_song_sets` (done)
+
+`dbt/models/intermediate/int_show_song_sets.sql` (view; `show_key`, band,
+`tour_name` with `Unknown tour`, `show_date`, `song_key`, `song_title`;
+distinct matched songs of dated shows), schema entry, singular tests
+`assert_int_show_song_sets_unique_key` and
+`assert_int_show_song_sets_only_catalog_songs` (checks against
+`int_song_catalog` directly, not through the flag the model uses), and
+`tests/spec03/` (DB-level tests against the oracle, opt-in with
+`SPEC03_DB_TESTS=1`, see `tests/spec03/conftest.py`).
+**Verified.** The set of every synthetic show equals the oracle's (536
+setlists; undated shows, unmatched titles, covers and tape absent; one row per
+show and song). Mutations, each restored: no `is_matched` filter (104 rows
+fail the catalog test and `not_null song_title`; oracle fails), no `distinct`
+(the repeated song in one show breaks uniqueness; oracle fails), undated shows
+kept (11 rows fail `not_null show_date`; oracle fails).
+**Performance finding (important).** The first version filtered
+`int_performances` directly with `where is_matched`. At the size of a real run
+(a generated dataset of about 7,000 setlists and 132,000 entries,
+`scripts/spec03/scale_data.sql`, isolated database) it took **over 240 s**
+(over 10 min in one measurement), against 4 s for `int_performances` without the
+filter: the filter makes Postgres reorder the joins and re-evaluate the
+`stg_setlists` view (date parsing) once per entry. The model now reads
+`int_performances` through a `materialized` CTE and filters afterwards:
+**6 s** at the same size. Every later spec-03 model reads `int_show_song_sets`
+rather than filtering `int_performances` itself.
+**Side finding on `master` (not touched):** the diagnostic report's
+`UNDATED_SONGS_SQL` (`where is_matched and release_year is null ...`) took
+**80 s** at that size (the other two report queries 2.9 s each), so the log
+report adds roughly 90 s to tomorrow's `transform`. Not a hang and not a
+correctness problem; a `materialized` CTE would remove it. Reported to the
+project owner instead of changed, since `master` is off limits until the
+checklist is done.

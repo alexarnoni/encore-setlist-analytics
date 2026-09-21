@@ -102,3 +102,34 @@ models:
         description: True when a seed_song_overrides row mapped this raw name.
         data_tests:
           - not_null
+
+  - name: int_show_song_sets
+    description: >
+      One row per show and distinct canonical catalog song (matched songs only,
+      no tape or covers), for shows with a usable date. show_key is the setlist
+      id: allowed here, never in `analytics`. A view over EPHEMERAL setlist.fm
+      data.
+    columns:
+      - name: show_key
+        data_tests:
+          - not_null
+      - name: band
+        data_tests:
+          - not_null
+      - name: tour_name
+        description: "'Unknown tour' when the show has no tour name."
+        data_tests:
+          - not_null
+      - name: show_date
+        data_tests:
+          - not_null
+      - name: song_key
+        description: >
+          Canonical song key (normalized title after override aliases), unique
+          per band in the catalog.
+        data_tests:
+          - not_null
+      - name: song_title
+        data_tests:
+          - not_null
+
