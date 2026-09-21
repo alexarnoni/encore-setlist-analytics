@@ -787,3 +787,11 @@ in the decisions log below.
   folder to `dbt_project.yml`. Consequence: it builds as a real view,
   `staging.test_normalize_title_cases`, in the database on every full
   `dbt run` (harmless — literal values only).
+
+- **2026-09-21** — Decision on the Arctic Monkeys rows left in
+  `raw_musicbrainz` by the item-20 incident: **keep them.** MusicBrainz
+  data is persistent by design and will be needed when all bands are
+  loaded; it does not affect the Oasis acceptance run because the marts
+  start from setlists. Working rule added to `CLAUDE.md`: pause
+  `encore_pipeline` before any manual task test and unpause only for a
+  deliberate full run.

@@ -19,3 +19,4 @@ Specs live in `docs/specs/`. Implement one spec at a time, only after the plan i
 - Every Docker image must support linux/arm64.
 - Run the tests before declaring a task done.
 - If something in a spec is ambiguous or conflicts with the context files, ask instead of guessing.
+- Pause encore_pipeline before any manual task test (airflow tasks test or similar) and unpause only for a deliberate full run.
