@@ -16,6 +16,8 @@ import subprocess
 from collections.abc import Sequence
 from pathlib import Path
 
+from encore.transform_report import log_transform_report
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_DBT_VENV = "/opt/dbt-venv"
@@ -152,11 +154,23 @@ def run_transform(*, executable: str | None = None) -> None:
 
     The first thing logged is which dbt project version this is (commit and
     content hash), so a run's log always says what code produced its marts.
+    The last is a diagnostic report (top undated catalog songs and top
+    unmatched titles per band) written to the log only, never stored.
 
     Not transactional: `dbt run` has already replaced the analytics tables
     by the time `dbt test` runs, so a failing test leaves the freshly built
     tables in place and fails the pipeline rather than rolling them back.
     """
     log_dbt_project_version()
-    for step in TRANSFORM_STEPS:
+    *build_steps, test_step = TRANSFORM_STEPS
+    for step in build_steps:
         run_dbt(step, executable=executable)
+    try:
+        run_dbt(test_step, executable=executable)
+    finally:
+        # After the tests, pass or fail: raw data is deleted right after
+        # this task, so this is the only chance to log which titles are
+        # behind the numbers (and a failing test is when they help most).
+        # Skipped if seed/run failed: the views may not be consistent.
+        # Best effort and log-only; see encore.transform_report.
+        log_transform_report()

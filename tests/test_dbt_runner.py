@@ -8,6 +8,12 @@ import pytest
 from encore import dbt_runner
 from encore.dbt_runner import DbtError, dbt_binary, run_dbt, run_transform
 
+@pytest.fixture(autouse=True)
+def _no_real_report(monkeypatch):
+    """The diagnostic report reads the database; unit tests must not."""
+    monkeypatch.setattr(dbt_runner, "log_transform_report", lambda *a, **k: None)
+
+
 # The "dbt" executable is the Python interpreter itself, so a command is a
 # real subprocess that we can make print or fail on demand, on any OS.
 PY = sys.executable
@@ -176,3 +182,49 @@ def test_run_transform_logs_the_version_before_any_dbt_step(monkeypatch):
     run_transform()
 
     assert events == ["version", ("seed", "--full-refresh"), ("run",), ("test",)]
+
+
+# --- diagnostic report after dbt test --------------------------------------
+
+
+def _record_calls(monkeypatch, fail_on=None):
+    events: list = []
+
+    def fake_run_dbt(command, **_):
+        events.append(tuple(command))
+        if fail_on is not None and tuple(command) == fail_on:
+            raise DbtError(command, 1)
+
+    monkeypatch.setattr(dbt_runner, "log_dbt_project_version", lambda *a, **k: events.append("version"))
+    monkeypatch.setattr(dbt_runner, "run_dbt", fake_run_dbt)
+    monkeypatch.setattr(dbt_runner, "log_transform_report", lambda *a, **k: events.append("report"))
+    return events
+
+
+def test_report_runs_after_dbt_test(monkeypatch):
+    events = _record_calls(monkeypatch)
+
+    run_transform()
+
+    assert events == ["version", ("seed", "--full-refresh"), ("run",), ("test",), "report"]
+
+
+def test_report_still_runs_when_dbt_test_fails_and_the_error_propagates(monkeypatch):
+    events = _record_calls(monkeypatch, fail_on=("test",))
+
+    with pytest.raises(DbtError):
+        run_transform()
+
+    assert events[-2:] == [("test",), "report"]
+
+
+@pytest.mark.parametrize("failing", [("seed", "--full-refresh"), ("run",)])
+def test_report_is_skipped_when_seed_or_run_fails(monkeypatch, failing):
+    events = _record_calls(monkeypatch, fail_on=failing)
+
+    with pytest.raises(DbtError):
+        run_transform()
+
+    assert "report" not in events
+    assert ("test",) not in events
+
