@@ -270,8 +270,10 @@ on the next full run.
       live marts (404 + 172 rows, 7 bands). Looked at both charts: the
       7-line chart has the legend upper left without covering data, one
       fixed colour per band, hollow markers for years with fewer than 3
-      shows (Metallica climbs to ~30 years in 2022-26, Oasis 2025 ~30,
-      the rest between 0 and ~16). The file contains no password, API key
+      shows. Yearly peak of the average age per band, from the marts:
+      Metallica 32.3 (2022; 25-32 in 2020-26), Oasis 30.1 (2025), Linkin
+      Park 15.7, Muse 14.6, Avenged Sevenfold 12.8, Arctic Monkeys 10.8,
+      Twenty One Pilots 7.8). The file contains no password, API key
       or forbidden column names. Note: the marts still reflect the run-2
       data, i.e. *Let There Be Love* at 2001 until the next run applies the
       seed fix. The scratch database used in R2-4 was dropped afterwards.
