@@ -763,13 +763,42 @@ in the decisions log below.
       an isolated point, since the line does not bridge 2010–2024. Not
       verified: rendering with more than one band (only Oasis is loaded);
       the colour/legend branch for several bands is untested.
-- [ ] **22. Acceptance run** — `ENCORE_BANDS_FILTER=Oasis`, full DAG
-      twice: `raw_setlistfm` empty, `mart_repertoire_age` populated,
-      second run idempotent (same mart contents except `computed_at`),
-      all dbt tests pass. Per adjustment 5: if
-      `match_rate_by_performance` for Oasis is below 0.90, list the
-      unmatched titles ordered by performance count and **stop for
-      review** — do not fill `seed_song_overrides.csv` unilaterally.
+- [x] **22. Acceptance run** — `ENCORE_BANDS_FILTER=Oasis` (passed with
+      `docker exec -e`, `.env` untouched), full DAG twice with
+      `airflow dags test` while `encore_pipeline` stayed **paused** (the
+      new CLAUDE.md rule; that command runs the graph in-process and
+      needs no unpause). Started from scratch: `raw_setlistfm` at 0 rows
+      and the `staging`/`intermediate`/`analytics` schemas dropped, so run
+      1 had to build everything.
+      | | Run 1 | Run 2 |
+      |---|---|---|
+      | tasks | all 8 ran, none failed | all 8 ran, none failed |
+      | dbt | seed 3/3, run 13/13, test 80 pass + 2 warn | same |
+      | `raw_setlistfm` after | 0 / 0 / 0 rows | 0 / 0 / 0 rows |
+      | `mart_repertoire_age` / `mart_match_quality` | 36 / 20 rows | 36 / 20 rows |
+      | `ops.pipeline_runs` | `success`, 48 setlist.fm requests, 0 MusicBrainz | same |
+      | `computed_at` | 17:08:03 | 17:10:17 |
+      **Idempotent:** md5 of both marts' content (every column except
+      `computed_at`) is identical between run 1 and run 2, and identical to
+      the checksums taken before the schemas were dropped in item 20.
+      **Match-rate gate (adjustment 5):** Oasis
+      `match_rate_by_performance` = 11,968 / 11,969 = **0.9999**, no year
+      below 0.90 — far above the 0.90 line, so no unmatched-title list was
+      needed and `seed_song_overrides.csv` stays empty (0 rows).
+      **All dbt tests pass:** 80 pass, 0 fail, plus the 2 warnings that are
+      by design (`release_year` NULL for 63 catalog songs with no dated
+      recording; 0 Oasis performances affected). pytest: 62 passed.
+      **Notebook** executed (scratch copy, outside the repo) against the
+      final marts with no errors; the committed `.ipynb` still has empty
+      outputs.
+      Quirk noted: for `airflow dags test` runs, `ops.pipeline_runs
+      .started_at` is the logical date (00:00) rather than the wall clock,
+      so these rows sort below same-day dev-fixture rows; `finished_at` is
+      correct. Cosmetic, only affects dev/test runs.
+      Data-policy end state: `raw_setlistfm` empty; nothing under
+      `analytics` carries setlist ids, dates, venues or titles (item 16's
+      test passes); no dev fixture left. setlist.fm requests used today:
+      97 (before) + 96 (two runs) = 193 of 1,300.
 
 ## Decisions log
 

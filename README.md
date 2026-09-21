@@ -26,11 +26,11 @@ flowchart LR
     EXMB --> RAWMB[("raw_musicbrainz\npersistent")]
 
     RAWSF --> VALIDATE["validate_raw"]
-    VALIDATE --> TRANSFORM["transform\n(dbt — spec 02)"]
+    VALIDATE --> TRANSFORM["transform\n(dbt seed / run / test)"]
     TRANSFORM --> CLEANUP["cleanup_raw_setlistfm\n(truncate, always runs)"]
     CLEANUP -.->|empties| RAWSF
 
-    TRANSFORM -.-> ANALYTICS[("analytics\npersistent marts — spec 02")]
+    TRANSFORM --> ANALYTICS[("analytics\npersistent marts")]
     ANALYTICS -.-> API["FastAPI — spec 04"]
     API -.-> FRONTEND["Cloudflare Pages — spec 04"]
 
@@ -39,7 +39,7 @@ flowchart LR
     style ANALYTICS fill:#dfd,stroke:#090
 ```
 
-Solid arrows are built (spec-01); dashed arrows are later specs. The
+Solid arrows are built (specs 01 and 02a); dashed arrows are later specs. The
 `encore_pipeline` DAG (`airflow/dags/encore_pipeline.py`) runs monthly:
 `truncate_raw_setlistfm_start → check_api_budget → extract_musicbrainz →
 extract_setlistfm → validate_raw → transform → cleanup_raw_setlistfm →
