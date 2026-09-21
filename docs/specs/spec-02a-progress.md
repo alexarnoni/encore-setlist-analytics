@@ -1,5 +1,13 @@
 # Spec 02a — Implementation progress
 
+> **STATUS: CLOSED — spec 02a accepted on 2026-09-21.** All 22 items are
+> done and the acceptance run passed (Oasis `match_rate_by_performance`
+> 0.9999, idempotent marts, `raw_setlistfm` empty, all dbt tests green).
+> This file is no longer edited. The two questions that were still open at
+> acceptance were decided afterwards (see the last two entries of the
+> decisions log) and the resulting follow-up work is tracked in
+> `docs/specs/spec-02a-followup-progress.md`.
+
 Tracks the approved plan for `docs/specs/spec-02a-first-kpi.md`. Updated
 and committed at the end of every task, marking items done and recording
 decisions made along the way (versions pinned, schema choices,
@@ -852,3 +860,21 @@ in the decisions log below.
   start from setlists. Working rule added to `CLAUDE.md`: pause
   `encore_pipeline` before any manual task test and unpause only for a
   deliberate full run.
+
+- **2026-09-21** — **Acceptance.** Item 22 reviewed by the project owner:
+  Oasis `match_rate_by_performance` 99.99%; spec 02a accepted and this
+  file closed.
+
+- **2026-09-21** — **The two open questions, decided at acceptance.**
+  (1) *Album-only match rate:* `match_rate_by_performance` stays the main
+  quality metric; `match_rate_by_album` is added to `mart_match_quality`
+  as a secondary, informational column. In future era KPIs, songs matched
+  to the catalog but not to a studio album form their own category
+  "non-album" instead of being dropped. (2) *Song release year:* repertoire
+  age uses the song's **first official release year** — the earlier of the
+  reference album's year and the recording's first-release-date; the
+  reference album stays the basis for era KPIs. A warn-level check lists
+  songs whose recording date is more than 2 years before the album year so
+  suspicious MusicBrainz dates can be reviewed and fixed through the
+  override seed. Both rules are recorded in `docs/context/product.md`;
+  implementation is tracked in `docs/specs/spec-02a-followup-progress.md`.
