@@ -39,6 +39,7 @@ Arctic Monkeys, Oasis, Linkin Park, Twenty One Pilots, Muse, Metallica, Avenged 
 - Era KPIs: songs matched to the catalog but not to a studio album (singles, B-sides, other recordings) form their own category, "non-album", instead of being dropped.
 - Song release year: repertoire age uses the song's first official release year, the earliest between the reference album's year and the recording's first release date. The reference album remains the basis for era KPIs.
 - Suspicious release dates: a warn-level check lists songs whose recording date is more than 2 years earlier than the album year, so the MusicBrainz dates can be reviewed and fixed through the override seed.
+- Known data limitations (for example Muse 1994-1995 matching poorly) are recorded in `docs/methodology.md`.
 
 ## Audience
 

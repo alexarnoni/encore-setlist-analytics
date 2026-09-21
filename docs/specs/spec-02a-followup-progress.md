@@ -140,3 +140,23 @@ commit per item, results recorded here.
       after each run); they rest on the shared, tested code.
 
 ## Log
+
+## Round 2 — after review of the full 7-band run
+
+Constraint for the whole round: no new pipeline run today (setlist.fm
+budget nearly spent: 1,205 of 1,300 used). Because `raw_setlistfm` is
+empty, `dbt run` / `dbt seed --full-refresh` are NOT run against the real
+`encore` database — they would rebuild the marts from nothing and wipe the
+only copy of the 7-band results. Items 1, 4 and 5 get their real-run check
+on the next full run.
+
+- [x] **R2-1. Override seed: *Let There Be Love* (Oasis) → 2005** — one row
+      in `seed_song_overrides.csv` (`Oasis,,Let There Be Love,,2005`): the
+      official release is *Don't Believe the Truth*; the 2001 recording is
+      not an official release. Checked: CSV has 5 fields per row, the
+      project parses, marts untouched (404 rows). Takes effect on the next
+      run's `dbt seed`; the audit list should then be empty.
+- [x] **R2-2. Muse 1994-1995 low match** recorded as an accepted known
+      limitation in the new `docs/methodology.md` (linked from
+      `product.md`). No data change.
+
