@@ -49,6 +49,11 @@ select
     count(distinct setlist_id) as shows,
     count(*) as performances,
     count(*) filter (where is_matched) as matched_performances,
+    -- Matched performances whose song has a release year: the ones that
+    -- actually entered the average below. matched_performances minus this
+    -- is the matched-but-undated share (recording-only songs whose
+    -- MusicBrainz recordings carry no date).
+    count(*) filter (where is_matched and age is not null) as aged_performances,
     round(count(*) filter (where is_matched)::numeric / count(*), 4) as match_rate,
     round((avg(age) filter (where is_matched and age is not null))::numeric, 4)
         as avg_repertoire_age,
