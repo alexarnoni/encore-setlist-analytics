@@ -226,4 +226,41 @@ on the next full run.
       marts inherit it) is not caught by it. On the real DB today the test
       is red for all 7 bands, by design (raw is empty, marts are full);
       documented in `dbt/README.md`.
+- [x] **R2-5. Dev volume for `./dbt` + dbt project version in the log.**
+      *Volume:* new `infra/docker-compose.dev.yml` (layered on the base file
+      by `make up-dev`) bind-mounts `./dbt` **read-only** over
+      `/opt/airflow/dbt` in the four Airflow services; the base file and the
+      Dockerfile `COPY` are unchanged, so production (`make up`) still runs
+      the image's copy. dbt writes only to `/tmp`, hence `:ro`. *Version
+      log:* `run_transform()` now logs, before any dbt step,
+      `dbt project: commit=<hash> content_sha=<hash> dir=...`. The commit
+      cannot come from git inside the image (`.git` is not copied), so the
+      Dockerfile takes `ARG DBT_GIT_COMMIT` -> `ENV ENCORE_DBT_COMMIT`
+      (the Makefile exports it as the last commit touching `dbt/`, plus
+      `-dirty` if `dbt/` has uncommitted changes; `make build` bakes it), and
+      `dbt_project_commit()` falls back to `git log` in a checkout, then to
+      `unknown`. I added a `content_sha` (hash of the project files, ignoring
+      `target/`, `logs/`, `.user.yml`) that was not asked for: with the mount
+      the commit is fixed at `up` time while files keep changing, so only the
+      content hash tells the truth. Also new: `make up-dev`, `make build`;
+      README and `dbt/README.md` updated (including the stale-image warning).
+      **Verified for real** (not via a pipeline run, which is barred today):
+      merged compose config shows the `:ro` mount and `ENCORE_DBT_COMMIT` for
+      the dev file and no dbt mount for the base file; image built with
+      commit `41527b1` and stack restarted with the dev file (DAG still
+      paused); inside the scheduler container the mount is `rw=false`, sees
+      29/29 test files, shows a probe file created on the host at once, and
+      refuses a write ("Read-only file system"); the real `run_transform()`
+      with dbt replaced by `/bin/echo` (so no database access) logs
+      `dbt project: commit=41527b1 content_sha=abc1257f845b` first, then the
+      three steps; the image alone, without the mount, logs the same commit
+      and the same `content_sha` (dev mount and image agree when in sync);
+      an uncommitted host file changes the content hash in the running
+      container (`abc1257f845b` -> `28946ee57564` -> back). Unit tests: 8 new
+      (fingerprint stability/ignored paths/missing dir, baked commit, git
+      fallback with a real temp repo, no-git, log fields, order in
+      `run_transform`); 4 mutations each caught. pytest 70 passed. Not
+      verified: `make` itself (not installed in this shell; its `DBT_GIT_COMMIT`
+      expression was run by hand) and the log line inside a real pipeline
+      run (tomorrow).
 

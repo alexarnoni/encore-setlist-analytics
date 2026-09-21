@@ -55,7 +55,12 @@ USER airflow
 # (re-downloading) dbt itself. Root-owned and read-only for the airflow
 # user, so everything dbt writes goes to /tmp instead of the project dir.
 COPY dbt/ /opt/airflow/dbt/
-ENV DBT_PROJECT_DIR=/opt/airflow/dbt \
+# Commit of the dbt project baked into this image, logged at the start of
+# every transform run. `unknown` unless passed at build time
+# (`make build`, or `DBT_GIT_COMMIT=$(git log -1 --format=%h -- dbt)`).
+ARG DBT_GIT_COMMIT=unknown
+ENV ENCORE_DBT_COMMIT=${DBT_GIT_COMMIT} \
+    DBT_PROJECT_DIR=/opt/airflow/dbt \
     DBT_PROFILES_DIR=/opt/airflow/dbt \
     DBT_TARGET_PATH=/tmp/dbt-target \
     DBT_LOG_PATH=/tmp/dbt-logs \

@@ -36,6 +36,9 @@ x-airflow-common:
   build:
     context: ..
     dockerfile: airflow/Dockerfile
+    args:
+      # Logged by the transform task; see airflow/Dockerfile.
+      DBT_GIT_COMMIT: ${DBT_GIT_COMMIT:-unknown}
   image: ${AIRFLOW_IMAGE_NAME:-encore-airflow:3.3.2}
   env_file:
     - ${ENV_FILE_PATH:-../.env}

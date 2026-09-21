@@ -1,0 +1,26 @@
+# LOCAL DEVELOPMENT ONLY. Never used on the VM.
+#
+# Layered on top of docker-compose.yml (`make up-dev`) to bind-mount the
+# repo's ./dbt over the copy baked into the Airflow image, so a change to a
+# model, macro, seed or test is seen by the next transform run without
+# rebuilding the image. Production uses docker-compose.yml alone and so the
+# COPY in airflow/Dockerfile: there the image is the deployed dbt project.
+#
+# Mounted read-only: dbt writes only to /tmp (DBT_TARGET_PATH/DBT_LOG_PATH).
+#
+# ENCORE_DBT_COMMIT is set from DBT_GIT_COMMIT at `up` time (the Makefile
+# exports it, with `-dirty` appended when dbt/ has uncommitted changes) or
+# falls back to `dev-mount`. It goes stale while you edit files, which is
+# why the transform task also logs a hash of the actual dbt/ contents.
+
+x-dbt-dev-mount: &dbt-dev-mount
+  volumes:
+    - ${AIRFLOW_PROJ_DIR:-..}/dbt:/opt/airflow/dbt:ro
+  environment:
+    ENCORE_DBT_COMMIT: ${DBT_GIT_COMMIT:-dev-mount}
+
+services:
+  airflow-init: *dbt-dev-mount
+  airflow-api-server: *dbt-dev-mount
+  airflow-scheduler: *dbt-dev-mount
+  airflow-dag-processor: *dbt-dev-mount

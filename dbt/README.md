@@ -119,11 +119,25 @@ task passes no flags.
   leave the old table shape in place. Full refresh drops and recreates
   the seed tables (and, through `CASCADE`, the views on top of them), so
   always follow it with a full `dbt run`, as the task does.
-- **Image contents.** Because `dbt/` is copied into the image, rebuild it
-  (`docker compose -f infra/docker-compose.yml --env-file .env up -d
-  --build`) after changing a model, macro or seed for the DAG to see the
-  change. The `docker run -v` function above mounts the directory instead,
-  which is why it needs no rebuild.
+- **Image contents.** `dbt/` is copied into the image, and that copy is what
+  runs in production. After changing a model, macro or seed, either rebuild
+  (`make build`, which also bakes the commit hash) or, **for local development
+  only**, start the stack with `make up-dev`: it bind-mounts `./dbt` read-only
+  over `/opt/airflow/dbt`
+  ([`infra/docker-compose.dev.yml`](../infra/docker-compose.dev.yml)), so the
+  next transform run sees your edits with no rebuild. A stack started with
+  plain `make up` uses the baked copy, and a stale image is an easy mistake
+  (it once ran the previous project's tests without anyone noticing): check
+  the version line below. The `docker run -v` function above mounts the
+  directory the same way.
+- **Which dbt project ran.** The first log line of every transform is
+  `dbt project: commit=<hash> content_sha=<hash> dir=...`. `commit` is the last
+  commit that touched `dbt/`, baked in at build time (`unknown` if the image
+  was built without it; `<hash>-dirty` means uncommitted changes at build/up
+  time). `content_sha` is a hash of the actual files, so it is the one to
+  trust with the dev mount, where files may have changed since the stack
+  started. To compare with the image, run the same function without the
+  mount; equal `content_sha` means equal project.
 
 ### Do not use `airflow tasks test` on an unpaused DAG
 

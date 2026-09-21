@@ -102,7 +102,15 @@ make logs   # follow every service's logs; Ctrl-C to stop following
 make down
 ```
 
-Anything beyond these four (e.g. `--build`, `--profile test`, targeting
+Two more targets exist for working on the dbt project. `make build`
+rebuilds the Airflow image (it bakes the current `dbt/` and its commit
+hash, logged at the start of every transform run). `make up-dev` starts
+the stack like `make up` but also bind-mounts `./dbt` read-only into the
+Airflow containers ([`infra/docker-compose.dev.yml`](infra/docker-compose.dev.yml)),
+so dbt changes take effect without a rebuild. **Local development only:**
+on the VM use `make up` (the image's copy of `dbt/` is what runs there).
+
+Anything beyond these (e.g. `--build`, `--profile test`, targeting
 a single service) still needs the full command — see "Deploying to the
 VM" and "Integration tests" below for examples.
 
