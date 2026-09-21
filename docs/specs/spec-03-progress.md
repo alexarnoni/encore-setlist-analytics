@@ -213,7 +213,7 @@ to Q1-Q9; the recommended defaults let work start without them.
 
 - [x] Plan approved (D1-D4, Q1-Q9 answered or defaults accepted) — section 4a
 - [x] T0 workspace and guardrails
-- [ ] T1 synthetic histories
+- [x] T1 synthetic histories
 - [ ] T2 `int_show_song_sets`
 - [ ] T3 `int_show_pairs` + Jaccard test
 - [ ] T4 `mart_tour_rotation`
@@ -255,3 +255,31 @@ models from the copied MusicBrainz data (4,843 catalog songs across the 7
 bands). The dbt and Python helpers only ever `docker run` from the current
 image; nothing is rebuilt or retagged.
 
+### T1 — synthetic histories, oracle and loader (done)
+
+`tests/support/histories.py` (deterministic builders, one band per scenario so
+results stay separable), `tests/support/oracle.py` (independent plain-Python
+oracle: Jaccard, consecutive pairs, tour rotation, yearly rotation, show index,
+literal "absent from the next N shows" abandonment, eligibility),
+`tests/support/db.py` (song pools from the real catalog, insert helpers, and a
+guard that **refuses any host other than `spec03-postgres`**),
+`scripts/spec03/load_synthetic.py`, `tests/test_spec03_synthetic.py`.
+Scenarios: Oasis (fixed / alternating / hand-computed overlap / short /
+no-tour tours, two undated shows, same-date shows, a repeated song, covers and
+tape and unmatched entries); Metallica (M72-like alternating sets across New
+Year, plus a steady tour); Muse (260 shows with a 12-year calendar hiatus and
+songs abandoned exactly at the window, one show short, censored, returning,
+played across the hiatus, with 2 performances, recording-only with and
+without a year); Arctic Monkeys (eligibility: 2 vs 3 performances, an undated
+third play, two plays in one show, recording-only songs); Linkin Park (150
+shows, seeded pseudo-random).
+**Verified.** 24 unit tests against hand-derived values (Overlap Tour mean
+Jaccard 109/210 from 3/5, 1/3, 1, 1/7; M72 Jaccard 1/5 with 5 core songs;
+yearly split 10 pairs in 2022 and 24 in 2023 with the steady tour; the Muse
+outcomes for N = 25, 50, 100 in a table). Writing them exposed three mistakes
+of mine in the *expectations* (the hiatus is 12.5 years not 15, the 5 songs
+common to both M72 sets are core, a song played once at show 7 of 100 is
+abandoned with duration 1 not censored); the oracle was right each time and the
+tests were corrected. Loaded into the spec-03 database through the raw tables:
+536 setlists and 3,793 entries (104 covers, 104 tape entries), equal to what
+the builders produce per band; the real database was not touched (0 raw rows).
