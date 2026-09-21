@@ -731,10 +731,38 @@ in the decisions log below.
       paused, then `raw_setlistfm` emptied by the failure run's cleanup.
       The pitfall is documented in `dbt/README.md`. Today's setlist.fm
       requests: 49 (fixture reload) + 48 (failure run) = 97 of 1,300.
-- [ ] **21. `notebooks/01_first_kpi.ipynb`** — reads only from
-      `analytics`; line chart (repertoire age by year per band), bar
-      chart (by tour for one band), match-quality table; outputs
-      cleared before commit.
+- [x] **21. `notebooks/01_first_kpi.ipynb`** — 4 code cells, outputs
+      cleared (0 outputs, 0 execution counts in the committed file).
+      Reads **only** `analytics.mart_repertoire_age` and
+      `analytics.mart_match_quality`: `read_analytics()` refuses any table
+      outside that whitelist, opens the connection with
+      `set_session(readonly=True)` and drops `computed_at`. Connects to
+      `127.0.0.1:5435` with `POSTGRES_USER`/`POSTGRES_PASSWORD` from `.env`
+      (host/port overridable with `ENCORE_DB_HOST`/`ENCORE_DB_PORT`).
+      (1) Line chart, average age by year, one line per band present; a
+      year's value is the tour averages weighted by `matched_performances`
+      (exact here: 0 matched performances lack an age), and the line
+      **breaks over years with no shows** instead of joining across the
+      2010–2024 gap. (2) Horizontal bars, average age by tour for `BAND`
+      (default Oasis), chronological; multi-year tours are one bar with the
+      year span in the label; `Unknown tour` is grey and last, described as
+      a pooled bucket, not a real tour. (3) Match-quality tables: totals
+      per band and the full band × year table (percent columns). Chart
+      style follows the dataviz skill: one fixed colour per band in project
+      band order (Oasis = orange even when alone), thin marks, recessive
+      grid, text in ink tokens, single series without a legend.
+      setlist.fm and MusicBrainz attribution links are in the intro.
+      **Verified for real.** Executed a *scratch copy* (outside the repo)
+      end to end against the live marts: no errors, both charts rendered
+      and inspected by eye. The tour bars (0.3, 1.0, 1.7, 4.5, 4.0, 5.3,
+      5.4, 4.0, 5.2, 6.1, 8.3, 30.0, Unknown 1.9) match an independent SQL
+      recomputation of the same weighted average from the mart; the tables
+      show Oasis 11,969 performances / 11,968 matched (99.99%) over 20
+      years. Headline of the chart: the average age climbs from ~0 (1991–94)
+      to ~10 in 2007, and the 2025 reunion tour averages **30.0** years —
+      an isolated point, since the line does not bridge 2010–2024. Not
+      verified: rendering with more than one band (only Oasis is loaded);
+      the colour/legend branch for several bands is untested.
 - [ ] **22. Acceptance run** — `ENCORE_BANDS_FILTER=Oasis`, full DAG
       twice: `raw_setlistfm` empty, `mart_repertoire_age` populated,
       second run idempotent (same mart contents except `computed_at`),
