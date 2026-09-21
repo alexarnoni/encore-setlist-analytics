@@ -47,7 +47,10 @@ log_run`, with `cleanup_raw_setlistfm` and `log_run` set to
 `trigger_rule=all_done` so raw setlist.fm data is deleted (and the run
 is logged) even when an earlier task fails. A separate daily DAG,
 `airflow/dags/log_cleanup.py`, removes Airflow's own log files older
-than 14 days.
+than 7 days. It is the one DAG created active rather than paused: task logs
+can contain setlist.fm titles (the transform's diagnostic report, see
+[dbt/README.md](dbt/README.md)), so their deletion must not depend on
+anyone remembering to unpause it.
 
 ## Data policy
 

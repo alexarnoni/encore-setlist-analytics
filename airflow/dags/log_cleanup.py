@@ -30,6 +30,10 @@ LOGS_DIR = Path(os.environ.get("AIRFLOW_LOGS_DIR", "/opt/airflow/logs"))
     catchup=False,
     max_active_runs=1,
     tags=["encore", "maintenance"],
+    # Unlike every other DAG (created paused, docker-compose.yml), this one
+    # must be active from the start, everywhere: it is what deletes task logs
+    # that may contain setlist.fm titles (transform diagnostic report).
+    is_paused_upon_creation=False,
 )
 def log_cleanup():
     @task

@@ -10,7 +10,10 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-MAX_LOG_AGE_DAYS = 14
+# 7 days (spec-01 R1.6 said 14; changed 2026-09-21). Task logs can hold
+# setlist.fm titles, from the transform's diagnostic report, so they are not
+# kept longer than needed to debug a failed run.
+MAX_LOG_AGE_DAYS = 7
 
 
 def delete_old_logs(logs_dir: Path, max_age_days: int = MAX_LOG_AGE_DAYS) -> list[Path]:
