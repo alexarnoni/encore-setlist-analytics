@@ -1,11 +1,11 @@
 """Encore monthly ingestion pipeline (spec-01 R6).
 
 Loads MusicBrainz discography (persistent) and each band's full
-setlist.fm history (ephemeral) into PostgreSQL, validates the load, and
-truncates raw_setlistfm — both at the start (so a previous run's
-leftovers never leak into this run's validation) and at the end, with
-trigger_rule=all_done so it also runs when an earlier task fails
-(adjustment 6).
+setlist.fm history (ephemeral) into PostgreSQL, validates the load, builds
+the analytics marts with dbt (spec-02a), and truncates raw_setlistfm — both
+at the start (so a previous run's leftovers never leak into this run's
+validation) and at the end, with trigger_rule=all_done so it also runs when
+an earlier task fails (adjustment 6).
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ from encore.clients.musicbrainz import MusicBrainzClient
 from encore.clients.setlistfm import SetlistFmClient
 from encore.config import Band, load_bands
 from encore.db import ensure_schemas, get_connection
+from encore.dbt_runner import DbtError, run_transform
 from encore.ingestion import musicbrainz as mb_ingestion
 from encore.ingestion import setlistfm as sf_ingestion
 
@@ -49,7 +50,7 @@ def _filtered_bands() -> list[Band]:
     start_date=datetime(2026, 1, 1),
     catchup=False,
     max_active_runs=1,
-    tags=["encore", "ingestion"],
+    tags=["encore", "ingestion", "dbt"],
 )
 def encore_pipeline():
     @task
@@ -130,7 +131,18 @@ def encore_pipeline():
 
     @task
     def transform() -> bool:
-        logger.info("dbt run pending spec 02")
+        """
+        Build the marts with dbt (spec-02a R8): seed, run, test.
+
+        Runs after validation and before cleanup, while raw_setlistfm still
+        holds this run's data. A dbt failure raises AirflowFailException
+        (no retry: the same data would fail the same way), which fails the
+        run; cleanup_raw_setlistfm still executes (trigger_rule=all_done).
+        """
+        try:
+            run_transform()
+        except DbtError as exc:
+            raise AirflowFailException(str(exc)) from exc
         return True
 
     @task(trigger_rule=TriggerRule.ALL_DONE)

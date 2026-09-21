@@ -93,11 +93,44 @@ Notes on the invocation:
 
 ## Running dbt inside Airflow
 
-Not wired up yet — the `transform` task in `encore_pipeline` is still a
-placeholder. Spec-02a items 19–20 copy this directory into the image
-(`/opt/airflow/dbt`) and replace the placeholder with `dbt seed`,
-`dbt run` and `dbt test`, run before `cleanup_raw_setlistfm` in the same
-DAG run. This section will describe the final behaviour once that lands.
+The `transform` task of `encore_pipeline` runs `dbt seed`, `dbt run` and
+`dbt test`, in that order, using the copy of this directory baked into the
+image (`/opt/airflow/dbt`, see `airflow/Dockerfile`). It executes after
+`validate_raw` and before `cleanup_raw_setlistfm`, in the same DAG run, so
+raw setlist.fm data is still there when dbt reads it. The code lives in
+`src/encore/dbt_runner.py`; the image's `DBT_*` environment variables
+select the project, profile, output paths and turn off colors, so the
+task passes no flags.
+
+- **Logs.** dbt's output is streamed line by line into the Airflow task
+  log (each line prefixed `[dbt]`), so it is visible while the task runs.
+- **Failure.** If any of the three commands exits non-zero, the task
+  fails immediately with `AirflowFailException` (no retry — the same data
+  would fail the same way) and the later steps do not run.
+  `cleanup_raw_setlistfm` and `log_run` have `trigger_rule=all_done`, so
+  they still run: raw data is deleted and the run is logged as `failed`.
+- **Not transactional.** `dbt run` replaces the `analytics` tables before
+  `dbt test` checks them. A failing test fails the pipeline but does not
+  roll the new tables back.
+- **Seeds run every time.** `dbt seed` is idempotent and takes well under
+  a second here, so it is not skipped when the CSVs are unchanged.
+- **Image contents.** Because `dbt/` is copied into the image, rebuild it
+  (`docker compose -f infra/docker-compose.yml --env-file .env up -d
+  --build`) after changing a model, macro or seed for the DAG to see the
+  change. The `docker run -v` function above mounts the directory instead,
+  which is why it needs no rebuild.
+
+### Do not use `airflow tasks test` on an unpaused DAG
+
+`airflow tasks test` looks like it runs one task in isolation, but in
+Airflow 3 it creates a temporary DagRun in the metadata database, and a
+running scheduler executes the *real* tasks of that run — starting with
+`truncate_raw_setlistfm_start` (which empties `raw_setlistfm`, including
+any dev fixture) and `extract_musicbrainz` (which makes real MusicBrainz
+requests). `encore_pipeline` is created paused (`docker-compose.yml`), so
+keep it paused when testing tasks this way:
+
+    docker exec infra-airflow-scheduler-1 airflow dags pause encore_pipeline
 
 ## Local development data
 

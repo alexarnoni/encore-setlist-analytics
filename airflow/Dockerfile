@@ -59,4 +59,5 @@ ENV DBT_PROJECT_DIR=/opt/airflow/dbt \
     DBT_PROFILES_DIR=/opt/airflow/dbt \
     DBT_TARGET_PATH=/tmp/dbt-target \
     DBT_LOG_PATH=/tmp/dbt-logs \
-    DBT_SEND_ANONYMOUS_USAGE_STATS=false
+    DBT_SEND_ANONYMOUS_USAGE_STATS=false \
+    DBT_USE_COLORS=false

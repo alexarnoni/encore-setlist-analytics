@@ -675,11 +675,62 @@ in the decisions log below.
       was fully cached (1.3 s) because nothing else changed. The running
       Airflow containers still use the old image until recreated (done in
       item 20).
-- [ ] **20. Real `transform` task in `encore_pipeline`** — replaces the
-      placeholder with `dbt seed`/`run`/`test` via
-      `/opt/dbt-venv/bin/dbt`, before `cleanup_raw_setlistfm`; a dbt
-      failure fails the task/DAG, cleanup still runs
-      (`trigger_rule=all_done`, unchanged).
+- [x] **20. Real `transform` task in `encore_pipeline`** —
+      `src/encore/dbt_runner.py` (`run_dbt`, `run_transform`, `DbtError`)
+      runs `dbt seed`, `dbt run`, `dbt test` in order via
+      `/opt/dbt-venv/bin/dbt`, streaming stdout+stderr line by line
+      through `logging` (prefix `[dbt]`) so it appears in the Airflow task
+      log live (R8.4). The `transform` task in
+      `airflow/dags/encore_pipeline.py` calls it and turns `DbtError` into
+      `AirflowFailException` (no retry: same data, same failure). Position
+      in the graph and `trigger_rule=all_done` on cleanup/log_run are
+      unchanged; `log_run` already treats a missing `transform` result as
+      a failed run. The logic sits in `src/` (not in the DAG file) so it
+      is unit-testable without Airflow. `DBT_USE_COLORS=false` was added to
+      the image `ENV` so logs carry no ANSI codes (0 escape characters
+      found in a real task log). `dbt seed` runs on every transform, not
+      only when CSVs change (open question 2, as proposed).
+      `dbt/README.md` "Running dbt inside Airflow" rewritten (behaviour,
+      not-transactional caveat, image needs rebuild after model edits).
+      **Verified for real.**
+      (1) *Unit tests:* 7 new (62 total). Mutations: ignoring the exit
+      code → 2 fail; run before seed → 2 fail; dropping the stderr merge →
+      1 fails; all restored.
+      (2) *In Airflow, success path, real Oasis data:* dropped the
+      `staging`/`intermediate`/`analytics` schemas, then ran only the
+      `transform` task → seed 3/3, run 13/13, test 80 pass + 2 warn (the
+      same two by-design warnings); both marts came back with **identical
+      content checksums** to before the drop (36 and 20 rows), and the raw
+      table's physical file was untouched (not truncated).
+      (3) *Failure path, single task:* dbt pointed at a nonexistent
+      project → task state `failed` with `AirflowFailException`, dbt's own
+      error text in the log, `run`/`test` never started.
+      (4) *Failure path, whole graph (real run, Oasis, dbt sabotaged):*
+      `airflow dags test` → `transform` failed, **`cleanup_raw_setlistfm`
+      ran right after and `log_run` last**; afterwards `raw_setlistfm` has
+      0 rows in all three tables and `ops.pipeline_runs` has the run as
+      `failed` (48 setlist.fm requests). This is R8.3 exercised end to end.
+      **Incident while verifying — please read.** My first attempt used
+      `airflow tasks test … transform` with `encore_pipeline` *unpaused*
+      (left unpaused since spec 01). In Airflow 3 that creates a temporary
+      DagRun in the metadata DB and the running scheduler executed its
+      real tasks: `truncate_raw_setlistfm_start` **wiped the dev fixture**
+      (so my first "rebuild" ran on empty raw data — marts had 0 rows and
+      the checksums differed, which is how I noticed), `check_api_budget`,
+      and `extract_musicbrainz`. `extract_setlistfm` never ran, so no
+      setlist.fm quota was spent. Side effect that remains:
+      **`raw_musicbrainz` now also holds Arctic Monkeys** (7 albums, 80
+      album tracks, 1,123 recordings, one `loaded_at` for all rows, so it
+      looks like an atomic per-band load); the run was interrupted before
+      any other band. Those are CC0 MusicBrainz rows in the persistent
+      schema, but they are an unplanned change to the dev DB — left in
+      place pending your call (harmless for the Oasis marts: rows are keyed
+      by band). Fixes: `encore_pipeline` is now **paused** (the compose
+      default), the dev fixture was reloaded (958 setlists / 13,170
+      entries, 49 requests) and everything above was redone with the DAG
+      paused, then `raw_setlistfm` emptied by the failure run's cleanup.
+      The pitfall is documented in `dbt/README.md`. Today's setlist.fm
+      requests: 49 (fixture reload) + 48 (failure run) = 97 of 1,300.
 - [ ] **21. `notebooks/01_first_kpi.ipynb`** — reads only from
       `analytics`; line chart (repertoire age by year per band), bar
       chart (by tour for one band), match-quality table; outputs
