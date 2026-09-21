@@ -5,7 +5,8 @@
 -- song title (enforced by a singular test, R7.2).
 --
 -- Rules
--- * A performance's repertoire age is show_year - release_year, and a
+-- * A performance's repertoire age is show_year - release_year (the song's
+--   first official release year, product.md), and a
 --   NEGATIVE age (the song was played before its release year, i.e. new
 --   material at that show) is clamped to 0. Decision recorded in
 --   spec-02a-progress.md item 13/14: the KPI asks whether a band bets on

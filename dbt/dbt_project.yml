@@ -46,6 +46,7 @@ seeds:
         raw_song_name: text
         canonical_song_title: text
         album_title: text
+        first_release_year: text
 
 # adjustment 3: CREATE EXTENSION needs superuser, which dbt's own
 # connection doesn't have — the extension itself is created by

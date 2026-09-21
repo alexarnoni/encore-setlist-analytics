@@ -19,9 +19,16 @@ logger = logging.getLogger(__name__)
 DEFAULT_DBT_VENV = "/opt/dbt-venv"
 
 # The dbt steps of one transform, in order. `seed` runs on every transform
-# rather than only when the CSVs changed: it is idempotent and takes well
-# under a second for two small files (spec-02a open question 2).
-TRANSFORM_STEPS: tuple[tuple[str, ...], ...] = (("seed",), ("run",), ("test",))
+# rather than only when the CSVs changed: it takes well under a second for
+# two small files (spec-02a open question 2). It uses --full-refresh because
+# a plain `dbt seed` only truncates and reloads an existing table and never
+# adds a column: after a seed gained a column it would "load" fine (0 rows
+# when the seed is header-only) yet leave the table without it.
+TRANSFORM_STEPS: tuple[tuple[str, ...], ...] = (
+    ("seed", "--full-refresh"),
+    ("run",),
+    ("test",),
+)
 
 
 class DbtError(RuntimeError):

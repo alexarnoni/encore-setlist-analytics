@@ -9,8 +9,9 @@ models:
   - name: mart_repertoire_age
     description: >
       Average repertoire age by band, tour and year. Repertoire age of a
-      performance is show_year minus the song's release year, with a
-      negative value (song played before its release year) clamped to 0.
+      performance is show_year minus the song's first official release year
+      (the earlier of its album's year and its recording's first-release
+      year), with a negative value (song played before its release year) clamped to 0.
       Only matched, non-tape, non-cover performances with a known year
       enter the average. Rebuilt from scratch on every run;
       computed_at is the only column expected to differ between two

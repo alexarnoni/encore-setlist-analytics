@@ -60,7 +60,7 @@ def test_run_transform_runs_seed_run_test_in_order(monkeypatch):
 
     run_transform()
 
-    assert calls == [("seed",), ("run",), ("test",)]
+    assert calls == [("seed", "--full-refresh"), ("run",), ("test",)]
 
 
 def test_run_transform_stops_at_the_first_failing_step(monkeypatch):
@@ -76,4 +76,4 @@ def test_run_transform_stops_at_the_first_failing_step(monkeypatch):
     with pytest.raises(DbtError):
         run_transform()
 
-    assert calls == [("seed",), ("run",)]  # `test` never ran
+    assert calls == [("seed", "--full-refresh"), ("run",)]  # `test` never ran

@@ -93,8 +93,8 @@ Notes on the invocation:
 
 ## Running dbt inside Airflow
 
-The `transform` task of `encore_pipeline` runs `dbt seed`, `dbt run` and
-`dbt test`, in that order, using the copy of this directory baked into the
+The `transform` task of `encore_pipeline` runs `dbt seed --full-refresh`,
+`dbt run` and `dbt test`, in that order, using the copy of this directory baked into the
 image (`/opt/airflow/dbt`, see `airflow/Dockerfile`). It executes after
 `validate_raw` and before `cleanup_raw_setlistfm`, in the same DAG run, so
 raw setlist.fm data is still there when dbt reads it. The code lives in
@@ -112,8 +112,13 @@ task passes no flags.
 - **Not transactional.** `dbt run` replaces the `analytics` tables before
   `dbt test` checks them. A failing test fails the pipeline but does not
   roll the new tables back.
-- **Seeds run every time.** `dbt seed` is idempotent and takes well under
-  a second here, so it is not skipped when the CSVs are unchanged.
+- **Seeds run every time, with `--full-refresh`.** They are two tiny
+  tables, so nothing is skipped when the CSVs are unchanged. A plain
+  `dbt seed` only truncates and reloads an existing table and never adds
+  a column, so after a seed gains a column it would report success and
+  leave the old table shape in place. Full refresh drops and recreates
+  the seed tables (and, through `CASCADE`, the views on top of them), so
+  always follow it with a full `dbt run`, as the task does.
 - **Image contents.** Because `dbt/` is copied into the image, rebuild it
   (`docker compose -f infra/docker-compose.yml --env-file .env up -d
   --build`) after changing a model, macro or seed for the DAG to see the
@@ -131,6 +136,28 @@ requests). `encore_pipeline` is created paused (`docker-compose.yml`), so
 keep it paused when testing tasks this way:
 
     docker exec infra-airflow-scheduler-1 airflow dags pause encore_pipeline
+
+## Reviewing and fixing release dates
+
+A song's release year is its **first official release year**: the earlier
+of the reference album's year and the earliest MusicBrainz recording's
+year. A wrong (too early) recording date therefore makes a song look
+older than it is. `intermediate.int_song_release_date_audit` lists songs
+whose recording is more than 2 years before the album; the warn-level test
+`assert_song_recording_date_not_far_before_album` reports how many:
+
+    select * from intermediate.int_song_release_date_audit;
+
+To settle one, add a row to `seeds/seed_song_overrides.csv` with only
+`band`, `canonical_song_title` and `first_release_year` (leave
+`raw_song_name` and `album_title` blank), e.g.
+
+    Oasis,,Let There Be Love,,2005
+
+The year replaces the computed one, `release_year_fixed` becomes true and
+the song leaves the audit list. Tests reject a malformed or implausible
+year, two different years for one song, and a title that is not in that
+band's catalog.
 
 ## Local development data
 

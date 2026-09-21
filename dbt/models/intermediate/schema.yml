@@ -26,13 +26,24 @@ models:
           catalog_source = 'recording' (no album has it).
       - name: release_year
         description: >
-          From the reference album for 'album' / 'override', from the
-          earliest recording for 'recording'. NULL when there is no usable
-          date — such a song can be matched but has no age.
+          The song's first official release year: the earlier of the
+          reference album's year and the recording's first-release year,
+          unless a seed fix (first_release_year) sets it. NULL when there
+          is no usable date — such a song can be matched but has no age.
         data_tests:
           - not_null:
               config:
                 severity: warn
+      - name: album_year
+        description: Year of the reference album. NULL for 'recording'.
+      - name: recording_year
+        description: >
+          Earliest recording year in MusicBrainz for the song; NULL when
+          there is no dated recording.
+      - name: release_year_fixed
+        description: True when release_year came from a seed fix.
+        data_tests:
+          - not_null
       - name: catalog_source
         data_tests:
           - not_null
