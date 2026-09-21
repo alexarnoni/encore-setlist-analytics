@@ -4,9 +4,11 @@ Tracks `docs/specs/spec-03-rotation-survival.md` (rotation and song survival).
 Same discipline as spec 01 and 02a: small tasks, one commit each, results
 recorded here.
 
-> **STATUS: PLAN — awaiting approval. No code has been written.** Work happens
-> only on the branch `spec-03`. Nothing below is started until the design
-> points (D1-D4) and open questions (Q1-Q9) are answered.
+> **STATUS: PLAN APPROVED 2026-09-21 — implementation of T0-T13 in progress.**
+> Work happens only on the branch `spec-03`, in the worktree
+> `D:\projetos\encore-spec03`. T14 (merge and real-data run) waits for the
+> main branch's next full run and its checklist. The running main stack,
+> its image and containers are not touched.
 
 ## 1. Guardrails
 
@@ -87,7 +89,8 @@ them. `computed_at` is set by the module.
 ## 4. Open questions (answer before the tasks that depend on them)
 
 Each has a recommended default so work can start; a different answer costs a
-small change, not a redesign.
+small change, not a redesign. **The final answers are in section 4a; where they
+differ from the defaults below (Q1, Q2, Q3, Q4, Q5), 4a wins.**
 
 | # | Question | Recommended default | Affects |
 |---|---|---|---|
@@ -106,6 +109,51 @@ debut-album songs censored, N-window results not drastically different) can
 only be judged on **real data**, i.e. after the branch is merged and a full
 pipeline run has produced the marts (T14). Until then the plan proves the
 *mechanics* with synthetic histories whose answers are known by construction.
+
+## 4a. Decisions (approved 2026-09-21) — these win over the defaults in section 4
+
+- **D1-D4 approved** as proposed. D2: worktree `D:\projetos\encore-spec03`
+  (branch `spec-03`); the main directory stays on `master`. D3: branch image
+  tag `encore-airflow:spec-03`. **Refinement of the disposable database
+  (T0):** instead of creating a database inside the running stack's Postgres,
+  spec-03 gets its **own container** `spec03-postgres` (own Docker network,
+  published on `127.0.0.1:5446` only). From inside it the real `postgres`
+  service is not even resolvable, so no dev command can reach the real
+  database by accident. The database is called `encore`, so the unchanged
+  dbt profile and `encore.db` work by only changing `POSTGRES_HOST`.
+- **Q1 / Q2 (changed from the default).** Duration is measured **in band
+  shows from the live debut to the last appearance before the gap,
+  inclusive**: `last_index - debut_index + 1`, so a song played in one show
+  has duration 1. A censored song uses the same rule up to the end of the
+  history: `total_shows - debut_index + 1`. Abandonment: **absent from the
+  next N shows** (N = 25, 50, 100) after an appearance, all inside the
+  history: an internal gap of `>= N` shows, or `total_shows - last_index >= N`
+  at the tail; otherwise censored. Only the first abandonment counts; the
+  song is flagged `returned_after_abandonment` if it appears again.
+- **Q3.** A pair belongs to the **year of its second show**. Tours excluded
+  for fewer than 5 shows are excluded from the yearly mart as well.
+- **Q4 / Q5 (for now, revisit after the next run's numbers).** Survival
+  eligibility: at least 3 performances **and** the song is matched to a
+  studio album (`reference_album` not null) **or** to a recording that has a
+  release year (`release_year` not null). Recording-only songs without a
+  release year are not eligible. Recording-only songs with a year are
+  eligible under the album label `non-album`. Jams, solos and other generic
+  entries are included as they are (no filter); recorded as a limitation.
+  *Rotation is unaffected:* setlist sets contain every matched song, as the
+  spec says.
+- **Q6-Q9 (recommended defaults, accepted).** Q6: no minimum group size in
+  the marts (they carry `songs`); the notebook draws only albums with at
+  least 5 songs. Q7: the time grid is the Kaplan-Meier timeline (event and
+  censoring times) plus `t = 0`. Q8: same-date shows are ordered by
+  `setlist_id`, shows without a date are left out of pairs and of the show
+  index. Q9: eligibility counts performances, durations use distinct shows.
+- **Conventions fixed while planning.** "Performances" of a song means its
+  matched performances in shows with a known date (the same population as the
+  show sets), so the reconciliation test (req. 15) and the module use one
+  definition. The album label `non-album` is used in `mart_song_survival`
+  too (not only in the curves), so the marts join on the same label. The
+  survival module derives eligibility from the raw counts in Python while the
+  reconciliation test re-derives it in SQL, so the test is not a tautology.
 
 ## 5. Ordered tasks
 
@@ -163,8 +211,8 @@ to Q1-Q9; the recommended defaults let work start without them.
 
 ## 7. Checklist
 
-- [ ] Plan approved (D1-D4, Q1-Q9 answered or defaults accepted)
-- [ ] T0 workspace and guardrails
+- [x] Plan approved (D1-D4, Q1-Q9 answered or defaults accepted) — section 4a
+- [x] T0 workspace and guardrails
 - [ ] T1 synthetic histories
 - [ ] T2 `int_show_song_sets`
 - [ ] T3 `int_show_pairs` + Jaccard test
@@ -186,3 +234,24 @@ to Q1-Q9; the recommended defaults let work start without them.
   (it had been dropped in the repository root) and committed on `master`
   (docs only) so that the branch starts from it. The `spec-03` branch was
   created from it; the plan is the first thing committed on the branch.
+
+## 9. Task log
+
+### T0 — workspace and guardrails (done)
+
+Worktree `D:\projetos\encore-spec03` on `spec-03`; `.env` copied in (gitignored).
+`scripts/spec03/env.sh` (helpers `s3psql`, `s3dbt`, `s3py`, `s3hostenv`),
+`up.sh` (starts or resets the isolated Postgres, copies the real MusicBrainz
+tables read-only through a throwaway `pg_dump` container, creates the empty
+`raw_setlistfm` tables with the project's own DDL) and `down.sh`;
+`.spec03-local/` (the cached MusicBrainz dump) is gitignored.
+**Verified.** Snapshot of the main stack before and after: identical image id
+(`0d38653fa85a`), container ids and creation times, main directory on `master`
+with a clean tree, no DAG import errors, real marts still 404 rows. From a
+container on the spec-03 network the real `postgres` service is not
+resolvable, while `spec03-postgres` is; `dbt debug` connects to it
+(`host: spec03-postgres`) and `dbt seed` + `dbt run` build all 14 existing
+models from the copied MusicBrainz data (4,843 catalog songs across the 7
+bands). The dbt and Python helpers only ever `docker run` from the current
+image; nothing is rebuilt or retagged.
+

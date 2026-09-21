@@ -42,3 +42,6 @@ dbt_packages/
 
 # Generated reports (executed notebooks, aggregated data only; never committed)
 reports/
+
+# spec-03 local dev artifacts (MusicBrainz dump cache)
+.spec03-local/
