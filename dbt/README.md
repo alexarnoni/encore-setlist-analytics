@@ -151,6 +151,31 @@ keep it paused when testing tasks this way:
 
     docker exec infra-airflow-scheduler-1 airflow dags pause encore_pipeline
 
+## End-of-run diagnostic lists (task log only)
+
+After `dbt test` (pass or fail; skipped if `seed` or `run` failed) the
+`transform` task logs, per band, a summary and two lists, then the raw data
+is deleted. This is the only time the titles behind the numbers are
+available. Lines start with `[report]`; the code is
+`src/encore/transform_report.py`.
+
+- summary: performances, matched, matched *with* a release year, matched
+  *without* one, unmatched (counts and shares);
+- the top 20 catalog songs with **no release year**, with performance count
+  and `catalog_source`;
+- the top 20 **unmatched** setlist titles, with performance counts.
+
+Scope is the marts' (performances with a known show year). It reads through
+a read-only session, creates nothing, writes nothing to any table, and never
+fails the task (a problem is logged as a warning).
+
+**Where it ends up.** Only in the task log. Task logs are files in the
+`airflow-logs` volume and are removed by the `log_cleanup` DAG once older than
+14 days; that DAG is created paused, so unpause it (or delete the run's log
+by hand) if you do not want setlist titles to stay on disk. When a run is
+started with `airflow dags test`, the output goes to the terminal instead;
+redirect it to a file outside the repository and delete it after reading.
+
 ## Reviewing and fixing release dates
 
 A song's release year is its **first official release year**: the earlier
