@@ -35,7 +35,10 @@ Arctic Monkeys, Oasis, Linkin Park, Twenty One Pilots, Muse, Metallica, Avenged 
 - Song abandonment: absent from the band's next 50 shows (N = 50). Songs whose last appearance is fewer than 50 shows before the end of the history are censored.
 - Survival analysis uses catalog songs only (matched to studio album, single, EP or B-side).
 - Reference album of a song: earliest studio album containing it.
-- Main data quality metric: % of performances (weighted by plays) matched to the catalog.
+- Main data quality metric: % of performances (weighted by plays) matched to the catalog (`match_rate_by_performance`). `match_rate_by_album` (share of performances matched to a studio album) is a secondary, informational column and never replaces the main metric.
+- Era KPIs: songs matched to the catalog but not to a studio album (singles, B-sides, other recordings) form their own category, "non-album", instead of being dropped.
+- Song release year: repertoire age uses the song's first official release year, the earliest between the reference album's year and the recording's first release date. The reference album remains the basis for era KPIs.
+- Suspicious release dates: a warn-level check lists songs whose recording date is more than 2 years earlier than the album year, so the MusicBrainz dates can be reviewed and fixed through the override seed.
 
 ## Audience
 

@@ -8,9 +8,11 @@ commit per item, results recorded here.
 
 - [x] **1. Close `spec-02a-progress.md`** and record both decisions —
       status banner added, acceptance and the two decisions logged.
-- [ ] **2. `docs/context/product.md`** — album metric / "non-album"
-      category and the first-official-release-year rule under *Key metric
-      rules*.
+- [x] **2. `docs/context/product.md`** — four bullets under *Key metric
+      rules*: `match_rate_by_album` secondary/informational; "non-album"
+      category for era KPIs; first-official-release-year rule (reference
+      album stays the basis for eras); warn-level check for recording
+      dates more than 2 years before the album year.
 - [ ] **3. Release year = first official release year** in
       `int_song_catalog`, plus a warn-level audit of suspicious
       recording dates and a way to fix a year through the override seed.
