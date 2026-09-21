@@ -379,6 +379,9 @@ calendar-day reset would allow any time. The run costs about 481 requests.
        git log -1 --format=%h -- dbt     # must equal commit=, with no -dirty
        docker exec infra-airflow-scheduler-1 grep -c aged_performances /opt/airflow/dbt/models/analytics/mart_repertoire_age.sql   # expect 1
 
+   (In Git Bash prefix `docker exec` commands that take `/opt/...` paths with
+   `MSYS_NO_PATHCONV=1`; not needed in WSL.)
+
    Then the budget (expect 0 or a small number today, plus about 481, at most 1300):
 
        docker exec infra-postgres-1 psql -U "$POSTGRES_USER" -d encore -tAc "select coalesce(sum(setlistfm_requests),0) from ops.pipeline_runs where finished_at::date = current_date"
