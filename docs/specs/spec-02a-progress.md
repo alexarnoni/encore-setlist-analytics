@@ -628,8 +628,32 @@ in the decisions log below.
       rebuilt, test green again. The `--store-failures` schema used to
       read the failing rows was dropped afterwards (no `dbt_test__audit`
       left in the DB).
-- [ ] **17. Singular test: `avg_repertoire_age` never negative** (R7.3).
-- [ ] **18. Singular test: `match_rate` between 0 and 1** (R7.4).
+- [x] **17. Singular test: `avg_repertoire_age` never negative** (R7.3) —
+      `dbt/tests/assert_avg_repertoire_age_not_negative.sql`. Flags rows
+      of `mart_repertoire_age` with a negative average **or median** (the
+      median comes from the same clamped ages, so it is the same
+      guarantee; the spec names only the average). NULL passes by design.
+      **Verified for real.** Green on the current mart. Mutation: removed
+      the clamp (`repertoire_age as age`) → the test fails with 4 rows:
+      1991, 1992, 1993 (avg −9.0, −0.875, −0.925) and 1999, whose average
+      is +0.83 but whose median is −1 — that last row is only caught
+      because the median is checked too. Clamp restored (`git diff`
+      empty), mart rebuilt, green again. This is the failure that would
+      have hit R7.3 on real Oasis data before the clamp decision.
+- [x] **18. Singular test: `match_rate` between 0 and 1** (R7.4) —
+      `dbt/tests/assert_match_rates_between_0_and_1.sql`. One `union all`
+      over all three rate columns: `mart_repertoire_age.match_rate`,
+      `mart_match_quality.match_rate_by_performance` and
+      `match_rate_by_title` (NULL allowed only on the last, as designed).
+      **Verified for real.** Three independent mutations, each restored
+      before the next: `match_rate * -1` → fails, 36 rows, attributed to
+      `mart_repertoire_age` (min −1.0000, so it covers the lower bound);
+      `by_performance * 2` → 20 rows, `mart_match_quality`
+      /`match_rate_by_performance` (≈2.0); `by_title * 2` → 20 rows,
+      `match_rate_by_title`. All three models `diff`-identical after
+      restoring, marts rebuilt, audit schema dropped, test green.
+      Full `dbt test` after items 16–18: 80 pass + 2 warn (the same two
+      NULL-by-design year warnings); pytest 55 passed.
 - [ ] **19. `dbt/` copied into the Airflow image** —
       `airflow/Dockerfile`: `COPY dbt/ /opt/airflow/dbt/`.
 - [ ] **20. Real `transform` task in `encore_pipeline`** — replaces the
