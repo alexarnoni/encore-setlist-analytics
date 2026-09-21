@@ -612,7 +612,22 @@ in the decisions log below.
       The by-title rate is the number that would move first if matching
       degraded; the by-performance rate barely can, because a few hit
       songs dominate plays.
-- [ ] **16. Singular test: no forbidden columns in `analytics`** (R7.2).
+- [x] **16. Singular test: no forbidden columns in `analytics`** (R7.2) —
+      `dbt/tests/assert_no_forbidden_columns_in_analytics.sql`. It queries
+      `information_schema.columns` for schema `analytics` and returns any
+      column named `setlist_id`, `show_date`, `venue` or `song_name_raw`.
+      It inspects the columns the warehouse really has rather than the
+      model SQL, so a future mart or a `select *` is covered too. Limit:
+      it matches the four names in the spec exactly; a renamed leak
+      (`venue_name`, `event_date`) would pass — the test guards the
+      contract, not the intent.
+      **Verified for real.** Passes on the current marts. Mutation: added
+      `setlist_id`, `show_date`, `venue`, `song_name_raw` as text columns
+      to `mart_match_quality` → the test fails with exactly those 4 rows
+      (table + column named). Model restored (`git diff` empty), mart
+      rebuilt, test green again. The `--store-failures` schema used to
+      read the failing rows was dropped afterwards (no `dbt_test__audit`
+      left in the DB).
 - [ ] **17. Singular test: `avg_repertoire_age` never negative** (R7.3).
 - [ ] **18. Singular test: `match_rate` between 0 and 1** (R7.4).
 - [ ] **19. `dbt/` copied into the Airflow image** —
