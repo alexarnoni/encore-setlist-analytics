@@ -81,8 +81,21 @@ commit per item, results recorded here.
       outside the line, 2025 (23 shows) is a filled isolated point, legend
       upper left. Committed `.ipynb` has 0 outputs / 0 execution counts.
       Only Oasis is loaded, so the several-band legend is still unseen.
-- [ ] **7. Rerun dbt on the current Oasis data** and report how
-      `avg_repertoire_age` changed.
+- [x] **7. Rerun dbt on the current Oasis data** and report how
+      `avg_repertoire_age` changed. `raw_setlistfm` was empty, so the
+      Oasis fixture was reloaded first (958 setlists / 13,170 entries, 49
+      requests, identical to before); before-values are the marts as they
+      stood under the old rule (snapshot taken beforehand).
+      **Result:** `performances` and `matched_performances` are identical
+      in all 36 cells; `avg_repertoire_age` changed in 31 of 36.
+      Overall (weighted by matched performances) **6.237 → 6.433 years
+      (+0.196)**, confirming the ~0.2-year low bias flagged when the
+      album-year rule was first questioned. By year the shift is +0.07 to
+      +0.41 (largest: 1994 +0.41, 2007 +0.40, 2000 +0.28); 1991-93 do not
+      move (age clamped at 0 / songs new at the time); 2025 goes 29.96 →
+      30.13. By tour: *Definitely Maybe* 0.29 → 0.69 (+0.40), the others
+      +0.10 to +0.28. `oldest_song_year` overall stays 1991. Cause: 22
+      catalog songs moved to an earlier year (8 Oasis; see item 3).
 - [ ] **8. Full pipeline, all 7 bands** (`ENCORE_BANDS_FILTER` empty), after
       a setlist.fm request-budget check.
 - [ ] **9. Report** per-band `match_rate_by_performance` and
