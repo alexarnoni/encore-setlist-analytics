@@ -293,3 +293,122 @@ on the next full run.
 - R2-5: the first log line of the transform task must read
   `dbt project: commit=... content_sha=...`.
 
+
+## Round 3 — preparing tomorrow's run to answer "songs without a release year"
+
+Requested after the round-2 review (items 1, 2, 4, 5 and 6 accepted, including
+the reconciliation deviation). Still no pipeline run today; validation is done
+on a scratch database (`encore_scratch`: MusicBrainz copied from the real DB,
+7 synthetic setlists for Oasis / Metallica / Muse, dropped afterwards) and the
+real `encore` database was not touched (marts 404 / 172, raw empty).
+
+- [x] **R3-1. `aged_performances` in `mart_repertoire_age`** — matched
+      performances whose song has a release year, i.e. those that entered the
+      average (`count(*) filter (where is_matched and age is not null)`);
+      `matched_performances - aged_performances` is the matched-but-undated
+      part. Schema entry (`not_null`), new singular test
+      `assert_mart_repertoire_age_internal_consistency` (aged <= matched <=
+      performances; average/median/oldest/newest NULL exactly when aged = 0),
+      and `assert_marts_reconcile_with_int_performances` now also reconciles
+      `aged_performances` with `int_performances`. **A gap found while
+      mutation-testing:** the consistency test alone cannot catch aged counting
+      every matched performance (aged <= matched still holds), so the
+      reconciliation had to be extended. Scratch results: correct build green;
+      aged = all matched -> *only* the reconciliation fails (Metallica 2 vs 6,
+      Oasis 3 vs 4); aged = all performances -> both fail; aged = 0 -> both
+      fail. Hand-checked values: the Oasis 2005 cell has 3 performances, 2
+      matched, 1 aged (average 10.0 from *Wonderwall* alone).
+- [x] **R3-2. Diagnostic lists in the task log** —
+      `src/encore/transform_report.py`, called by `run_transform()` after
+      `dbt test`. Per band: a summary line (performances, matched, matched
+      with / without a release year, unmatched, with shares), the top 20
+      catalog songs **without a release year** (count and `catalog_source`),
+      and the top 20 **unmatched** setlist titles (count). A query inside the
+      task rather than a dbt operation (formatting and unit tests are easier in
+      Python). Read-only session, no temp tables, output through `logging`
+      only, titles collapsed to one line and capped at 80 characters (they are
+      setlist.fm text going into a log). It never raises: a failure is a
+      warning. **Design choice, flagged:** it runs after `dbt test` even when a
+      test fails (raw data is deleted right after, and a failing run is when
+      the titles help most; it also stops a red reconciliation test from
+      wasting the day's quota), and it does not run if `seed` or `run` failed.
+      Scope = performances with a known show year, like the marts.
+      **Verified:** 13 unit tests (formatting, read-only queries, session
+      flags, never raising, `top_n` passed through, ordering relative to the
+      dbt steps, skipped when seed/run fail, still runs and re-raises when the
+      test fails); mutations (no `finally`, report also before the steps,
+      session not read-only, `top_n` ignored, exceptions escaping) each caught
+      (my first "report before test" mutation was invalid code and did not
+      count; it was redone). **End to end on the scratch database** with the
+      real `run_transform()` and real dbt: version line first, seed 3/3, run
+      14/14, test 88 pass + 6 warn + 0 error (the warns are the undated show,
+      NULL years and similar expected ones), then the report. Its numbers match
+      a hand count: Metallica 10 performances / 6 matched / 2 with a year / 4
+      without (*Master of Puppet* x3, *Helpless (jam)* x1) / 4 unmatched
+      (*Made Up Metal Jam* x3, plus a title containing a line break printed on
+      one line); Oasis 6 / 4 / 3 / 1 (*Ain't Got Nothing*) / 2; the undated
+      show is excluded.
+      **Where the lists live — needs your decision.** Task logs are files in
+      the `airflow-logs` volume; the `log_cleanup` DAG deletes logs older than
+      14 days but is **paused** here, so setlist titles with counts stay on
+      disk until someone deletes them or unpauses it. With `airflow dags test`
+      the output goes to the terminal / a redirect file instead. Documented in
+      `dbt/README.md`; nothing was changed about retention.
+- [x] **R3-3. Recordings without a release date stay in the catalog.** No
+      change; to be decided after tomorrow's numbers.
+- [x] **Docs.** `dbt/README.md` section on the log-only report; root README
+      notes that `make` is available in WSL (`sudo apt install make`).
+
+### Tomorrow's checklist (in this order)
+
+Timing first: setlist.fm's 1,440/day may be a rolling 24 h window rather than
+a calendar day. Today's 1,205 requests happened between about 16:47 and 18:05
+UTC, so start the run **after about 18:10 UTC** (15:10 in Brazil); a
+calendar-day reset would allow any time. The run costs about 481 requests.
+
+1. **Rebuild the image** (repo root; `make` works in WSL, otherwise use the
+   docker command in the comment):
+
+       export DBT_GIT_COMMIT="$(git log -1 --format=%h -- dbt)$(git diff --quiet HEAD -- dbt || echo -dirty)"
+       make build      # docker compose -f infra/docker-compose.yml --env-file .env build
+       make up         # plain, NOT up-dev: the run must use the baked copy
+
+2. **Confirm the dbt version line** (the same function the transform logs first):
+
+       docker exec infra-airflow-scheduler-1 python -c "import logging; logging.basicConfig(level=logging.INFO, format='%(message)s'); from encore.dbt_runner import log_dbt_project_version as f; f()"
+       git log -1 --format=%h -- dbt     # must equal commit=, with no -dirty
+       docker exec infra-airflow-scheduler-1 grep -c aged_performances /opt/airflow/dbt/models/analytics/mart_repertoire_age.sql   # expect 1
+
+   Then the budget (expect 0 or a small number today, plus about 481, at most 1300):
+
+       docker exec infra-postgres-1 psql -U "$POSTGRES_USER" -d encore -tAc "select coalesce(sum(setlistfm_requests),0) from ops.pipeline_runs where finished_at::date = current_date"
+
+3. **Run the full pipeline** with the DAG paused and `ENCORE_BANDS_FILTER`
+   empty, output to a file **outside the repo** (it will contain setlist
+   titles; delete it afterwards). Use a logical date not used before:
+
+       docker exec infra-airflow-scheduler-1 airflow dags test encore_pipeline 2026-09-25 > <scratch>/run.log 2>&1
+
+4. **Report**, from that log and the database:
+   - reconciliation: `grep -E "assert_marts_reconcile|assert_no_undated|Done. PASS" run.log`
+   - *Let There Be Love* at 2005 and an empty audit:
+
+         select song_title, release_year, album_year, recording_year, release_year_fixed
+           from intermediate.int_song_catalog
+          where band = 'Oasis' and song_title = 'Let There Be Love';    -- 2005 | 2005 | 2001 | t
+         select count(*) from intermediate.int_song_release_date_audit;  -- 0
+
+     and `assert_song_recording_date_not_far_before_album` passing in the log.
+   - `aged_performances` share per band:
+
+         select band, sum(performances) performances, sum(matched_performances) matched,
+                sum(aged_performances) aged,
+                round(100.0 * sum(aged_performances) / sum(performances), 2) aged_pct_of_performances,
+                round(100.0 * sum(aged_performances) / sum(matched_performances), 2) aged_pct_of_matched,
+                round(100.0 * (sum(matched_performances) - sum(aged_performances)) / sum(performances), 2) matched_without_year_pct
+           from analytics.mart_repertoire_age
+          group by band order by matched_without_year_pct desc;
+
+   - the two lists per band: `grep -F "[report]" run.log`.
+5. **Then delete `run.log`** and decide what to do about the task-log retention
+   above. The catalog decision (R3-3) waits for these numbers.

@@ -86,6 +86,8 @@ cp .env.example .env   # fill in real values, see comments in the file
 make up
 ```
 
+On Windows, `make` is available inside WSL (`sudo apt install make`).
+
 `make up`/`down`/`ps`/`logs` (see the [Makefile](Makefile)) exist
 because Docker Compose resolves the `${VAR}` placeholders in
 `infra/docker-compose.yml` (including the required-variable checks)
