@@ -39,6 +39,14 @@ models:
         description: Performances that resolved to the song catalog.
         data_tests:
           - not_null
+      - name: aged_performances
+        description: >
+          Matched performances whose song has a release year, i.e. the ones
+          that entered avg_repertoire_age. Never above matched_performances;
+          the difference is matched performances of songs with no release
+          year.
+        data_tests:
+          - not_null
       - name: match_rate
         description: matched_performances / performances, between 0 and 1.
         data_tests:
