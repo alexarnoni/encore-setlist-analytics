@@ -48,3 +48,15 @@ RUN python -m venv /opt/dbt-venv \
 ENV DBT_VENV=/opt/dbt-venv
 
 USER airflow
+
+# --- dbt project ---
+# Last on purpose: it changes far more often than anything above, and
+# putting it after the venv layer keeps a model edit from rebuilding
+# (re-downloading) dbt itself. Root-owned and read-only for the airflow
+# user, so everything dbt writes goes to /tmp instead of the project dir.
+COPY dbt/ /opt/airflow/dbt/
+ENV DBT_PROJECT_DIR=/opt/airflow/dbt \
+    DBT_PROFILES_DIR=/opt/airflow/dbt \
+    DBT_TARGET_PATH=/tmp/dbt-target \
+    DBT_LOG_PATH=/tmp/dbt-logs \
+    DBT_SEND_ANONYMOUS_USAGE_STATS=false

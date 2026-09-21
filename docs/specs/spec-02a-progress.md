@@ -654,8 +654,27 @@ in the decisions log below.
       restoring, marts rebuilt, audit schema dropped, test green.
       Full `dbt test` after items 16–18: 80 pass + 2 warn (the same two
       NULL-by-design year warnings); pytest 55 passed.
-- [ ] **19. `dbt/` copied into the Airflow image** —
-      `airflow/Dockerfile`: `COPY dbt/ /opt/airflow/dbt/`.
+- [x] **19. `dbt/` copied into the Airflow image** —
+      `airflow/Dockerfile`: `COPY dbt/ /opt/airflow/dbt/`, placed **last**
+      (after the dbt venv layer) so editing a model never re-downloads
+      dbt. Files are root-owned and read-only for the `airflow` user, so
+      the image sets `DBT_TARGET_PATH=/tmp/dbt-target`,
+      `DBT_LOG_PATH=/tmp/dbt-logs`, `DBT_PROJECT_DIR` and
+      `DBT_PROFILES_DIR` (= `/opt/airflow/dbt`) and
+      `DBT_SEND_ANONYMOUS_USAGE_STATS=false` as `ENV`, so a bare
+      `dbt <cmd>` from a task needs no flags. `.dockerignore` now also
+      excludes `dbt/target`, `dbt/logs`, `dbt/.user.yml`,
+      `dbt/dbt_packages` so host-generated artifacts never enter the
+      image.
+      **Verified for real**, without mounting `dbt/` (only what is in the
+      image), as uid 50000 on the compose network: the tree is there
+      (models, macros, seeds, tests, profiles) with no `target/`,
+      `logs/`, `.user.yml` or `.env*`; `dbt debug` → profiles and project
+      valid, connection OK; `dbt parse` exits 0, leaves `/opt/airflow/dbt`
+      untouched and writes its manifest to `/tmp/dbt-target`. The rebuild
+      was fully cached (1.3 s) because nothing else changed. The running
+      Airflow containers still use the old image until recreated (done in
+      item 20).
 - [ ] **20. Real `transform` task in `encore_pipeline`** — replaces the
       placeholder with `dbt seed`/`run`/`test` via
       `/opt/dbt-venv/bin/dbt`, before `cleanup_raw_setlistfm`; a dbt
