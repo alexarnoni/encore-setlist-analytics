@@ -1,0 +1,176 @@
+# Encore infrastructure: PostgreSQL + Apache Airflow (LocalExecutor).
+#
+# Adapted from the official Airflow docker-compose baseline
+# (https://airflow.apache.org/docs/apache-airflow/3.3.2/docker-compose.yaml),
+# trimmed to LocalExecutor: no Redis, Celery worker or Flower, since
+# LocalExecutor runs tasks as subprocesses of the scheduler. The triggerer
+# is omitted too — spec-01 has no deferrable operators; add it back if a
+# later spec needs one.
+#
+# The Airflow services build a custom image (../airflow/Dockerfile) that
+# extends the official one with the project's ingestion code and dbt in
+# its own venv (/opt/dbt-venv) — see docs/specs/spec-01-progress.md item 3.
+# `docker compose up` builds it automatically the first time; run
+# `docker compose build` again after changing src/, config/ or
+# airflow/requirements.txt.
+#
+# Required environment variables (see ../.env.example):
+#   AIRFLOW_IMAGE_NAME, AIRFLOW_UID, POSTGRES_USER, POSTGRES_PASSWORD,
+#   POSTGRES_DB, AIRFLOW_FERNET_KEY, AIRFLOW_JWT_SECRET,
+#   AIRFLOW_WWW_USER_USERNAME, AIRFLOW_WWW_USER_PASSWORD
+#
+# Ports are bound to 127.0.0.1 only (never 0.0.0.0), per docs/context/tech.md.
+#
+# IMPORTANT — run from the repo root with an explicit --env-file:
+#   docker compose -f infra/docker-compose.yml --env-file .env up
+# `env_file:` below only injects variables into the containers; Compose's
+# own ${VAR} interpolation in this file (including the :? required-var
+# checks) reads .env from the compose project directory, i.e. infra/, by
+# default — NOT from the repo root where the real .env lives — so a bare
+# `docker compose up` run from infra/ fails with "variable is missing a
+# value" even though .env exists one level up. --env-file makes Compose
+# read the right file for both purposes.
+
+x-airflow-common:
+  &airflow-common
+  build:
+    context: ..
+    dockerfile: airflow/Dockerfile
+    args:
+      # Logged by the transform task; see airflow/Dockerfile.
+      DBT_GIT_COMMIT: ${DBT_GIT_COMMIT:-unknown}
+  image: ${AIRFLOW_IMAGE_NAME:-encore-airflow:3.3.2}
+  env_file:
+    - ${ENV_FILE_PATH:-../.env}
+  environment:
+    &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER:-airflow}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-airflow}
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:?Set AIRFLOW_FERNET_KEY in .env, see .env.example}
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: 'http://airflow-api-server:8080/execution/'
+    AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_JWT_SECRET:?Set AIRFLOW_JWT_SECRET in .env, see .env.example}
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
+    AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
+  volumes:
+    - ${AIRFLOW_PROJ_DIR:-..}/airflow/dags:/opt/airflow/dags
+    - airflow-logs:/opt/airflow/logs
+  user: "${AIRFLOW_UID:-50000}:0"
+  depends_on:
+    &airflow-common-depends-on
+    postgres:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-airflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-airflow}
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d
+    ports:
+      - "127.0.0.1:5435:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-airflow}"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    restart: always
+
+  airflow-init:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        mkdir -v -p /opt/airflow/logs
+        chown -R "${AIRFLOW_UID:-50000}:0" /opt/airflow/logs
+        # Airflow lives in a real venv at /home/airflow/.local (it has its
+        # own pyvenv.cfg), but the `airflow` console script's shebang
+        # points straight at the base interpreter, which only resolves
+        # that venv's site-packages via the invoking user's HOME. As
+        # root (HOME=/root) `airflow db migrate` fails with
+        # "ModuleNotFoundError: No module named 'airflow'" even though
+        # the exact same command works for the airflow user — so run it
+        # via `su airflow` instead of directly as root.
+        su airflow -c "airflow db migrate"
+        su airflow -c "airflow users create \
+          --username '${AIRFLOW_WWW_USER_USERNAME:-airflow}' \
+          --password '${AIRFLOW_WWW_USER_PASSWORD:?Set AIRFLOW_WWW_USER_PASSWORD in .env}' \
+          --firstname Encore --lastname Admin --role Admin \
+          --email admin@example.com" || true
+    user: "0:0"
+
+  airflow-api-server:
+    <<: *airflow-common
+    command: api-server
+    ports:
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/api/v2/monitor/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    healthcheck:
+      test: ["CMD-SHELL", 'airflow jobs check --job-type SchedulerJob --hostname "$${HOSTNAME}"']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-dag-processor:
+    <<: *airflow-common
+    command: dag-processor
+    healthcheck:
+      test: ["CMD-SHELL", 'airflow jobs check --job-type DagProcessorJob --hostname "$${HOSTNAME}"']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  # Isolated PostgreSQL for integration tests. Never started by default;
+  # run with `docker compose --profile test up -d postgres-test`.
+  postgres-test:
+    image: postgres:16
+    profiles:
+      - test
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-airflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: encore_test
+    ports:
+      - "127.0.0.1:5436:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-airflow}"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+
+volumes:
+  postgres-db-volume:
+  airflow-logs:

@@ -1,0 +1,101 @@
+version: 2
+
+# analytics = PERSISTENT aggregated marts. Nothing here may carry a
+# setlist id, show date, venue or song title (docs/context/structure.md);
+# the R7.2 singular test guards that.
+
+models:
+
+  - name: mart_repertoire_age
+    description: >
+      Average repertoire age by band, tour and year. Repertoire age of a
+      performance is show_year minus the song's first official release year
+      (the earlier of its album's year and its recording's first-release
+      year), with a negative value (song played before its release year) clamped to 0.
+      Only matched, non-tape, non-cover performances with a known year
+      enter the average. Rebuilt from scratch on every run;
+      computed_at is the only column expected to differ between two
+      runs on the same data.
+    columns:
+      - name: band
+        data_tests:
+          - not_null
+      - name: tour_name
+        description: "'Unknown tour' when the show has no tour name."
+        data_tests:
+          - not_null
+      - name: show_year
+        data_tests:
+          - not_null
+      - name: shows
+        description: Distinct shows with at least one performance in the cell.
+        data_tests:
+          - not_null
+      - name: performances
+        description: All non-tape, non-cover performances in the cell.
+        data_tests:
+          - not_null
+      - name: matched_performances
+        description: Performances that resolved to the song catalog.
+        data_tests:
+          - not_null
+      - name: match_rate
+        description: matched_performances / performances, between 0 and 1.
+        data_tests:
+          - not_null
+      - name: avg_repertoire_age
+        description: >
+          NULL only when no matched performance in the cell has a known
+          release year.
+      - name: median_repertoire_age
+      - name: oldest_song_year
+        description: Smallest release year among the averaged performances.
+      - name: newest_song_year
+        description: Largest release year among the averaged performances.
+      - name: computed_at
+        data_tests:
+          - not_null
+
+  - name: mart_match_quality
+    description: >
+      How well setlist songs resolve to the song catalog, by band and
+      year. The headline metric is match_rate_by_performance (weighted by
+      plays); match_rate_by_title counts every distinct song once and is
+      the harsher view. Counts and rates only — no titles.
+    columns:
+      - name: band
+        data_tests:
+          - not_null
+      - name: show_year
+        data_tests:
+          - not_null
+      - name: performances
+        description: All non-tape, non-cover performances in the band/year.
+        data_tests:
+          - not_null
+      - name: matched_performances
+        data_tests:
+          - not_null
+      - name: match_rate_by_performance
+        description: matched_performances / performances, between 0 and 1.
+        data_tests:
+          - not_null
+      - name: distinct_songs
+        description: >
+          Distinct normalized titles played (after override aliases).
+      - name: distinct_songs_matched
+      - name: match_rate_by_title
+        description: >
+          distinct_songs_matched / distinct_songs. NULL only if no
+          performance in the cell has a usable title.
+      - name: match_rate_by_album
+        description: >
+          Secondary, informational. Share of performances matched to a song
+          with a reference studio album; never above
+          match_rate_by_performance. The difference is the share of plays
+          on matched songs that are not on a studio album ("non-album").
+        data_tests:
+          - not_null
+      - name: computed_at
+        data_tests:
+          - not_null

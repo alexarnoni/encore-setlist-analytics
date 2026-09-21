@@ -1,0 +1,27 @@
+version: 2
+
+# Raw tables written by the ingestion code (src/encore/ingestion/).
+# Declared as dbt sources so staging models reference them with
+# source(), not a hard-coded schema.table.
+sources:
+  - name: raw_setlistfm
+    schema: raw_setlistfm
+    description: >
+      EPHEMERAL. Truncated at the end of every pipeline run, so any model
+      reading it must be a view and only produces meaningful results
+      while a run is in progress (or against the dev fixture, see
+      dbt/README.md).
+    tables:
+      - name: setlists
+      - name: setlist_entries
+
+  - name: raw_musicbrainz
+    schema: raw_musicbrainz
+    description: >
+      PERSISTENT (MusicBrainz data is CC0). Survives between pipeline
+      runs; the ingestion re-fetches a band only when it is older than 30
+      days.
+    tables:
+      - name: albums
+      - name: album_tracks
+      - name: recordings

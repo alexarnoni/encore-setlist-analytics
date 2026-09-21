@@ -1,0 +1,15 @@
+.git
+.venv
+.kiro
+data
+notebooks
+.env
+*.md
+__pycache__
+**/__pycache__
+.pytest_cache
+.ipynb_checkpoints
+dbt/target
+dbt/logs
+dbt/.user.yml
+dbt/dbt_packages

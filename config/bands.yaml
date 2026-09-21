@@ -1,0 +1,15 @@
+bands:
+  - name: Arctic Monkeys
+    mbid: ada7a83c-e3e1-40f1-93f9-3e73dbc9298a
+  - name: Oasis
+    mbid: 39ab1aed-75e0-4140-bd47-540276886b60
+  - name: Linkin Park
+    mbid: f59c5520-5f46-4d2c-b2c4-822eabf53419
+  - name: Twenty One Pilots
+    mbid: a6c6897a-7415-4f8d-b5a5-3a5e05f3be67
+  - name: Muse
+    mbid: 9c9f1380-2516-4fc9-a3e6-f9f61941d090
+  - name: Metallica
+    mbid: 65f4f0c5-ef9e-490c-aee3-909e7ae6b2ab
+  - name: Avenged Sevenfold
+    mbid: 24e1b53c-3085-4581-8472-0b0088d2508c

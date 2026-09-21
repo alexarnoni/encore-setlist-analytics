@@ -1,0 +1,16 @@
+# Runtime dependencies baked into the Airflow image, used by src/encore/
+# (ingestion code and DAGs). Kept separate from the project's top-level
+# requirements.txt, which also carries notebook/analysis tooling
+# (jupyter, matplotlib, pytest) that has no place in the Airflow image.
+#
+# No version pins here on purpose: this file is installed with
+# `pip install --constraint <official Airflow constraints file>`
+# (airflow/Dockerfile), which already fixes the exact version of any
+# package it manages. Pinning a version here too can conflict with the
+# constraints file outright (e.g. requests==2.32.3 here vs the
+# constraints file's requests==2.34.2 for Airflow 3.3.2 caused a
+# ResolutionImpossible build failure) — let the constraints file decide.
+requests
+python-dotenv
+psycopg2-binary
+PyYAML
