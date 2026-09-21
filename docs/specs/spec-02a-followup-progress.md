@@ -69,9 +69,18 @@ commit per item, results recorded here.
       (Caught and fixed on the way: my first `schema.yml` edit had dropped
       the warn-level `not_null` on `release_year`; the warn count going
       from 3 to 2 exposed it.)
-- [ ] **5. Notebook: legend upper left** instead of direct labels.
-- [ ] **6. Notebook: years with fewer than 3 shows** as hollow markers,
-      left out of the connecting line, rule noted under the title.
+- [x] **5. Notebook: legend upper left** instead of direct labels — the
+      legend is now always drawn in the upper left (single band included);
+      the end-of-line labels are gone.
+- [x] **6. Notebook: years with fewer than 3 shows** as hollow markers,
+      left out of the connecting line, rule noted under the title —
+      `MIN_SHOWS = 3`; shows per band/year = sum of `shows` over the tour
+      cells (a show belongs to one tour). The note sits between the title
+      and the plot. Executed a scratch copy against the live marts and
+      looked at the chart: Oasis years 1991, 2004 and 2007 are hollow and
+      outside the line, 2025 (23 shows) is a filled isolated point, legend
+      upper left. Committed `.ipynb` has 0 outputs / 0 execution counts.
+      Only Oasis is loaded, so the several-band legend is still unseen.
 - [ ] **7. Rerun dbt on the current Oasis data** and report how
       `avg_repertoire_age` changed.
 - [ ] **8. Full pipeline, all 7 bands** (`ENCORE_BANDS_FILTER` empty), after
