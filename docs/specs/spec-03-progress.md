@@ -215,7 +215,7 @@ to Q1-Q9; the recommended defaults let work start without them.
 - [x] T0 workspace and guardrails
 - [x] T1 synthetic histories
 - [x] T2 `int_show_song_sets`
-- [ ] T3 `int_show_pairs` + Jaccard test
+- [x] T3 `int_show_pairs` + Jaccard test
 - [ ] T4 `mart_tour_rotation`
 - [ ] T5 `mart_band_rotation_by_year`
 - [ ] T6 survival core + unit tests
@@ -317,3 +317,46 @@ report adds roughly 90 s to tomorrow's `transform`. Not a hang and not a
 correctness problem; a `materialized` CTE would remove it. Reported to the
 project owner instead of changed, since `master` is off limits until the
 checklist is done.
+
+### T3 — `int_show_pairs` and the Jaccard test (done)
+
+`dbt/macros/consecutive_show_pairs.sql` (the pair and Jaccard logic, taking any
+relation of show sets), `dbt/models/intermediate/int_show_pairs.sql` (the macro
+over `int_show_song_sets`), `dbt/models/staging/test_fixtures/test_jaccard_cases.sql`
+(the same macro over literal sets), singular tests
+`assert_jaccard_expected_outputs` (**requirement 13**: identical = 1,
+disjoint = 0, 2 of 4, a chain where only adjacent shows pair, ordering by date
+against the keys, same-date tie broken by key, a single show and `Unknown
+tour` never paired; full outer join so a missing or extra pair fails) and
+`assert_int_show_pairs_one_fewer_than_shows` (n shows give n-1 pairs, a chain
+not a web, counted from `int_show_song_sets` directly), schema entry, and
+`tests/spec03/test_show_pairs.py` against the oracle. The Oasis synthetic
+history gained a "Reverse Tour" (6 shows whose ids descend while dates ascend).
+**Verified.** All 17 dbt tests and 5 oracle tests pass; the pairs equal the
+oracle's exactly (as fractions) for every synthetic tour. Mutations on the
+macro: union computed as a plain sum (fixture test 7 rows, oracle fails), the
+`Unknown tour` filter removed (fixture test, oracle fails), pairing with the
+show two places later (fixture test, one-fewer test and oracle fail).
+**A gap found and closed:** ordering by `show_key` alone (ignoring the date)
+was caught by *nothing* at first, because in my fixture and my synthetic
+histories the keys happened to run in date order. The fixture now uses keys
+against the dates and the Reverse Tour was added; the same mutation now fails
+the fixture test (2 rows) and the oracle. (The one-fewer test cannot see it,
+by design: it only counts.) Two more of my own hand-derived expectations were
+wrong and corrected (a disjoint pair is 0, not 1/5).
+**Performance.** At production size (about 7,000 setlists and 132,000 entries,
+`scripts/spec03/scale_data.sql`): `int_show_song_sets` 5.0 s,
+`int_show_pairs` 6.1 s (6,207 pairs). The marts of T4 and T5 should read
+these views once each.
+
+## 10. Where things stand (end of day, 2026-09-21)
+
+T0-T3 done; T4-T13 not started. Nothing of spec 03 is on `master`. The main
+stack, image, containers and DAG folder were not touched (compared before and
+after at T0: same image id, container ids and creation times). The main
+directory is on `master` with a clean tree. The isolated `spec03-postgres`
+container is stopped; `bash scripts/spec03/up.sh` brings it back with its data
+(the volume is kept), then `python scripts/spec03/...` / `load_synthetic.py`
+reload the synthetic histories if needed.
+Open item for the project owner: the diagnostic report on `master` takes about
+90 s at production size (see T2).
