@@ -171,10 +171,13 @@ fails the task (a problem is logged as a warning).
 
 **Where it ends up.** Only in the task log. Task logs are files in the
 `airflow-logs` volume and are removed by the `log_cleanup` DAG once older than
-14 days; that DAG is created paused, so unpause it (or delete the run's log
-by hand) if you do not want setlist titles to stay on disk. When a run is
-started with `airflow dags test`, the output goes to the terminal instead;
-redirect it to a file outside the repository and delete it after reading.
+**7 days** (`MAX_LOG_AGE_DAYS` in `src/encore/log_cleanup.py`; it was 14).
+That DAG is created active, not paused (`is_paused_upon_creation=False`), so
+the retention applies on the VM too without anyone unpausing it; on a
+machine where the DAG already existed paused, unpause it once:
+`airflow dags unpause log_cleanup`. When a run is started with
+`airflow dags test`, the output goes to the terminal instead; redirect it to
+a file outside the repository and delete it after reading.
 
 ## Reviewing and fixing release dates
 

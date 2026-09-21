@@ -413,5 +413,29 @@ calendar-day reset would allow any time. The run costs about 481 requests.
           group by band order by matched_without_year_pct desc;
 
    - the two lists per band: `grep -F "[report]" run.log`.
-5. **Then delete `run.log`** and decide what to do about the task-log retention
-   above. The catalog decision (R3-3) waits for these numbers.
+5. **Then delete `run.log`** (task-log retention is settled: 7 days, see the
+   decisions above). The catalog decision (R3-3) waits for these numbers.
+
+### Decisions on the round-3 open points (2026-09-21)
+
+- **Keep the report running even when `dbt test` fails** (as built): no code
+  change. It still does not run if `seed` or `run` failed.
+- **`log_cleanup` unpaused and retention 7 days instead of 14.**
+  `MAX_LOG_AGE_DAYS = 7` (`src/encore/log_cleanup.py`; the default-threshold
+  test now checks an 8-day file is deleted and a 6-day file kept; going back
+  to 14 makes it fail). `log_cleanup` now has `is_paused_upon_creation=False`
+  (an addition to what was asked: without it the retention would depend on a
+  manual unpause on every machine, including the VM where DAGs are created
+  paused). README, `dbt/README.md` and `docs/methodology.md` updated. The
+  spec-01 text (R1.6, 14 days) is left as the historical record; this entry
+  is the change. No pipeline run today; tomorrow's run starts after 18:10 UTC.
+  **Verified for real.** Image rebuilt (constant 7 inside it). The existing
+  `log_cleanup` DAG stayed paused after the rebuild, as expected
+  (`is_paused_upon_creation` only applies to DAGs created afterwards), so it
+  was unpaused once with `airflow dags unpause log_cleanup`. With two probe
+  files planted in the logs volume (8 and 6 days old; no real log was older
+  than 7 days), the scheduler's run succeeded, logged "Deleted 1 log file(s)
+  older than 7 days", removed the 8-day file and the directory it left empty
+  and kept the 6-day one; the probe was then removed. Final state:
+  `log_cleanup` active, `encore_pipeline` paused. pytest 83 passed.
+

@@ -24,3 +24,18 @@ Decision (2026-09-21): **accepted as a known limitation.** Nothing is
 patched or added to `seed_song_overrides.csv` for it. Those two years are
 reported with their real, low match rate; any Muse KPI for 1994-1995 should
 be read with that in mind and the methodology page should say so.
+
+## Data handling of diagnostic output
+
+The transform task logs, per band, the most frequent catalog songs without a
+release year and the most frequent unmatched setlist titles, with counts (see
+`dbt/README.md`). That is setlist.fm text, so it is handled like the raw data
+it comes from, only more loosely:
+
+- it is written to the Airflow task log only, never to a table, and never to
+  the repository;
+- task logs are kept for **7 days** and then deleted by the `log_cleanup` DAG,
+  which is created active, not paused (retention was 14 days in spec-01 and
+  was shortened on 2026-09-21);
+- only aggregated results in `analytics` are persisted and published, as
+  before. Song titles never reach the marts.

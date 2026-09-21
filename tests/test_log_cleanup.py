@@ -65,11 +65,11 @@ def test_keeps_directory_that_still_has_a_recent_file(tmp_path):
     assert (tmp_path / "dag_id").exists()
 
 
-def test_default_threshold_is_14_days(tmp_path):
+def test_default_threshold_is_7_days(tmp_path):
     borderline_old = tmp_path / "old.log"
     borderline_new = tmp_path / "new.log"
-    _touch_with_age(borderline_old, age_days=15)
-    _touch_with_age(borderline_new, age_days=13)
+    _touch_with_age(borderline_old, age_days=8)
+    _touch_with_age(borderline_new, age_days=6)
 
     deleted = delete_old_logs(tmp_path)  # no max_age_days passed
 
