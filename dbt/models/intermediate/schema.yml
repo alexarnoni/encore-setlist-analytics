@@ -133,3 +133,28 @@ models:
         data_tests:
           - not_null
 
+
+  - name: int_show_pairs
+    description: >
+      Consecutive pairs of shows (same band and tour, adjacent in date order,
+      ties broken by show_key; 'Unknown tour' never paired) with their Jaccard
+      similarity. Carries show keys and dates: allowed here, never in
+      `analytics`. A view over EPHEMERAL setlist.fm data.
+    columns:
+      - name: band
+        data_tests:
+          - not_null
+      - name: tour_name
+        data_tests:
+          - not_null
+      - name: first_show_key
+        data_tests:
+          - not_null
+      - name: second_show_key
+        data_tests:
+          - not_null
+          - unique
+      - name: jaccard
+        description: Intersection over union of the two setlist sets, in [0, 1].
+        data_tests:
+          - not_null

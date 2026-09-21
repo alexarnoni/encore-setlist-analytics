@@ -88,6 +88,8 @@ def oasis_rotation_history(pool: SongPool) -> list[SyntheticShow]:
       (every consecutive pair has Jaccard 0, rotation 1);
     * "Overlap Tour": 5 hand-picked sets (two shows share a date);
     * "Short Tour": 4 shows (excluded from rotation: fewer than 5);
+    * "Reverse Tour": 6 shows whose setlist ids DESCEND while the dates ascend,
+      so ordering by id instead of by date gives different pairs;
     * no tour: 6 shows ("Unknown tour": excluded from pairs, but part of the
       band's show history).
     """
@@ -121,6 +123,12 @@ def oasis_rotation_history(pool: SongPool) -> list[SyntheticShow]:
         shows.append(SyntheticShow(f"oa-o-{i:03d}", band, d, "Overlap Tour", songs))
 
     shows += _run("oa-s", band, "Short Tour", date(2003, 2, 1), 2, [tuple(a[45:50])] * 4)
+
+    reverse_sets = [(a[0], a[1], a[2]), (a[0], a[1], a[3]), (a[0], a[4], a[5]),
+                    (a[0], a[4], a[5]), (a[1], a[2], a[3]), (a[0], a[1], a[2])]
+    for i, songs in enumerate(reverse_sets, start=1):
+        shows.append(SyntheticShow(f"oa-r-{7 - i:03d}", band, date(2004, 9, 1) + timedelta(days=i),
+                                   "Reverse Tour", songs))
 
     unknown_sets = [tuple(a[50:53]), tuple(a[52:55]), tuple(a[54:57]),
                     tuple(a[56:59]), tuple(a[50:52]), tuple(a[58:60])]

@@ -49,7 +49,7 @@ def test_show_counts_per_band(pool):
     shows = h.all_histories(_pools(pool))
     per_band = {b: sum(1 for s in shows if s.band == b) for b in {s.band for s in shows}}
 
-    assert per_band == {"Oasis": 49, "Metallica": 36, "Muse": 260, "Arctic Monkeys": 41, "Linkin Park": 150}
+    assert per_band == {"Oasis": 55, "Metallica": 36, "Muse": 260, "Arctic Monkeys": 41, "Linkin Park": 150}
     assert sum(1 for s in shows if s.show_date is None) == 3  # 2 Oasis, 1 Arctic Monkeys
 
 
@@ -76,7 +76,8 @@ def test_oasis_tours(pool):
     stats = o.tour_rotation(h.oasis_rotation_history(pool))
 
     # Short Tour (4 shows) and the no-tour shows are excluded.
-    assert set(stats) == {("Oasis", "Fixed Tour"), ("Oasis", "Alternating Tour"), ("Oasis", "Overlap Tour")}
+    assert set(stats) == {("Oasis", "Fixed Tour"), ("Oasis", "Alternating Tour"), ("Oasis", "Overlap Tour"),
+                          ("Oasis", "Reverse Tour")}
 
     fixed = stats[("Oasis", "Fixed Tour")]  # 20 dated shows (2 undated ignored), same 15 songs
     assert (fixed.shows, fixed.pairs, fixed.rotation) == (20, 19, 0)
@@ -100,6 +101,18 @@ def test_same_date_shows_are_ordered_by_setlist_id(pool):
     assert [(p.first_id, p.second_id) for p in pairs] == [
         ("oa-o-001", "oa-o-002"), ("oa-o-002", "oa-o-003"), ("oa-o-003", "oa-o-004"), ("oa-o-004", "oa-o-005"),
     ]
+
+
+def test_reverse_tour_is_paired_by_date_not_by_id(pool):
+    pairs = [p for p in o.consecutive_pairs(h.oasis_rotation_history(pool)) if p.tour == "Reverse Tour"]
+
+    # dates ascend from oa-r-006 to oa-r-001, so that is the order of the pairs
+    assert [(p.first_id, p.second_id) for p in pairs] == [
+        ("oa-r-006", "oa-r-005"), ("oa-r-005", "oa-r-004"), ("oa-r-004", "oa-r-003"),
+        ("oa-r-003", "oa-r-002"), ("oa-r-002", "oa-r-001"),
+    ]
+    # sets {0,1,2} {0,1,3} {0,4,5} {0,4,5} {1,2,3} {0,1,2}: 2/4, 1/5, 1, 0 (disjoint), 2/4
+    assert [p.jaccard for p in pairs] == [Fraction(1, 2), Fraction(1, 5), 1, 0, Fraction(1, 2)]
 
 
 def test_metallica_tours_and_years(pool):
@@ -127,7 +140,7 @@ def test_undated_and_unmatched_only_shows_do_not_count(pool):
     shows = h.oasis_rotation_history(pool)
 
     assert "oa-f-u1" not in o.show_sets(shows)
-    assert len(o.show_sets(shows)) == 47
+    assert len(o.show_sets(shows)) == 53
 
 
 # --- survival oracle, against hand-derived outcomes ---------------------------
