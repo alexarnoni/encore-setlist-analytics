@@ -159,6 +159,24 @@ the song leaves the audit list. Tests reject a malformed or implausible
 year, two different years for one song, and a title that is not in that
 band's catalog.
 
+## Reconciliation test (runs inside every pipeline run)
+
+`assert_marts_reconcile_with_int_performances` checks, per band, that the
+performances (and matched performances) summed over `mart_repertoire_age`
+and over `mart_match_quality` equal the rows of `int_performances`. Raw
+setlist.fm data is deleted at the end of each run, so this is the only
+in-run proof that nothing was lost or invented on the way to the marts. It
+compares against the rows that have a known `show_year`, because the marts
+leave undated performances out by design;
+`assert_no_undated_performances_left_out_of_marts` (warn) reports how many
+those are per band.
+
+Because it needs raw data, **it fails by design outside a run**: once
+`raw_setlistfm` has been truncated `int_performances` is empty while the
+marts are still populated, so a `dbt test` on your machine between runs
+shows this test red for every band. Do not "fix" it; it is green inside the
+pipeline (and on freshly loaded dev data).
+
 ## Local development data
 
 `raw_setlistfm` is ephemeral by data policy (see

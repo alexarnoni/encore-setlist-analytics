@@ -159,4 +159,71 @@ on the next full run.
 - [x] **R2-2. Muse 1994-1995 low match** recorded as an accepted known
       limitation in the new `docs/methodology.md` (linked from
       `product.md`). No data change.
+- [x] **R2-3. Songs without a release year — analysis only, nothing
+      changed.** *Cannot be answered from the marts as they are:* no mart
+      column records how many performances entered the average, so the
+      share of performances whose song has no year is not derivable. What
+      the marts do give: a lower bound of 0 for every band (no cell with
+      matched performances has a NULL average) and an **upper bound** —
+      only recording-only songs can lack a year (all 457 catalog songs
+      without a year are recording-only; album and override songs always
+      have one), so the share is at most `match_rate_by_performance −
+      match_rate_by_album`: Oasis 13.1 % (known to be 0 from item 12),
+      Metallica 6.4 %, Linkin Park 6.0 %, Muse 5.9 %, Arctic Monkeys 4.4 %,
+      Twenty One Pilots 4.3 %, Avenged Sevenfold 3.1 %. All bounds exceed
+      2 %, so no band can be cleared or flagged. The top-20 affected titles
+      by performance count also cannot be produced (no titles or play counts
+      outside a run). Catalog side (MusicBrainz, persistent), songs without
+      a year / all songs: Metallica 232/1,523 (15.2 %), Oasis 63/738,
+      Muse 57/540, Linkin Park 56/1,127, Arctic Monkeys 26/220, Twenty One
+      Pilots 12/453, Avenged Sevenfold 11/242.
+      **Likely cause (evidence in the catalog):** all 510 MusicBrainz
+      recordings behind those 457 songs have `first_release_date` NULL, and
+      the titles are mostly bootleg/live-track entries: jams, solos, medleys
+      written "A / B", version or venue annotations ("(live at the Forum)",
+      "(Semi-Acoustic version)"), and misspellings of real songs ("Master of
+      Puppet", "Ecstacy of Gold", "Fake Tales of San Fransisco"). Generic /
+      instrumental-looking titles: Metallica 89 of 232, Avenged Sevenfold
+      11 of 11. So the effect is real but probably concentrated in the
+      bands with many live-recording entries (Metallica first). Not
+      measured on performances.
+      **Proposals, none applied:** (1) add `aged_performances` (performances
+      with a known age) to `mart_repertoire_age` so every run reports the
+      per-band share directly — the missing piece; (2) tomorrow's run
+      produces the numbers, and a dev-fixture reload would be needed for
+      titles; (3) fixes would be alias rows in `seed_song_overrides.csv`
+      for the misspellings that are really album songs, and treating
+      undated recording-only songs as a separate "matched, undated"
+      category rather than as age data.
+- [x] **R2-4. Reconciliation test in every run** —
+      `assert_marts_reconcile_with_int_performances`: per band, performances
+      and matched performances summed over each mart must equal
+      `int_performances` (bands taken as the union of the three, so a
+      missing or extra band fails). **Deviation, flagged:** compared with
+      the rows that have a known `show_year`, not every row, because both
+      marts exclude undated performances by design and a strict all-rows
+      equality would fail on any band with an undated setlist; a companion
+      warn test `assert_no_undated_performances_left_out_of_marts` reports
+      how many are excluded per band. Runs in `transform`'s `dbt test`, so a
+      mismatch fails the run.
+      **Verified in a scratch database** (`encore_scratch`: MusicBrainz
+      copied from the real DB, 4 synthetic setlists for Oasis and Muse incl.
+      a cover, a tape entry, an unmatched song and an undated show; the
+      real database was not touched, marts still 404 / 172 rows): green on a
+      correct build (6 dated Oasis / 4 Muse performances, matched 5 / 3);
+      four mutations each fail it with the expected columns diverging —
+      age mart +1 performance; quality mart dropping unmatched rows (only
+      the quality columns differ); a whole band missing from the age mart
+      (1 row); age mart matched = all (only the age matched column
+      differs). **A slip worth recording:** my first mutation pass restored
+      files but did not rebuild the marts between mutations, so results
+      after the first were contaminated by leftovers (a "2 rows" where 1
+      was expected exposed it); M2-M4 were redone with a clean rebuild
+      before each. The same scratch run also confirmed R2-1: with the seed
+      row, *Let There Be Love* gets 2005, `release_year_fixed` true, and the
+      audit list is empty. Limit: the test guards mart drift against
+      `int_performances`; an error inside `int_performances` itself (both
+      marts inherit it) is not caught by it. On the real DB today the test
+      is red for all 7 bands, by design (raw is empty, marts are full);
+      documented in `dbt/README.md`.
 
