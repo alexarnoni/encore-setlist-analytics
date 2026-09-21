@@ -98,6 +98,10 @@ def encore_pipeline():
 
     @task(max_active_tis_per_dag=1)
     def extract_setlistfm(band_dict: dict) -> dict:
+        # Count only THIS band's requests. When tasks share a process (as in
+        # `airflow dags test`) the counters would otherwise accumulate across
+        # bands and log_run would sum running totals.
+        reset_counters()
         run_id = get_current_context()["run_id"]
         band = Band(**band_dict)
         client = SetlistFmClient()
