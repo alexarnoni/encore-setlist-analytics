@@ -10,6 +10,13 @@
 -- * by TITLE (match_rate_by_title): every distinct song counts once. It
 --   is the harsher view: unmatched rarities weigh as much as hits.
 --
+-- * by ALBUM (match_rate_by_album): share of performances matched to a song
+--   that has a reference STUDIO ALBUM (album source, or an override that
+--   names an album). SECONDARY and informational (product.md): the gap to
+--   match_rate_by_performance is the share of matched plays that are
+--   "non-album" songs (recording-only) — the category future era KPIs keep
+--   instead of dropping. It never replaces the main metric.
+--
 -- "Matched" = the performance resolved to the catalog (album, recording
 -- or override) — the same is_matched flag mart_repertoire_age uses, so the
 -- two marts agree on counts (assert_marts_performance_counts_agree).
@@ -28,7 +35,8 @@ with performances as (
         band,
         show_year,
         title_normalized,
-        is_matched
+        is_matched,
+        reference_album
     from {{ ref('int_performances') }}
     where show_year is not null
 
@@ -50,6 +58,8 @@ select
         / nullif(count(distinct title_normalized) filter (where title_normalized <> ''), 0),
         4
     ) as match_rate_by_title,
+    round(count(*) filter (where reference_album is not null)::numeric / count(*), 4)
+        as match_rate_by_album,
     current_timestamp as computed_at
 from performances
 group by band, show_year
