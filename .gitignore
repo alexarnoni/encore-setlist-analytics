@@ -39,3 +39,6 @@ dbt/target/
 dbt/logs/
 dbt/.user.yml
 dbt_packages/
+
+# Generated reports (executed notebooks, aggregated data only; never committed)
+reports/

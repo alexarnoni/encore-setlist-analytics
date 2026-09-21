@@ -263,4 +263,31 @@ on the next full run.
       verified: `make` itself (not installed in this shell; its `DBT_GIT_COMMIT`
       expression was run by hand) and the log line inside a real pipeline
       run (tomorrow).
+- [x] **R2-6. Executed notebook as HTML, all 7 bands** —
+      `reports/01_first_kpi.html` (new gitignored folder `reports/`, checked
+      with `git check-ignore`; generated with `nbconvert --execute` from a
+      copy so the committed notebook keeps 0 outputs). Executed against the
+      live marts (404 + 172 rows, 7 bands). Looked at both charts: the
+      7-line chart has the legend upper left without covering data, one
+      fixed colour per band, hollow markers for years with fewer than 3
+      shows (Metallica climbs to ~30 years in 2022-26, Oasis 2025 ~30,
+      the rest between 0 and ~16). The file contains no password, API key
+      or forbidden column names. Note: the marts still reflect the run-2
+      data, i.e. *Let There Be Love* at 2001 until the next run applies the
+      seed fix. The scratch database used in R2-4 was dropped afterwards.
+      Final state: image rebuilt at HEAD (commit `90fc50b`), stack running
+      with the dev mount, mounted and baked copies report the same
+      `content_sha` (`80f491fe03c2`), DAG paused, `raw_setlistfm` empty,
+      marts intact.
+
+### Left for tomorrow's full run (no pipeline run was made today)
+
+- R2-1: the seed row should give *Let There Be Love* 2005, mark it fixed and
+  leave the audit list (and its warn test) empty.
+- R2-4: `assert_marts_reconcile_with_int_performances` must be green with the
+  real 7-band data; the warn companion reports any undated performances.
+  If red, the first suspect is undated setlists or a mart filter, not the
+  data.
+- R2-5: the first log line of the transform task must read
+  `dbt project: commit=... content_sha=...`.
 
