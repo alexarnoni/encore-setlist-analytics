@@ -96,10 +96,47 @@ commit per item, results recorded here.
       30.13. By tour: *Definitely Maybe* 0.29 → 0.69 (+0.40), the others
       +0.10 to +0.28. `oldest_song_year` overall stays 1991. Cause: 22
       catalog songs moved to an earlier year (8 Oasis; see item 3).
-- [ ] **8. Full pipeline, all 7 bands** (`ENCORE_BANDS_FILTER` empty), after
+- [x] **8. Full pipeline, all 7 bands** (`ENCORE_BANDS_FILTER` empty), after
       a setlist.fm request-budget check.
-- [ ] **9. Report** per-band `match_rate_by_performance` and
-      `match_rate_by_album`, songs flagged by the date check, and top 20
-      unmatched titles for any band below 0.90. **Stop for review.**
+      **Budget check.** Phase 0 show counts (9,499) → 479 pages/requests
+      expected; 241 already used that day → 720 projected, under the DAG's
+      1,300 cap and the API's 1,440. MusicBrainz for the 5 missing bands
+      was preloaded first with a one-off script: 0 real requests (answered
+      from the Phase 0 disk cache), 64 albums = 59 after the 5 seed
+      exclusions; all dbt tests then passed on 7 bands' catalogs, so a
+      dbt failure could not burn the setlist.fm quota afterwards.
+      **Run 1 (17:36-17:49): succeeded, but with the wrong dbt.** I had not
+      rebuilt the Airflow image after items 3-4, and `transform` uses the
+      copy of `dbt/` baked into the image: it ran the OLD project (80
+      tests, no `match_rate_by_album`, old release-year rule). The
+      symptom was in the log (80 vs 87 tests) and I missed it; the
+      dbt/README already said a rebuild is needed. My error. The same run
+      exposed a counting bug: `ops` logged **1,795** requests for 481 real
+      ones, because `extract_setlistfm` never reset the shared request
+      counters and `log_run` summed the running totals (per-band values
+      49, 137, 192, 247, 318, 371, 481; 12 minutes of wall time is
+      inconsistent with 1,795 calls at 1 s each). It would also have made
+      the next run's budget estimate 1,795 and blocked it. Fix:
+      `reset_counters()` at the start of the task (commit `9f3c254`); the
+      logged row was corrected 1,795 → 481 in `ops`.
+      **Run 2 (17:53-18:05): rebuilt image, correct.** 14 tasks ok, dbt
+      seed 3/3, run 14/14, test **87 pass + 3 warn**, `raw_setlistfm` 0 / 0
+      / 0, `ops` row `success`, 483 requests (per-band counts now sum
+      correctly). Setlist.fm requests used that day: 241 + 481 + 483 =
+      **1,205** (the second run was needed only because of the stale
+      image). `encore_pipeline` stayed paused throughout.
+- [x] **9. Report** — per-band results were delivered in chat; no band is
+      below 0.90, so no unmatched-title list was needed. Numbers
+      (`match_rate_by_performance` / `match_rate_by_album`): Metallica
+      0.9999 / 0.9364; Oasis 0.9999 / 0.8689; Arctic Monkeys 0.9947 /
+      0.9511; Twenty One Pilots 0.9906 / 0.9473; Muse 0.9897 / 0.9313;
+      Avenged Sevenfold 0.9881 / 0.9572; Linkin Park 0.9750 / 0.9149
+      (album rate is the performance-weighted mean of the per-year
+      rounded rates). Date check: 1 song flagged over all bands (Oasis,
+      *Let There Be Love*). Weak spot: Muse 1994-95 (59 performances,
+      0 % and 24 % matched). 457 catalog songs have no release year
+      (Metallica 232). Not verified: an independent recomputation of the
+      marts for the six bands other than Oasis (raw data is deleted
+      after each run); they rest on the shared, tested code.
 
 ## Log
