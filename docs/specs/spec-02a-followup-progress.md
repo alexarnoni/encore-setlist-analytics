@@ -439,3 +439,26 @@ calendar-day reset would allow any time. The run costs about 481 requests.
   and kept the 6-day one; the probe was then removed. Final state:
   `log_cleanup` active, `encore_pipeline` paused. pytest 83 passed.
 
+### Bug found and fixed before today's run (2026-09-22)
+
+`check_api_budget` failed immediately: "Projected setlist.fm requests today
+(1495 = 1012 already logged + 483 estimated) would exceed the daily budget of
+1300." Real usage today was 0 (confirmed via `finished_at::date`). Cause:
+`ops.sum_setlistfm_requests_today()` filters on `started_at`, and for a DAG
+run started with `airflow dags test <date>`, `started_at` is the **logical
+date passed on the command line**, not the real wall clock — a quirk already
+noted after item 22 as "cosmetic". During yesterday's verification I ran
+`airflow dags test encore_pipeline 2026-09-22/2026-09-23/2026-09-24` (picking
+unused future logical dates so as not to collide with real runs), which left
+3 rows in `ops.pipeline_runs` with `started_at` on those future dates —
+today, that placed 1,012 of yesterday's real requests inside "today"'s
+window. **Not cosmetic after all: it can block a legitimate run.**
+Fix applied: `update ops.pipeline_runs set started_at = finished_at where
+started_at::date <> finished_at::date` (4 rows, all mine from yesterday's
+testing) — corrects the date without deleting any row or request count.
+Today's logged total is 0 again. **Follow-up to consider:** `check_api_budget`
+should compare against `finished_at` (or the DAG run's real `logical_date`
+under its normal `@monthly` schedule, not a manually-supplied test date), so
+a test run's logical date can never again collide with a later real day. Not
+fixed now; flagged for the project owner.
+
