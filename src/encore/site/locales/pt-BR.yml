@@ -38,6 +38,81 @@ home:
 comparison:
   title: Comparação
 methodology:
+  kicker: como os números são feitos
   title: Metodologia
+  lede: Como os números deste site são construídos, o que eles podem e não podem sustentar, e onde os dados são fracos.
+  scope:
+    h: Escopo e fontes
+    p:
+      1: "O Encore acompanha {{ bands_count }} bandas ({{ band_list }}), fixas nesta versão. Os setlists (quais músicas foram tocadas em quais shows) vêm do setlist.fm; o catálogo (álbuns, singles, faixas e datas de lançamento) vem do MusicBrainz."
+      2: "Tudo aqui é calculado a partir de {{ shows_total }} shows e publicado apenas de forma agregada: por banda, turnê, ano e álbum."
+  kpi:
+    h: O que os números significam
+    item:
+      1: "<strong>Cobertura do catálogo.</strong> Uma execução é reconhecida quando seu título corresponde a uma música do catálogo do MusicBrainz. A parcela de execuções reconhecidas, ponderada por quantas vezes cada música foi tocada, é a principal medida de qualidade dos dados (tabela abaixo). A parcela ligada a um álbum de estúdio aparece ao lado, só como informação."
+      2: "<strong>O que fica de fora.</strong> Covers, entradas de fita e intros são excluídos dos números do catálogo. Medleys (títulos unidos por ' / ') são separados em músicas distintas."
+      3: "<strong>Idade do repertório.</strong> Para cada execução, o ano do show menos o ano do primeiro lançamento oficial da música (o menor entre o ano do álbum de estúdio e o do primeiro lançamento da gravação), nunca abaixo de zero. O valor de um ano é a média das execuções. No gráfico por turnê, cada barra é a mediana de uma turnê em um ano, porque a mediana não pode ser reconstruída entre vários anos."
+      4: "<strong>Rotação.</strong> Para shows consecutivos da mesma turnê, calcula-se a sobreposição entre os dois setlists (índice de Jaccard). Rotação é 1 menos a sobreposição média: 0 é o mesmo setlist toda noite, 1 é nenhuma música em comum. Turnês com menos de 5 shows não são pontuadas, e um par pertence ao ano do segundo show. Anos com menos de 5 pares aparecem como marcadores vazados e ficam fora da linha."
+      5: "<strong>Álbum de uma música.</strong> O álbum de estúdio mais antigo que a contém. Músicas do catálogo sem álbum de estúdio (singles, lados B, outras gravações) formam um grupo próprio, non-album, em vez de serem descartadas."
+  survival:
+    h: Sobrevivência das músicas e a regra de abandono
+    p:
+      1: "A sobrevivência é medida em shows, não em tempo de calendário, para que um hiato não seja lido como abandono de músicas. A duração de uma música vai do primeiro ao último show em que foi tocada, inclusive: uma música tocada em um único show dura 1."
+      2: "Uma música é abandonada quando saiu do setlist e não voltou: sua última aparição está pelo menos N shows antes do fim do histórico, com N = 50 por padrão. Toda outra música é censurada: continua sendo tocada, ou ficou fora por um tempo e voltou. Só entram na análise músicas do catálogo com pelo menos 3 execuções, ligadas a um álbum de estúdio ou a uma gravação com ano de lançamento conhecido."
+      3: "Conta apenas a última lacuna. Uma versão anterior tratava a primeira lacuna como o evento e marcava como abandonados clássicos que descansaram por uma turnê e voltaram; a regra da última lacuna corrige isso."
+  sensitivity:
+    h: Quanto o N importa?
+    p:
+      1: "Sobrevivência mediana, em shows, das músicas elegíveis de cada banda para três tamanhos de janela. Onde a mediana quase não se move, a escolha de N não está guiando o resultado; onde ela se move muito, leia o número com isso em mente."
+    note: "Não atingida: a curva nunca cai abaixo de 50%."
+  policy:
+    h: Política de dados
+    p:
+      1: "Os dados brutos do setlist.fm existem apenas enquanto o pipeline roda e são apagados ao fim de cada execução. Só resultados agregados são guardados e publicados; por isso este site nunca mostra um setlist individual, data de show, local ou identificador do setlist.fm."
+      2: "Os títulos de músicas, quando aparecem, são os títulos canônicos do MusicBrainz (CC0). Os dados de setlist são creditados ao <a href='{{ setlistfm_url }}'>setlist.fm</a> e usados apenas para fins não comerciais; os dados de catálogo vêm do <a href='{{ musicbrainz_url }}'>MusicBrainz</a>."
+  limits:
+    h: Limitações conhecidas
+    item:
+      1: "<strong>Uma janela em shows não é uma janela em tempo.</strong> Cinquenta shows passam em meses para uma banda que faz muitas datas e em mais de um ano para uma que faz poucas. De 2015 em diante, um ano ativo médio tem cerca de {{ twenty_one_pilots_pairs_avg }} pares de shows para o Twenty One Pilots (seu ano mais cheio tem {{ twenty_one_pilots_pairs_max }}), {{ arctic_monkeys_pairs_avg }} para o Arctic Monkeys, {{ muse_pairs_avg }} para o Muse, {{ oasis_pairs_avg }} para o Oasis, e {{ metallica_pairs_avg }}, {{ avenged_sevenfold_pairs_avg }} e {{ linkin_park_pairs_avg }} para Metallica, Avenged Sevenfold e Linkin Park (pares contam um pouco menos que shows). Compare bandas com isso em mente."
+      2: "<strong>Muse, 1994 e 1995.</strong> A cobertura do catálogo é baixa nos dois primeiros anos do Muse: {{ muse_1994_matched }} de {{ muse_1994_performances }} execuções reconhecidas em 1994 e {{ muse_1995_matched }} de {{ muse_1995_performances }} em 1995 ({{ muse_1995_rate }}). Juntos são {{ muse_weak_share }} das execuções do Muse, então a cobertura geral ({{ muse_match }}) quase não muda, mas os números do Muse nesses anos são frágeis. Causa provável: demos e EPs antigos que não estão no catálogo usado aqui."
+      3: "<strong>Jams, solos e entradas genéricas</strong> como '(jam)' não podem ser distinguidos com segurança nos dados; quando correspondem a uma música do catálogo, são contados como qualquer outra. Isso pode aumentar os setlists, reduzir a sobreposição entre shows e incluir músicas espúrias na sobrevivência."
+      4: "<strong>Gravações sem ano de lançamento</strong> não têm posição na linha do tempo do catálogo e ficam fora da sobrevivência. Músicas só de gravação que têm ano entram sob non-album."
+      5: "<strong>As datas de lançamento vêm do MusicBrainz</strong> e podem estar erradas. Casos suspeitos são revisados e corrigidos por uma lista manual de correções no repositório."
+  match:
+    h: Cobertura do catálogo por banda
+    p:
+      1: "Parcela das execuções reconhecidas no catálogo, ponderada por execuções (a medida principal), e a parcela ligada a um álbum de estúdio (secundária, informativa)."
 about:
+  kicker: o que é isto
   title: Sobre
+  lede: O Encore é um projeto de portfólio de dados, sem fins comerciais, sobre como as bandas usam o próprio catálogo nos shows.
+  purpose:
+    h: Para que serve
+    p:
+      1: "Ele pergunta como sete bandas tratam o catálogo no palco: vivem do passado ou apostam em material novo, os shows mudam de uma noite para outra, e quanto tempo uma música sobrevive no repertório ao vivo. Duas outras perguntas, a estrutura do show e as diferenças por país ou tipo de casa, ficam para versões futuras."
+      2: "É também um exemplo prático de um pipeline de dados pequeno e completo, com o método escrito ao lado dos gráficos."
+  stack:
+    h: Como é feito
+    item:
+      1: "<strong>Ingestão.</strong> Clientes Python das APIs do setlist.fm e do MusicBrainz, orquestrados pelo Apache Airflow (LocalExecutor) em Docker Compose, em uma máquina virtual ARM64."
+      2: "<strong>Armazenamento e transformação.</strong> PostgreSQL 16 e dbt Core. Os dados brutos do setlist.fm ficam em um schema efêmero, esvaziado ao fim de cada execução; os modelos de staging e intermediários são views; só os marts agregados persistem."
+      3: "<strong>Análise.</strong> pandas e lifelines (Kaplan-Meier) para rotação e sobrevivência das músicas."
+      4: "<strong>Este site.</strong> Um site estático gerado a partir dos marts com Python, Jinja2 e matplotlib (os gráficos são SVG inline, sem biblioteca de gráficos em JavaScript), em português e inglês, no Cloudflare Pages. Sem API e sem banco de dados em tempo de execução."
+  source:
+    h: Código
+    p:
+      1: "O código, as notas de metodologia e as especificações estão no <a href='{{ repo_url }}'>GitHub</a>. Feito por <a href='{{ author_url }}'>alexarnoni</a>."
+chart:
+  table: Tabela de dados
+labels:
+  band: Banda
+  songs: Músicas
+  abandoned: Abandonadas
+  censored: Censuradas
+  median_shows: Mediana (shows)
+  n_col: "N = {{ n }}"
+  performances: Execuções
+  matched_rate: Reconhecidas no catálogo
+  album_rate: Ligadas a álbum de estúdio
+  years: Anos
+  not_reached: não atingida

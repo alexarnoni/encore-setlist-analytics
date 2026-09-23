@@ -20,6 +20,10 @@ TOURS = {"Tour A": [2000, 2001, 2002], "Tour B": [2003, 2004]}
 ALBUMS = ["Album One", "Album Two", "non-album", "all"]
 WINDOWS = [25, 50, 100]
 COMPUTED_AT = datetime(2026, 9, 23, 6, 30, tzinfo=timezone.utc)
+# Years outside 2000-2004 that exist only to feed placeholders: touring intensity "from 2015 on"
+# (rotation) and Muse's two weakly matched early years (match quality).
+LATE_ROTATION_YEARS = [2015, 2016]
+MUSE_WEAK_YEARS = {1994: (9, 0), 1995: (50, 12)}  # year -> (performances, matched)
 
 
 def fake_marts() -> dict[str, pd.DataFrame]:
@@ -44,6 +48,15 @@ def fake_marts() -> dict[str, pd.DataFrame]:
                 band=band, show_year=y, performances=400, matched_performances=380,
                 match_rate_by_performance=0.95, distinct_songs=60, distinct_songs_matched=55,
                 match_rate_by_title=0.9, match_rate_by_album=0.85, computed_at=COMPUTED_AT))
+        for y in LATE_ROTATION_YEARS:
+            rot_year.append(dict(band=band, show_year=y, pairs=30 + b, mean_jaccard=0.6, rotation=0.4,
+                                 computed_at=COMPUTED_AT))
+        if band == "Muse":
+            for y, (perf, matched) in MUSE_WEAK_YEARS.items():
+                quality.append(dict(
+                    band=band, show_year=y, performances=perf, matched_performances=matched,
+                    match_rate_by_performance=matched / perf, distinct_songs=5, distinct_songs_matched=1,
+                    match_rate_by_title=0.2, match_rate_by_album=0.1, computed_at=COMPUTED_AT))
         for n in WINDOWS:
             for album in ALBUMS:
                 songs = 30 if album == "all" else 10

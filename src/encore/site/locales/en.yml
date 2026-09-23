@@ -38,6 +38,81 @@ home:
 comparison:
   title: Comparison
 methodology:
+  kicker: how the numbers are built
   title: Methodology
+  lede: How the numbers on this site are built, what they can and cannot support, and where the data is thin.
+  scope:
+    h: Scope and sources
+    p:
+      1: "Encore follows {{ bands_count }} bands ({{ band_list }}), fixed for this version. Setlists (which songs were played at which shows) come from setlist.fm; the catalog (albums, singles, tracks and release dates) comes from MusicBrainz."
+      2: "Everything here is computed from {{ shows_total }} shows and published only as aggregates: by band, tour, year and album."
+  kpi:
+    h: What the numbers mean
+    item:
+      1: "<strong>Catalog match.</strong> A performance is matched when its title resolves to a song in the MusicBrainz catalog. The share of matched performances, weighted by how often each song was played, is the main data-quality measure (table below). The share matched to a studio album is shown next to it for information only."
+      2: "<strong>What is left out.</strong> Covers, tape entries and intros are excluded from catalog figures. Medleys (titles joined by ' / ') are split into separate songs."
+      3: "<strong>Repertoire age.</strong> For each performance, the year of the show minus the song's first official release year (the earlier of its studio album's year and its recording's first release), never below zero. A year's figure is the mean over its performances. On the tour chart each bar is the median of one tour in one year, because a median cannot be rebuilt across several years."
+      4: "<strong>Rotation.</strong> For consecutive shows of the same tour, the overlap between the two setlists (Jaccard index) is computed. Rotation is 1 minus the mean overlap: 0 means the same setlist every night, 1 means no song in common. Tours with fewer than 5 shows are not scored, and a pair belongs to the year of its second show. Years with fewer than 5 pairs are drawn as hollow markers and left out of the line."
+      5: "<strong>Album of a song.</strong> The earliest studio album that contains it. Songs matched to the catalog but not to a studio album (singles, B-sides, other recordings) form their own group, non-album, instead of being dropped."
+  survival:
+    h: Song survival and the abandonment rule
+    p:
+      1: "Survival is measured in shows, not in calendar time, so that a hiatus is not read as abandoning songs. A song's duration runs from its first show to its last, inclusive: a song played at one show only lasts 1."
+      2: "A song is abandoned when it left the setlist and did not come back: its last appearance is at least N shows before the end of the history, with N = 50 by default. Every other song is censored: it is still being played, or it disappeared for a while and returned. Only catalog songs with at least 3 performances, matched to a studio album or to a recording with a known release year, enter the analysis."
+      3: "Only the final gap counts. An earlier version treated the first gap as the event and marked classics that were rested for a tour and brought back as abandoned; the final-gap rule fixes that."
+  sensitivity:
+    h: How much does N matter?
+    p:
+      1: "Median survival, in shows, of each band's eligible songs for three window sizes. Where the median barely moves, the choice of N is not driving the result; where it moves a lot, read the figure with that in mind."
+    note: "Not reached: the curve never drops below 50%."
+  policy:
+    h: Data policy
+    p:
+      1: "Raw setlist.fm data exists only while the pipeline runs and is deleted at the end of every run. Only aggregated results are kept and published, so this site never shows an individual setlist, show date, venue or setlist.fm identifier."
+      2: "Song titles, where they appear, are canonical MusicBrainz titles (CC0). Setlist data is credited to <a href='{{ setlistfm_url }}'>setlist.fm</a> and used for non-commercial purposes only; catalog data comes from <a href='{{ musicbrainz_url }}'>MusicBrainz</a>."
+  limits:
+    h: Known limitations
+    item:
+      1: "<strong>A window in shows is not a window in time.</strong> Fifty shows pass in months for a band that tours heavily and in more than a year for one that does not. From 2015 on, an average active year has about {{ twenty_one_pilots_pairs_avg }} show pairs for Twenty One Pilots (its busiest year has {{ twenty_one_pilots_pairs_max }}), {{ arctic_monkeys_pairs_avg }} for Arctic Monkeys, {{ muse_pairs_avg }} for Muse, {{ oasis_pairs_avg }} for Oasis, and {{ metallica_pairs_avg }}, {{ avenged_sevenfold_pairs_avg }} and {{ linkin_park_pairs_avg }} for Metallica, Avenged Sevenfold and Linkin Park (pairs slightly undercount shows). Compare bands with this in mind."
+      2: "<strong>Muse, 1994 and 1995.</strong> Catalog match is low in Muse's two earliest years: {{ muse_1994_matched }} of {{ muse_1994_performances }} performances matched in 1994 and {{ muse_1995_matched }} of {{ muse_1995_performances }} in 1995 ({{ muse_1995_rate }}). Together they are {{ muse_weak_share }} of Muse's performances, so the overall match ({{ muse_match }}) barely moves, but Muse figures for those years are thin. Likely cause: early demos and EPs that are not in the catalog kept here."
+      3: "<strong>Jams, solos and generic entries</strong> such as '(jam)' cannot be told apart reliably in the data, so where they match a catalog song they are counted like any other. This can enlarge setlists, lower the overlap between shows and add spurious songs to survival."
+      4: "<strong>Recordings without a release year</strong> cannot be placed on the catalog timeline and are left out of survival. Recording-only songs that do have a year are included under non-album."
+      5: "<strong>Release dates come from MusicBrainz</strong> and can be wrong. Suspicious cases are reviewed and corrected through a manual override list in the repository."
+  match:
+    h: Match quality by band
+    p:
+      1: "Share of performances matched to the catalog, weighted by plays (the main measure), and the share matched to a studio album (secondary, informational)."
 about:
+  kicker: what this is
   title: About
+  lede: Encore is a non-commercial data portfolio project about how bands use their own catalog in live shows.
+  purpose:
+    h: What it is for
+    p:
+      1: "It asks how seven bands treat their catalog on stage: do they live off their past or bet on new material, do shows change from night to night, and how long does a song survive in the live repertoire. Two more questions, show structure and differences by country or venue type, are planned for later versions."
+      2: "It is also a worked example of a small end-to-end data pipeline, with the method written down next to the charts."
+  stack:
+    h: How it is built
+    item:
+      1: "<strong>Ingestion.</strong> Python clients for the setlist.fm and MusicBrainz APIs, orchestrated by Apache Airflow (LocalExecutor) in Docker Compose on an ARM64 virtual machine."
+      2: "<strong>Storage and transformation.</strong> PostgreSQL 16 and dbt Core. Raw setlist.fm data lives in an ephemeral schema truncated at the end of every run; staging and intermediate models are views; only aggregated marts persist."
+      3: "<strong>Analysis.</strong> pandas and lifelines (Kaplan-Meier) for rotation and song survival."
+      4: "<strong>This site.</strong> A static site generated from the marts with Python, Jinja2 and matplotlib (charts are inline SVG, with no JavaScript chart library), in Portuguese and English, on Cloudflare Pages. No API and no database at runtime."
+  source:
+    h: Source
+    p:
+      1: "The code, the methodology notes and the specs are on <a href='{{ repo_url }}'>GitHub</a>. Built by <a href='{{ author_url }}'>alexarnoni</a>."
+chart:
+  table: Data table
+labels:
+  band: Band
+  songs: Songs
+  abandoned: Abandoned
+  censored: Censored
+  median_shows: Median (shows)
+  n_col: "N = {{ n }}"
+  performances: Performances
+  matched_rate: Matched to catalog
+  album_rate: Matched to a studio album
+  years: Years
+  not_reached: not reached

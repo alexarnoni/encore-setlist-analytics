@@ -28,6 +28,7 @@ DEFAULT_SITE_URL = "https://encore.alexarnoni.com"
 REPO_URL = "https://github.com/alexarnoni/encore-setlist-analytics"
 SETLISTFM_URL = "https://www.setlist.fm/"
 MUSICBRAINZ_URL = "https://musicbrainz.org/"
+AUTHOR_URL = "https://alexarnoni.com/"
 
 PACKAGE_DIR = Path(__file__).parent
 TEMPLATES_DIR = PACKAGE_DIR / "templates"
@@ -54,6 +55,14 @@ def _write(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf8", newline="\n")
 
 
+def _clear(out: Path) -> None:
+    """Empty `out` but keep the directory itself (a running `make site-serve` may hold it open)."""
+    if not out.exists():
+        return
+    for child in out.iterdir():
+        shutil.rmtree(child) if child.is_dir() else child.unlink()
+
+
 def _copy_assets(out: Path) -> None:
     """Write `assets/site.css` (generated tokens + static styles) and copy self-hosted fonts."""
     css = theme.tokens_css() + "\n" + (ASSETS_DIR / "site.css").read_text(encoding="utf8")
@@ -70,7 +79,7 @@ def build_site(
 ) -> list[Path]:
     """Render every page of every locale into `out` and return the written files.
 
-    `out` is emptied first so a removed page never lingers. Raises `i18n.LocaleError`
+    `out` is emptied first (its contents, not the directory) so a removed page never lingers. Raises `i18n.LocaleError`
     on a missing translation key or an unfilled placeholder.
     """
     origin = (origin or site_url()).rstrip("/")
@@ -81,8 +90,7 @@ def build_site(
     shows_total = int(shape.shows_by_band(marts["mart_repertoire_age"]).sum())
     page_list = pages.page_list(bands)
 
-    if out.exists():
-        shutil.rmtree(out)
+    _clear(out)
     written: list[Path] = []
     for locale in i18n.LOCALES:
         t = i18n.Translator(locale, strings[locale], values.placeholder_values(marts, bands, locale))
@@ -91,7 +99,7 @@ def build_site(
             ctx.update(
                 origin=origin, as_of=as_of.isoformat(), built_on=built_on.isoformat(), shows_total=shows_total,
                 bands_total=len(bands), repo_url=REPO_URL, setlistfm_url=SETLISTFM_URL,
-                musicbrainz_url=MUSICBRAINZ_URL, layout=pages.layout(page, locale, page_list, t, origin),
+                musicbrainz_url=MUSICBRAINZ_URL, author_url=AUTHOR_URL, layout=pages.layout(page, locale, page_list, t, origin),
             )
             html = env.get_template(page.template).render(**ctx)
             target = out / i18n.URL_PREFIX[locale] / page.path / "index.html"

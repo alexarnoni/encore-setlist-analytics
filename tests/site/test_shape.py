@@ -111,14 +111,15 @@ def test_weakest_years_uses_threshold() -> None:
 
 def test_shows_and_touring_intensity(marts) -> None:
     assert shape.shows_by_band(marts["mart_repertoire_age"])["Muse"] == 5 * 14
-    assert shape.touring_intensity(marts["mart_band_rotation_by_year"], since=2002)["Oasis"] == 21.0
+    assert shape.touring_intensity(marts["mart_band_rotation_by_year"], since=2002)["Oasis"] == 25.0  # (3 x 21 + 2 x 31) / 5 active years
 
 
 def test_placeholder_values_per_locale(marts) -> None:
     en = values.placeholder_values(marts, tuple(BANDS), "en")
     pt = values.placeholder_values(marts, tuple(BANDS), "pt-BR")
     assert en["metallica_median"] == "155" and en["twenty_one_pilots_songs"] == "30"
-    assert en["muse_match"] == "95.0%" and pt["muse_match"] == "95,0%"
+    assert en["muse_match"] == "92.9%" and pt["muse_match"] == "92,9%"  # (5*380 + 0 + 12) / (5*400 + 9 + 50)
+    assert en["oasis_match"] == "95.0%"
     assert en["oasis_first_year"] == "2000" and en["bands_count"] == "7"
     assert en["shows_total"] == pt["shows_total"] == str(sum(5 * (10 + b) for b in range(7)))
 
@@ -129,3 +130,13 @@ def test_placeholder_without_a_value_is_left_out() -> None:
     m["mart_survival_summary"] = s.assign(median_survival_shows=s["median_survival_shows"].where(s["band"] != "Muse"))
     out = values.placeholder_values(m, tuple(BANDS), "en")
     assert "muse_median" not in out and "oasis_median" in out
+
+
+def test_methodology_placeholders_from_the_marts(marts) -> None:
+    en = values.placeholder_values(marts, tuple(BANDS), "en")
+    pt = values.placeholder_values(marts, tuple(BANDS), "pt-BR")
+    assert (en["muse_1994_performances"], en["muse_1994_matched"], en["muse_1995_rate"]) == ("9", "0", "24.0%")
+    assert en["muse_weak_share"] == "2.87%" and pt["muse_weak_share"] == "2,87%"  # 59 of 2,059
+    assert "oasis_weak_share" not in en  # no weak year, so a text that uses it fails the build
+    assert en["muse_pairs_avg"] == "34" and en["muse_pairs_max"] == "34"  # 30 + band index 4, in 2015-2016
+    assert en["band_list"].startswith("Arctic Monkeys, Oasis")

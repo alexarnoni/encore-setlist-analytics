@@ -1,4 +1,42 @@
 {% extends "base.html" %}
+{% from "_macros.html" import table, kicker, list %}
 {% block main %}
+{{ kicker(t('methodology.kicker')) }}
 <h1>{{ t('methodology.title') }}</h1>
+<p class="lede">{{ t('methodology.lede') }}</p>
+
+<section id="scope">
+  <h2>{{ t('methodology.scope.h') }}</h2>
+  {% for p in t.section('methodology.scope.p') %}<p>{{ p }}</p>{% endfor %}
+</section>
+
+<section id="kpi">
+  <h2>{{ t('methodology.kpi.h') }}</h2>
+  {{ list(t.section('methodology.kpi.item')) }}
+</section>
+
+<section id="survival">
+  <h2>{{ t('methodology.survival.h') }}</h2>
+  {% for p in t.section('methodology.survival.p') %}<p>{{ p }}</p>{% endfor %}
+  <h3 id="sensitivity">{{ t('methodology.sensitivity.h') }}</h3>
+  {% for p in t.section('methodology.sensitivity.p') %}<p>{{ p }}</p>{% endfor %}
+  <div class="card">{{ table(sensitivity.headers, sensitivity.rows) }}</div>
+  <p class="note">{{ t('methodology.sensitivity.note') }}</p>
+</section>
+
+<section id="policy">
+  <h2>{{ t('methodology.policy.h') }}</h2>
+  {% for p in t.section('methodology.policy.p', setlistfm_url=setlistfm_url, musicbrainz_url=musicbrainz_url) %}<p>{{ p }}</p>{% endfor %}
+</section>
+
+<section id="limitations">
+  <h2>{{ t('methodology.limits.h') }}</h2>
+  {{ list(t.section('methodology.limits.item')) }}
+</section>
+
+<section id="match">
+  <h2>{{ t('methodology.match.h') }}</h2>
+  {% for p in t.section('methodology.match.p') %}<p>{{ p }}</p>{% endfor %}
+  <div class="card">{{ table(match.headers, match.rows) }}</div>
+</section>
 {% endblock %}

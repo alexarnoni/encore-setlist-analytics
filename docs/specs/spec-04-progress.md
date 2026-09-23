@@ -267,3 +267,25 @@ permission: source github.com/IBM/plex (SIL OFL), about 30 KB in total, plus
 falls back to the system monospace (`ui-monospace`, Cascadia Mono, Consolas);
 `fonts.css` and the copy step are already wired and switch on when
 `src/encore/site/assets/fonts/*.woff2` exist.
+
+### T7 — Methodology and About (done)
+
+Templates `methodology.html`, `about.html`, `_macros.html` (stackable data
+table, figure with data-table alternative, kicker, list); hand-written text in
+both locales (scope and sources, KPI definitions, survival and the final-gap
+rule, N sensitivity table, data policy, known limitations, match quality by
+band; about: purpose, stack, source and author links). Every number in the
+limitations text is a placeholder filled from the marts: touring intensity
+since 2015 (`<band>_pairs_avg`, `_pairs_max`), Muse's weak years
+(`muse_1994_*`, `muse_1995_*`, `muse_weak_share`), overall match. The fixture
+gained Muse 1994-1995 and rotation years 2015-2016 to feed them.
+`build_site` now empties the output directory's contents rather than deleting
+it (a running `make site-serve` holds the directory open on Windows).
+**Verified.** 62 site tests: sections present in both locales, sensitivity table
+equals the marts, weighted match table (`2,059` vs `2.059`, `92.9%` vs `92,9%`),
+limitation text filled in both languages, no template syntax left on any page,
+and a build without Muse's weak years fails with the missing placeholder name
+(`muse_1994...`) instead of shipping stale text. Real-data build: every
+placeholder resolves and the rendered numbers equal `docs/methodology.md`
+(sensitivity table 337/337/337 ... 378/463/819; pairs per year 64, 52, 40, 40,
+28/31/30, busiest 127; Muse 0.25% of performances, overall match 99.0%).
