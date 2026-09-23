@@ -73,7 +73,42 @@ as-is wherever they match the catalog. This can inflate set sizes, lower
 Jaccard, and add spurious "songs" to survival tables. Recorded here as a
 known limitation rather than patched with a filter.
 
+### Sensitivity to the window N
+
+Median survival (shows, all eligible songs of the band), first full run under
+the final-gap rule (2026-09-23). The curves are computed for N = 25, 50 and
+100 so the choice of N can be checked rather than trusted.
+
+| Band | N = 25 | N = 50 | N = 100 |
+|---|---|---|---|
+| Arctic Monkeys | 337 | 337 | 337 |
+| Avenged Sevenfold | 378 | 463 | 819 |
+| Linkin Park | 265 | 265 | 265 |
+| Metallica | 998 | 1235 | 1458 |
+| Muse | 334 | 480 | 544 |
+| Oasis | 127 | 163 | 163 |
+| Twenty One Pilots | 526 | 674 | 713 |
+
 ## Known limitations
+
+### A fixed window in shows spans different calendar time per band
+
+Survival is measured in **shows**, not in time, so that hiatuses do not count
+as abandonment. The price is that N = 50 shows covers very different calendar
+spans depending on how much a band tours. Twenty One Pilots plays enough shows
+that 50 of them pass in months (its busiest year in the data has 127 show
+pairs), so a song last played in early 2025 already counts as abandoned by the
+end of the history, while for a band that tours less, such as Metallica or
+Linkin Park, the same 50 shows take well over a year. As a rough guide, from
+2015 on the average active year has about 64 show pairs for Twenty One Pilots,
+52 for Arctic Monkeys, 40 for Muse and Oasis, and 28 to 31 for Metallica,
+Avenged Sevenfold and Linkin Park (show pairs undercount shows, because tours
+of fewer than 5 shows and "Unknown tour" are left out, and only years with
+shows are averaged). Comparisons **between** bands should be read with this in mind (and even
+within one band, touring intensity changes over a career).
+This is a known limitation of measuring in shows rather than time. The
+sensitivity table above (N = 25, 50, 100) shows how much the medians move with
+the window.
 
 ### Muse, 1994-1995: low catalog match (accepted)
 
