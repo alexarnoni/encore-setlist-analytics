@@ -216,7 +216,7 @@ to Q1-Q9; the recommended defaults let work start without them.
 - [x] T1 synthetic histories
 - [x] T2 `int_show_song_sets`
 - [x] T3 `int_show_pairs` + Jaccard test
-- [ ] T4 `mart_tour_rotation`
+- [x] T4 `mart_tour_rotation`
 - [ ] T5 `mart_band_rotation_by_year`
 - [ ] T6 survival core + unit tests
 - [ ] T7 Kaplan-Meier curves and summary
@@ -360,3 +360,29 @@ container is stopped; `bash scripts/spec03/up.sh` brings it back with its data
 reload the synthetic histories if needed.
 Open item for the project owner: the diagnostic report on `master` takes about
 90 s at production size (see T2).
+
+### T4 — `mart_tour_rotation` (done)
+
+`dbt/models/analytics/mart_tour_rotation.sql` (grain band/tour_name: shows,
+pairs, mean_jaccard, rotation = 1 - mean_jaccard, median_setlist_size,
+core_songs — >= 90% of shows, exact-fraction comparison — distinct_songs,
+first_year/last_year), schema entry, `assert_mart_tour_rotation_unique_grain`
+and `assert_mart_tour_rotation_internal_consistency` (rotation formula and
+bounds, pairs = shows - 1, shows >= 5, core <= distinct, no `Unknown tour`,
+first_year <= last_year), and `tests/spec03/test_tour_rotation.py` against
+the oracle. Tours with fewer than 5 shows and `Unknown tour` never get a row
+(matches the oracle's design from T1): rotation cannot be measured on either.
+**Caught while writing the schema:** a plain YAML scalar description
+containing `(excluded: not a real tour)` broke dbt's parser — a colon+space
+mid-string reads as a new mapping key. Quoted the string.
+**Verified.** All values equal the oracle exactly (as rounded to 4 decimals)
+for every synthetic tour; `Unknown tour` and Oasis's 4-show "Short Tour" are
+absent; Metallica's M72-like tour has higher rotation than its steady tour
+(the spec's real-data sanity check, reproduced on synthetic data). Mutations:
+no minimum-shows filter (the consistency test AND the oracle both fail — the
+oracle test even without needing the shows>=5 rule to be phrased the same
+way, since it compares the full set of tours); core threshold 90% -> 50%
+(**the dbt consistency test does not catch this** — core_songs <=
+distinct_songs still holds — only the oracle test does, which is exactly why
+it exists); rotation defined as `mean_jaccard` instead of `1 - mean_jaccard`
+(both fail). All restored, model `diff` clean.
