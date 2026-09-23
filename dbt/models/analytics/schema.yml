@@ -160,3 +160,31 @@ models:
       - name: computed_at
         data_tests:
           - not_null
+
+  - name: mart_band_rotation_by_year
+    description: >
+      Rotation by band and year, weighted by pairs (a pair belongs to the
+      year of its second show). Only pairs from tours that qualify for
+      mart_tour_rotation are counted, so the two marts agree by construction.
+      Rebuilt from scratch on every run; computed_at is the only column
+      expected to differ between two runs on the same data.
+    columns:
+      - name: band
+        data_tests:
+          - not_null
+      - name: show_year
+        data_tests:
+          - not_null
+      - name: pairs
+        data_tests:
+          - not_null
+      - name: mean_jaccard
+        data_tests:
+          - not_null
+      - name: rotation
+        description: 1 - mean_jaccard, between 0 and 1.
+        data_tests:
+          - not_null
+      - name: computed_at
+        data_tests:
+          - not_null
