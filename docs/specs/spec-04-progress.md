@@ -185,3 +185,23 @@ a key in one locale only, a missing file, a non-string value, a missing key
 lookup, an unfilled placeholder and bad placeholder syntax each fail; values
 are escaped while locale markup is kept; pt-BR `1.234,5` vs en `1,234.5`.
 19 site tests pass.
+
+### T4 — data shaping and placeholder values (done)
+
+`bands.py` (names and order from `config/bands.yaml`, slugs, placeholder keys),
+`shape.py` (pure aggregations: weighted-mean repertoire age by year; median
+per tour-and-year cell, dropping "Unknown tour" and cells under 15 shows because
+a multi-year tour's median cannot be rebuilt from yearly medians; rotation by
+year with a thin flag under 5 pairs; survival albums, curves starting at
+(0, 1.0), album table with the band total first and `non-album` last; median
+and N sensitivity tables; match quality weighted by performances; weakest
+years; shows per band; touring intensity), `values.py` (per-band placeholders
+`<band>_median/_songs/_abandoned/_censored/_shows/_match/_first_year/_last_year`,
+global `bands_count`, `shows_total`; a value that does not exist is left out so
+the text that uses it fails the build). **Verified.** 33 site tests pass:
+weighted mean by hand ((10x100 + 20x300)/400 = 17.5), thin and small handling,
+sensitivity row, weighted match rate, locale formatting (`95,0%` vs `95.0%`),
+missing value dropped. Real-data note: the odd median cells (for example
+Metallica "Unknown tour" 2023, median 1.0 against a mean of 15.1) confirm the
+minimum-shows filter for the tour chart; the threshold is reviewed on real
+charts in T15.
