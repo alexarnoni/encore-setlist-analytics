@@ -29,22 +29,32 @@ duration 1. A song still in rotation at the end of the available history is
 debut_index + 1`.
 
 **Abandonment** ("absent from the band's next N shows") is checked for
-N = 25, 50 and 100: after an appearance at show index *i*, the song is
-abandoned if there is a later gap of **N or more consecutive shows**
-without it, fully inside the history (`internal gap >= N`, or `total_shows
-- last_index >= N` at the tail). Only the **first** such gap counts as the
-abandonment event; if the song reappears afterward it is flagged
-`returned_after_abandonment`, but the survival duration and event/censoring
-status are not changed. Consequence, seen in the first real run: a song that
-is still played today but was once absent for N shows (a classic dropped for a
-tour and brought back) is an abandonment event, not a censored song, with the
-duration measured up to that first gap. Among debut-album songs played in
-2025 or later, 3 of 3 (Metallica, Kill 'Em All), 5 of 6 (Oasis, Definitely
-Maybe) and 3 of 7 (Linkin Park, Hybrid Theory) are events flagged
-`returned_after_abandonment`. Read `returned_after_abandonment` together with
-the survival curves. A song with no such gap by the end of the history
-is censored, matching the product rule ("censored if fewer than N shows
-remain").
+N = 25, 50 and 100. A **gap** is a run of N or more consecutive shows, fully
+inside the history, without the song. A gap between two appearances is an
+**intermediate gap** (the song came back); the run after the song's last
+appearance is the **final gap**. The abandonment event is the **final gap
+only**: the song is abandoned if its last appearance is at least N shows
+before the end of the history (`total_shows - last_index >= N`), that is, it
+left the setlist and did not return. Duration is then debut to that last
+appearance. Every other song is **censored**: it is still being played, or it
+left for a while and came back (matching the product rule, "censored if
+fewer than N shows remain").
+
+- A censored song that had at least one intermediate gap has duration debut
+  to its last appearance.
+- A censored song that never had a gap runs to the end of the history.
+- `gaps_count` is the number of intermediate gaps at that N, and
+  `returned_after_abandonment` is `gaps_count > 0`. Neither depends on the
+  event: a song can return and later leave for good (an event with
+  `returned_after_abandonment = true`).
+
+**History of this rule.** The first version (spec-03 T6 to T14, 2026-09-21 to
+2026-09-23) counted the **first** gap as the event. The first full run showed
+what that does: a classic dropped for a tour and brought back was marked
+abandoned at the first gap, so most debut-album songs still played today
+(Kill 'Em All, Definitely Maybe, Hybrid Theory) appeared as events instead of
+censored, with a duration cut at the first gap. On 2026-09-23 the rule was
+changed to the final gap. Numbers from the earlier rule are not comparable.
 
 **Eligibility** for survival analysis: a catalog song needs at least 3
 **performances** (not distinct shows — a song played twice in one show

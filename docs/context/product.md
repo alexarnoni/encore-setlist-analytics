@@ -22,7 +22,7 @@ Arctic Monkeys, Oasis, Linkin Park, Twenty One Pilots, Muse, Metallica, Avenged 
 ## Data policy (non-negotiable)
 
 - Raw setlist.fm data exists only during a pipeline run and is deleted at the end of the run.
-- Only aggregated results (by band, tour, album, song) are persisted and published.
+- Only aggregated results (by band, tour, album, song) are persisted and published. A song-level mart may carry the canonical MusicBrainz title of a catalog song (CC0 data, for example `mart_song_survival.song_title`); it never carries setlist.fm text, dates, show ids or setlist URLs.
 - No per-show setlist pages. When a show is referenced, link to its setlist.fm page.
 - Every page that uses setlist.fm data shows attribution with a setlist.fm link (no nofollow, present in the HTML).
 - The repository never contains setlist.fm data, including notebook outputs.
@@ -32,7 +32,7 @@ Arctic Monkeys, Oasis, Linkin Park, Twenty One Pilots, Muse, Metallica, Avenged 
 
 - Covers, tape entries, intros, jams and solos are excluded from catalog KPIs.
 - Medleys (names joined by " / ") are split into separate entries flagged is_medley.
-- Song abandonment: absent from the band's next 50 shows (N = 50). Songs whose last appearance is fewer than 50 shows before the end of the history are censored.
+- Song abandonment: the song leaves the band's setlist and does not return, i.e. its last appearance is at least 50 shows (N = 50) before the end of the history. Songs still played, and songs that were absent for 50 or more shows but came back, are censored. Intermediate gaps are counted (`gaps_count`), not treated as abandonment.
 - Survival analysis uses catalog songs only (matched to studio album, single, EP or B-side).
 - Reference album of a song: earliest studio album containing it.
 - Main data quality metric: % of performances (weighted by plays) matched to the catalog (`match_rate_by_performance`). `match_rate_by_album` (share of performances matched to a studio album) is a secondary, informational column and never replaces the main metric.

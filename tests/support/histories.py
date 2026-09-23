@@ -169,7 +169,8 @@ def muse_plan(pool: SongPool) -> dict[str, tuple[str, set[int]]]:
         "exact": (a[1], {1, 2, 3, 54, 55, 56}),  # gap of exactly 50 after show 3
         "short": (a[2], {1, 2, 3, 53, 54, 55}),  # gap of 49 after show 3
         "censored": (a[3], set(range(100, 231, 10))),  # played every 10th show, 30 shows before the end
-        "returns": (a[4], {5, 6, 7, 80, 81, 82}),  # abandoned, then comes back
+        "returns": (a[4], {5, 6, 7, 80, 81, 82}),  # leaves, comes back, then leaves for good
+        "returns_and_stays": (a[7], {8, 9, 10, 100, 101, 102, 255, 256, 257}),  # two gaps, still played at the end
         "hiatus": (a[5], set(range(126, 136))),  # played across the 12-year hiatus
         "two_performances": (a[6], {10, 200}),  # fewer than 3 performances
         "recording_with_year": (pool.recording_with_year[0], {20, 21, 22, 23}),

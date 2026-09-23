@@ -21,7 +21,7 @@ def _outcome(band, song, album, duration, event, window=50):
         band=band, song_key=song, album_label=album,
         debut_index=1, last_index=duration, total_shows=1000,
         duration_shows={window: duration}, event={window: event},
-        returned_after_abandonment={window: False},
+        returned_after_abandonment={window: False}, gaps_count={window: 0},
     )
 
 

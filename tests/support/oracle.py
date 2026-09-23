@@ -157,10 +157,11 @@ class CatalogInfo:
 @dataclass(frozen=True)
 class Outcome:
     debut_index: int
-    last_index: int  # last appearance before the first abandonment, else the last appearance
+    last_index: int  # the song's last appearance
     duration: int
-    event: bool
-    returned: bool
+    event: bool  # left for good: the FINAL gap is at least `window` shows
+    returned: bool  # at least one intermediate gap of `window` shows or more
+    gaps: int  # number of intermediate gaps of `window` shows or more
 
 
 def band_show_index(shows: list[SyntheticShow], band: str) -> dict[str, int]:
@@ -192,16 +193,25 @@ def performances(shows: list[SyntheticShow], band: str) -> dict[str, int]:
 
 
 def outcome(indices: list[int], total: int, window: int) -> Outcome:
-    """First abandonment, by the literal definition: an appearance at index a
-    is followed by an abandonment when shows a+1..a+window all exist and none
-    of them has the song. Duration is inclusive (last - debut + 1); a censored
-    song runs to the end of the history."""
+    """By the literal definition. After an appearance at index a, the song has
+    a GAP when shows a+1..a+window all exist and none of them has the song. A
+    gap followed by a later appearance is intermediate (the song returned); a
+    gap with no later appearance is the final one, i.e. the song left for good
+    and is an event. Duration is inclusive (last - debut + 1); a censored song
+    that never had a gap runs to the end of the history instead."""
     seen = set(indices)
-    debut = indices[0]
+    debut, last = indices[0], indices[-1]
+    gaps = 0
+    left_for_good = False
     for a in indices:
         if a + window <= total and not any((a + k) in seen for k in range(1, window + 1)):
-            return Outcome(debut, a, a - debut + 1, True, returned=any(i > a for i in indices))
-    return Outcome(debut, indices[-1], total - debut + 1, False, False)
+            if any(i > a for i in indices):
+                gaps += 1
+            else:
+                left_for_good = True
+    if left_for_good or gaps:
+        return Outcome(debut, last, last - debut + 1, left_for_good, gaps > 0, gaps)
+    return Outcome(debut, last, total - debut + 1, False, False, 0)
 
 
 def eligible_songs(shows: list[SyntheticShow], band: str,

@@ -159,25 +159,28 @@ def test_muse_eligible_songs(pool, catalog):
     plan = h.muse_plan(pool)
     eligible = set(o.eligible_songs(h.muse_survival_history(pool), "Muse", catalog))
 
-    expected = {plan[k][0] for k in ("filler", "exact", "short", "censored", "returns", "hiatus",
-                                     "recording_with_year")}
+    expected = {plan[k][0] for k in ("filler", "exact", "short", "censored", "returns",
+                                     "returns_and_stays", "hiatus", "recording_with_year")}
     assert eligible == expected
     assert plan["two_performances"][0] not in eligible  # 2 performances
     assert plan["recording_no_year"][0] not in eligible  # recording-only, no release year
 
 
-# (duration, event, returned) per song, derived by hand from the plan in
-# muse_plan(): 260 shows, appearances as listed there.
+# (duration, event, returned, gaps) per song and window, derived by hand from
+# the plan in muse_plan(): 260 shows, appearances as listed there.
 MUSE_EXPECTED = {
-    25: {"filler": (260, False, False), "exact": (3, True, True), "short": (3, True, True),
-         "censored": (131, True, False), "returns": (3, True, True), "hiatus": (10, True, False),
-         "recording_with_year": (4, True, False)},
-    50: {"filler": (260, False, False), "exact": (3, True, True), "short": (55, True, False),
-         "censored": (161, False, False), "returns": (3, True, True), "hiatus": (10, True, False),
-         "recording_with_year": (4, True, False)},
-    100: {"filler": (260, False, False), "exact": (56, True, False), "short": (55, True, False),
-          "censored": (161, False, False), "returns": (78, True, False), "hiatus": (10, True, False),
-          "recording_with_year": (4, True, False)},
+    25: {"filler": (260, False, False, 0), "exact": (56, True, True, 1), "short": (55, True, True, 1),
+         "censored": (131, True, False, 0), "returns": (78, True, True, 1),
+         "returns_and_stays": (250, False, True, 2), "hiatus": (10, True, False, 0),
+         "recording_with_year": (4, True, False, 0)},
+    50: {"filler": (260, False, False, 0), "exact": (56, True, True, 1), "short": (55, True, False, 0),
+         "censored": (161, False, False, 0), "returns": (78, True, True, 1),
+         "returns_and_stays": (250, False, True, 2), "hiatus": (10, True, False, 0),
+         "recording_with_year": (4, True, False, 0)},
+    100: {"filler": (260, False, False, 0), "exact": (56, True, False, 0), "short": (55, True, False, 0),
+          "censored": (161, False, False, 0), "returns": (78, True, False, 0),
+          "returns_and_stays": (250, False, True, 1), "hiatus": (10, True, False, 0),
+          "recording_with_year": (4, True, False, 0)},
 }
 
 
@@ -186,25 +189,37 @@ def test_muse_survival_outcomes(pool, catalog, window):
     plan = h.muse_plan(pool)
     outcomes = o.survival_outcomes(h.muse_survival_history(pool), "Muse", catalog, window)
 
-    got = {key: (outcomes[name].duration, outcomes[name].event, outcomes[name].returned)
+    got = {key: (outcomes[name].duration, outcomes[name].event, outcomes[name].returned, outcomes[name].gaps)
            for key, (name, _) in plan.items() if name in outcomes}
     assert got == MUSE_EXPECTED[window]
 
 
-def test_gap_of_exactly_the_window_is_an_abandonment_one_show_less_is_not():
-    # appearances at 1 and 4 in a 10-show history: 2 shows in between.
-    assert o.outcome([1, 4], 10, window=2).event and o.outcome([1, 4], 10, window=2).returned
-    assert o.outcome([1, 4], 10, window=3) == o.Outcome(1, 4, 4, False, False) or \
-        o.outcome([1, 4], 10, window=3).event  # tail 6 >= 3: abandoned after 4
-    first_gap = o.outcome([1, 4, 5], 5, window=2)
-    assert first_gap.duration == 1 and first_gap.returned  # gap after 1 is exactly 2 shows
+def test_gap_of_exactly_the_window_is_a_gap_one_show_less_is_not():
+    # appearances at 1 and 4: 2 silent shows in between.
+    reached = o.outcome([1, 4], 10, window=2)
+    assert (reached.gaps, reached.returned) == (1, True)
+    short = o.outcome([1, 4], 10, window=3)
+    assert (short.gaps, short.returned) == (0, False)
+    assert short.event and short.duration == 4  # the final gap (6 shows) is a full 3-show gap
+
+
+def test_a_song_that_returns_and_is_still_played_is_censored():
+    out = o.outcome([1, 8, 9, 10], 11, window=5)
+
+    assert out == o.Outcome(1, 10, 10, False, True, 1)
+
+
+def test_a_song_that_returns_and_then_leaves_is_an_event():
+    out = o.outcome([1, 2, 3, 9], 20, window=5)
+
+    assert out == o.Outcome(1, 9, 9, True, True, 1)
 
 
 def test_a_song_played_once_has_duration_one():
     # played once at show 7 of 100 and never again for the next 50 shows: abandoned, duration 1
-    assert o.outcome([7], 100, window=50) == o.Outcome(7, 7, 1, True, False)
+    assert o.outcome([7], 100, window=50) == o.Outcome(7, 7, 1, True, False, 0)
     # played once at show 70 of 100: fewer than 50 shows remain, so it is censored (100 - 70 + 1)
-    assert o.outcome([70], 100, window=50) == o.Outcome(70, 70, 31, False, False)
+    assert o.outcome([70], 100, window=50) == o.Outcome(70, 70, 31, False, False, 0)
 
 
 def test_arctic_eligibility(pool, catalog):

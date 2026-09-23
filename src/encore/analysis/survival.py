@@ -16,15 +16,23 @@ Conventions (approved decisions, spec-03-progress.md section 4a):
 * Same-date shows are ordered by show_key (Q8); undated shows have no index
   and cannot enter a duration.
 * Duration is INCLUSIVE, in shows, from the live debut to the last
-  appearance before the first abandonment (or to the end of history if
-  censored): `last_index - debut_index + 1`. A song played once has
-  duration 1.
-* Abandonment (event) at a window N: after some appearance at index a, the
-  next N shows (a+1 .. a+N) all exist in the band's history and NONE of them
-  has the song. Only the FIRST such gap counts. A song whose last appearance
-  is fewer than N shows before the end of the history cannot show a full
-  gap, so it is censored at N instead. A song that reappears after its first
-  abandonment is flagged `returned_after_abandonment` for that N.
+  appearance: `last_index - debut_index + 1`. A song played once has
+  duration 1. The exception is a censored song that never had a gap: it runs
+  to the end of history, `total_shows - debut_index + 1`.
+* A GAP at a window N is a run of at least N consecutive shows, all inside
+  the band's history, without the song. A gap between two appearances is an
+  INTERMEDIATE gap (the song came back); the run after the last appearance is
+  the FINAL gap.
+* Abandonment (event) at a window N is the FINAL gap only: the last
+  appearance is at least N shows before the end of the history, so the song
+  left and did not return. Duration = debut to that last appearance.
+* Every other song is censored: it is still in the repertoire, or it left
+  and came back. A censored song that had at least one intermediate gap has
+  duration debut to its last appearance; one that never had a gap runs to the
+  end of history.
+* `gaps_count` is the number of intermediate gaps at that N, and
+  `returned_after_abandonment` is `gaps_count > 0`. Both are independent of
+  the event: a song can return and later leave for good.
 * Eligible songs: at least 3 performances (raw play count, not distinct
   shows) AND matched to a studio album OR to a recording that has a release
   year (Q4/Q5: recording-only songs with no year are not eligible).
@@ -35,6 +43,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import date
+from typing import NamedTuple
 
 from lifelines import KaplanMeierFitter
 
@@ -80,8 +89,9 @@ class SongSurvival:
     last_index: int
     total_shows: int
     duration_shows: Mapping[int, int]  # window N -> duration, inclusive
-    event: Mapping[int, bool]  # window N -> abandoned (True) or censored (False)
-    returned_after_abandonment: Mapping[int, bool]  # window N -> played again after the first abandonment
+    event: Mapping[int, bool]  # window N -> abandoned for good (True) or censored (False)
+    returned_after_abandonment: Mapping[int, bool]  # window N -> had at least one intermediate gap
+    gaps_count: Mapping[int, int]  # window N -> number of intermediate gaps
 
 
 def band_show_index(appearances: Iterable[ShowAppearance], band: str) -> dict[str, int]:
@@ -126,19 +136,26 @@ def eligible_songs(
     }
 
 
-def outcome_for_window(indices: list[int], total_shows: int, window: int) -> tuple[int, bool, bool]:
-    """(duration_shows, event, returned_after_abandonment) for one song at
-    one window N. `indices` must be sorted, non-empty show indices."""
-    debut = indices[0]
-    seen = set(indices)
-    for appearance in indices:
-        gap_is_inside_history = appearance + window <= total_shows
-        gap_has_no_appearance = not any((appearance + k) in seen for k in range(1, window + 1))
-        if gap_is_inside_history and gap_has_no_appearance:
-            duration = appearance - debut + 1
-            returned = any(i > appearance for i in indices)
-            return duration, True, returned
-    return total_shows - debut + 1, False, False
+class WindowOutcome(NamedTuple):
+    """One song's outcome at one window N."""
+
+    duration_shows: int
+    event: bool
+    returned_after_abandonment: bool
+    gaps_count: int
+
+
+def outcome_for_window(indices: list[int], total_shows: int, window: int) -> WindowOutcome:
+    """Outcome of one song at one window N. `indices` must be sorted,
+    non-empty, distinct show indices."""
+    debut, last = indices[0], indices[-1]
+    gaps = sum(1 for before, after in zip(indices, indices[1:]) if after - before - 1 >= window)
+    left_for_good = total_shows - last >= window
+    if left_for_good or gaps:
+        duration = last - debut + 1
+    else:
+        duration = total_shows - debut + 1
+    return WindowOutcome(duration, left_for_good, gaps > 0, gaps)
 
 
 def compute_survival(
@@ -169,11 +186,13 @@ def compute_survival(
         durations: dict[int, int] = {}
         events: dict[int, bool] = {}
         returned: dict[int, bool] = {}
+        gap_counts: dict[int, int] = {}
         for window in windows:
-            duration, event, has_returned = outcome_for_window(indices, total_shows, window)
-            durations[window] = duration
-            events[window] = event
-            returned[window] = has_returned
+            outcome = outcome_for_window(indices, total_shows, window)
+            durations[window] = outcome.duration_shows
+            events[window] = outcome.event
+            returned[window] = outcome.returned_after_abandonment
+            gap_counts[window] = outcome.gaps_count
         results.append(
             SongSurvival(
                 band=band,
@@ -185,6 +204,7 @@ def compute_survival(
                 duration_shows=durations,
                 event=events,
                 returned_after_abandonment=returned,
+                gaps_count=gap_counts,
             )
         )
     return results

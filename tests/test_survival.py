@@ -93,56 +93,92 @@ def test_eligible_songs_filters_a_mapping():
 
 
 # --- outcome_for_window: the abandonment rule -------------------------------
+#
+# Abandonment is the FINAL gap only: the last appearance is at least N shows
+# before the end of the history. A song that had an intermediate gap and came
+# back is censored, with duration debut -> last appearance.
 
 
-def test_gap_of_exactly_the_window_is_an_abandonment():
-    # appearance at 1, then silence at 2..51 (50 shows), history has 51+ shows.
-    duration, event, returned = outcome_for_window([1], total_shows=100, window=50)
+def test_song_that_left_for_good_is_an_event():
+    # played at 1, silent for the 50 shows after it, history has 100 shows.
+    out = outcome_for_window([1], total_shows=100, window=50)
 
-    assert (duration, event, returned) == (1, True, False)
-
-
-def test_gap_one_show_short_of_the_window_is_not_an_abandonment():
-    # appearance at 1 and 51: only 49 silent shows between them.
-    duration, event, returned = outcome_for_window([1, 51], total_shows=100, window=50)
-
-    assert event is False  # not abandoned at that gap; falls through to censoring
-    assert duration == 100 - 1 + 1  # censored: debut to the end of history
+    assert out == (1, True, False, 0)
 
 
-def test_gap_exactly_reaching_the_end_of_history_still_counts():
+def test_final_gap_of_exactly_the_window_is_an_abandonment():
     # appearance at 1, window 50, and the history has EXACTLY 51 shows: the
-    # silent gap (shows 2..51) reaches precisely the last show. This must
-    # still be a full, in-history gap (boundary: appearance + window == total).
-    assert outcome_for_window([1], total_shows=51, window=50) == (1, True, False)
+    # silent tail (shows 2..51) is a full in-history gap (last + window == total).
+    assert outcome_for_window([1], total_shows=51, window=50) == (1, True, False, 0)
     # one show short of that boundary: the gap needs one more show than exists.
-    assert outcome_for_window([1], total_shows=50, window=50) == (50, False, False)
+    assert outcome_for_window([1], total_shows=50, window=50) == (50, False, False, 0)
+
+
+def test_song_still_being_played_is_censored_to_the_end_of_history():
+    out = outcome_for_window([1, 5, 9], total_shows=10, window=50)
+
+    assert out == (10 - 1 + 1, False, False, 0)
+    assert outcome_for_window([70], total_shows=100, window=50) == (31, False, False, 0)  # 30 shows remain: censored
+
+
+def test_song_that_returns_and_is_still_played_is_censored_not_abandoned():
+    # gap of 6 shows (2..7 silent) after index 1, then it comes back and is
+    # played until the end: it returned, so it is NOT an abandonment.
+    out = outcome_for_window([1, 8, 9, 10], total_shows=11, window=5)
+
+    assert out.event is False
+    assert out.returned_after_abandonment is True
+    assert out.gaps_count == 1
+    assert out.duration_shows == 10 - 1 + 1  # debut to its last appearance, not to the end of history
+
+
+def test_song_that_returns_and_then_leaves_for_good_is_an_event_with_the_last_appearance():
+    # intermediate gap after 3 (5 silent shows), back at 9, then silent for the
+    # last 11 shows: left for good, after having returned once.
+    out = outcome_for_window([1, 2, 3, 9], total_shows=20, window=5)
+
+    assert out == (9 - 1 + 1, True, True, 1)
+
+
+def test_gap_one_show_short_of_the_window_is_not_an_intermediate_gap():
+    # appearances at 1 and 51: only 49 silent shows between them.
+    out = outcome_for_window([1, 51], total_shows=60, window=50)
+
+    assert out.gaps_count == 0
+    assert out.returned_after_abandonment is False
+    assert out.event is False
+    assert out.duration_shows == 60 - 1 + 1  # never had a gap: runs to the end of history
+
+
+def test_intermediate_gap_of_exactly_the_window_counts():
+    out = outcome_for_window([1, 52], total_shows=60, window=50)  # shows 2..51 silent: 50 of them
+
+    assert out.gaps_count == 1
+    assert out.returned_after_abandonment is True
+    assert out.event is False
+    assert out.duration_shows == 52 - 1 + 1
+
+
+def test_gaps_count_counts_every_intermediate_gap_and_ignores_short_ones():
+    # gaps of 5, 2, 6 silent shows between appearances; window 5 -> two count.
+    indices = [1, 7, 10, 17]
+    out = outcome_for_window(indices, total_shows=18, window=5)
+
+    assert out.gaps_count == 2
+    assert out.event is False  # 1 show after the last appearance: still in the repertoire
+    assert out.duration_shows == 17 - 1 + 1
 
 
 def test_a_song_played_once_has_duration_one():
-    assert outcome_for_window([7], total_shows=100, window=50) == (1, True, False)  # 93 silent shows follow: abandoned
-    assert outcome_for_window([70], total_shows=100, window=50) == (31, False, False)  # only 30 remain: censored
+    assert outcome_for_window([7], total_shows=100, window=50) == (1, True, False, 0)  # 93 silent shows follow: abandoned
 
 
-def test_censored_song_runs_to_the_end_of_history():
-    duration, event, returned = outcome_for_window([1, 5, 9], total_shows=10, window=50)
+def test_the_first_gap_no_longer_decides_the_event():
+    # the old rule called this an event at the first 5-show gap (after index 3);
+    # the song is back and played to the end, so now it is censored.
+    out = outcome_for_window([1, 2, 3, 9, 10, 11, 12], total_shows=12, window=5)
 
-    assert (duration, event, returned) == (10 - 1 + 1, False, False)
-
-
-def test_song_returns_after_its_first_abandonment():
-    # abandoned after index 3 (a 5-show gap to 9), but reappears at 9: flagged.
-    duration, event, returned = outcome_for_window([1, 2, 3, 9], total_shows=20, window=5)
-
-    assert (duration, event, returned) == (3 - 1 + 1, True, True)
-
-
-def test_only_the_first_gap_counts_even_if_a_later_one_is_also_long():
-    # first gap after index 3 is only 2 shows (not abandoned there); the real
-    # first qualifying gap is after index 6.
-    duration, event, returned = outcome_for_window([1, 3, 6, 20], total_shows=20, window=5)
-
-    assert (duration, event, returned) == (6 - 1 + 1, True, True)
+    assert (out.event, out.gaps_count) == (False, 1)
 
 
 # --- compute_survival: end-to-end on hand-built band histories ---------------
@@ -152,7 +188,8 @@ def test_full_scenario_abandoned_censored_returning_and_hiatus():
     """One band, one history, four songs with known outcomes at N=5:
     - "Exact": abandoned with a gap of exactly 5.
     - "Short": played close to the end of history, tail gap under the window (censored).
-    - "Returns": abandoned, then comes back.
+    - "Returns": leaves, comes back, then leaves for good (an event, last appearance 10).
+    - "Stays": leaves, comes back and is still played near the end (censored, returned).
     - "Hiatus": played continuously across the show-index boundary that
       falls on a 20-calendar-year gap (shows 10 to 11) and on to the end of
       history — must NOT be flagged abandoned, because the show index has no
@@ -168,29 +205,43 @@ def test_full_scenario_abandoned_censored_returning_and_hiatus():
         _appearance(BAND, "Returns", 1, dates), _appearance(BAND, "Returns", 2, dates),
         _appearance(BAND, "Returns", 3, dates), _appearance(BAND, "Returns", 9, dates),
         _appearance(BAND, "Returns", 10, dates),
+        *[_appearance(BAND, "Stays", i, dates) for i in (1, 2, 3, *range(10, 19))],
         *[_appearance(BAND, "Hiatus", i, dates) for i in range(9, 21)],  # straight through the hiatus boundary
     ]
-    counts = {"Filler": 20, "Exact": 4, "Short": 4, "Returns": 5, "Hiatus": 12}
+    counts = {"Filler": 20, "Exact": 4, "Short": 4, "Returns": 5, "Stays": 12, "Hiatus": 12}
     catalog = {name: ALBUM_SONG for name in counts}
 
     outcomes = {o.song_key: o for o in compute_survival(appearances, BAND, counts, catalog, windows=(5,))}
 
     assert outcomes["Exact"].event[5] is True
-    assert outcomes["Exact"].duration_shows[5] == 3  # debut 1, last-before-gap 3: 3-1+1
+    assert outcomes["Exact"].duration_shows[5] == 3  # debut 1, last appearance 3: 3-1+1
     assert outcomes["Exact"].returned_after_abandonment[5] is False
+    assert outcomes["Exact"].gaps_count[5] == 0
 
     assert outcomes["Short"].event[5] is False  # last appearance at 19, only 1 show remains: no full gap ever
     assert outcomes["Short"].duration_shows[5] == 20 - 16 + 1  # censored: debut 16 to the end of history
 
+    # "Returns" left after show 3, came back at 9 and 10, and the history ends
+    # at 20 (10 silent shows after 10): it returned and then left for good.
     assert outcomes["Returns"].event[5] is True
-    assert outcomes["Returns"].duration_shows[5] == 3
+    assert outcomes["Returns"].duration_shows[5] == 10 - 1 + 1
     assert outcomes["Returns"].returned_after_abandonment[5] is True
+    assert outcomes["Returns"].gaps_count[5] == 1
+
+    # "Stays" has one 6-show gap (shows 4..9) and is back until show 18, two
+    # shows before the end: it returned, so it is censored, and its duration
+    # stops at its last appearance.
+    assert outcomes["Stays"].event[5] is False
+    assert outcomes["Stays"].duration_shows[5] == 18 - 1 + 1
+    assert outcomes["Stays"].returned_after_abandonment[5] is True
+    assert outcomes["Stays"].gaps_count[5] == 1
 
     # Hiatus is played at every show from index 9 to 20 — a continuous run
     # of show indices, even though the calendar gap between shows 10 and 11
     # is ~20 years. No silent show-index gap ever appears, so no abandonment.
     assert outcomes["Hiatus"].event[5] is False
     assert outcomes["Hiatus"].duration_shows[5] == 20 - 9 + 1
+    assert outcomes["Hiatus"].gaps_count[5] == 0
     assert "Filler" in {o.song_key for o in compute_survival(appearances, BAND, counts, catalog, windows=(5,))}
 
 

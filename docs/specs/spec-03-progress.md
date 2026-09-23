@@ -4,7 +4,7 @@ Tracks `docs/specs/spec-03-rotation-survival.md` (rotation and song survival).
 Same discipline as spec 01 and 02a: small tasks, one commit each, results
 recorded here.
 
-> **STATUS: T0-T14 done (2026-09-23), merged to master. Nothing on hold — see section 11
+> **STATUS: T0-T14 done (2026-09-23), merged to master. Abandonment rule changed to the LAST gap on branch `spec-03` (not yet on master, not yet run on real data): see the T14 addendum — see section 11
 > for exactly where to pick up.** Work happens only on the branch
 > `spec-03`, in the worktree `D:\projetos\encore-spec03`. T14 (merge and
 > real-data run) is explicitly on hold until the user asks for it. The
@@ -850,6 +850,47 @@ skipped (it would only show synthetic data); generate it after the real run.
   (mean Jaccard rotation weighted by pairs, all years): Arctic Monkeys 0.149,
   Avenged Sevenfold 0.241, Linkin Park 0.174, Metallica 0.239, Muse 0.239, Oasis
   0.098, Twenty One Pilots 0.209; 165 scored tours, all in [0, 1].
+
+### T14 addendum — abandonment rule changed to the last gap (2026-09-23)
+
+**Why.** Sanity check 2 of the first real run (debut-album songs still played
+today should be censored) failed for a real reason: only the first 50-show gap
+counted, so songs dropped for a tour and brought back were events. Decision by
+the owner: the event is the LAST gap.
+
+**New rule** (`docs/methodology.md`, spec section Part B, `product.md`): a gap is
+N or more consecutive shows without the song, inside the history. A song is
+abandoned only if its FINAL gap (after its last appearance) is a full gap, i.e.
+it left and did not return; duration = debut to last appearance. Otherwise it is
+censored (still played, or it returned): duration = debut to last appearance if
+it had an intermediate gap, else to the end of history.
+`returned_after_abandonment` = at least one intermediate gap;
+new column `gaps_count` = number of intermediate gaps (mart_song_survival, N=50).
+
+**Code and tests.** `src/encore/analysis/survival.py` (`WindowOutcome`,
+`outcome_for_window`, `SongSurvival.gaps_count`), `io.py` (column plus an
+`ALTER TABLE ... ADD COLUMN IF NOT EXISTS gaps_count` so the existing production
+table migrates on the next run), dbt source docs and a new singular test
+`assert_song_survival_gaps_consistent`. Independent oracle rewritten from the
+literal definition; synthetic Muse plan gained a `returns_and_stays` song (two
+intermediate gaps, still played at the end). Unit tests cover a song that returns
+and stays, a song that returns and then leaves for good, gap boundaries, and the
+end-to-end scenario. Four mutations (final-gap `>=`, a returned song counted as
+an event, intermediate-gap boundary, censored-returned duration) each turn a test
+red; the dbt consistency test was also turned red by hand and restored.
+Full suite in the branch image against `spec03-postgres`, DB-level tests on:
+170 passed; `dbt test --select tag:survival` PASS=36. The isolated table was
+created with the old shape first, so the `ALTER` migration ran for real there.
+
+**Not done: the real marts still hold the OLD first-gap numbers.** `analyze`
+reads the views over `raw_setlistfm`, which is empty after every run, so it
+cannot be re-run alone: a full pipeline run (~480 setlist.fm requests) on the new
+code is needed, after `master` gets this commit and the main image is rebuilt.
+The T14 sanity-check numbers above (event counts, debut-album section) describe
+the old rule and must be re-read after that run.
+
+**The T14 caveat "read returned_after_abandonment together with the curves"
+no longer applies.**
 
 ## 11. Handoff for the next session (2026-09-23)
 
