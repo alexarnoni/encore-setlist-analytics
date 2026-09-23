@@ -392,3 +392,44 @@ policy check on all 23 pages. Full suite: 282 passed, 14 skipped.
 3. **Headline claims vs the marts (T12).** Three points where the numbers do not
    say exactly what the brief says (see the T10 note); I will not write text that
    overstates them, so I need to know how you want them worded.
+
+### Decisions applied after the T11 stop (2026-09-23)
+
+1. **Band colours** (approved): Linkin Park `#19a170`, Twenty One Pilots `#c28400`,
+   Muse `#d57197`, Avenged Sevenfold `#6851ea`; every band now reaches 3:1 on the
+   card surface of both themes (the test lists no exceptions any more).
+2. **Font** (approved): IBM Plex Mono Regular and Medium, latin subset, downloaded
+   from github.com/IBM/plex (SIL OFL), 18.5 KB and 19 KB, in
+   `src/encore/site/assets/fonts/` with `OFL.txt` and a README that gives the source
+   and the subset command; `fonttools` and `brotli` added to `requirements.txt` as dev
+   tooling. `fonts.css` is now linked (the files exist) and the build copies the fonts.
+
+### T12 — findings text (drafted, awaiting your review)
+
+Hand-written findings in both locales, **every number a placeholder** filled from
+the marts (new generic figures in `values.add_findings_values`: yearly age and
+rotation, first/last-three rotation, longest gap, tour rotation, album songs /
+abandoned / median / where the curve ends, configured age dips). Home: three
+findings (01 hero stat, 02 seven small multiples, 03 hero stat), each with 3
+paragraphs; bands: three sentences each. Written to the brief: 01 is "clear for
+Metallica, weak for Avenged Sevenfold and Linkin Park" with albums and dip sizes;
+02 names Linkin Park as a second exception, uses 0.75 for the M72 tour and yearly
+values (0.87 in 2023, 0.85 in 2024) for the year claim, and no longer promises
+"all bands but one"; 03 uses the Oasis figure (36%) and Morning Glory (89%), drops
+the "2000s albums below 30%" claim and calls Dig Out Your Soul a short censored
+curve. **One change beyond the brief**, because the data required it: "about a
+third of a catalog" does not generalise (the seven overall curves end at 36%, 24%,
+22%, 21%, 11%, 9% and 5%), so finding 03's heading says "only a minority ... 36% for
+Oasis, 5% for Muse" and lists all seven. `home.f1..f3` hero stats now read the
+configured Metallica 72 Seasons dip and the Oasis figure; the earlier "largest
+one-year fall" helper was removed as unused.
+**Guards.** Placeholder typos fail a unit test; both locales must quote the same
+figures; each band has 2 to 3 sentences; a real-data test (skipped without the
+database) builds the whole site from the real marts and asserts every claim's
+direction and ordering (Metallica dips above 4 years, Avenged Sevenfold and Linkin
+Park dips under 2, The Stage and Living Things rising, rotation falling for five
+bands, not for Linkin Park, rising for Metallica, M72 tour 0.75, the ordering of the
+seven overall curves, Morning Glory above 85%, Dig Out Your Soul under 200 shows
+and 6 songs), so new data that breaks a sentence fails the build's tests before it
+ships. Release years named in the text were checked against
+`raw_musicbrainz.albums` (read-only, by me, not by the generator).

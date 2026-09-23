@@ -10,10 +10,11 @@ from __future__ import annotations
 from encore.site import bands as bands_mod
 
 # One fixed colour per band in config order (colour follows the band, never its rank).
-# From the notebooks; Twenty One Pilots' amber (#eda100) is darkened once to #c28400 so
-# it reaches 3:1 on the light surface, and that shade is used everywhere.
+# From the notebooks, adjusted once so every colour reaches 3:1 (WCAG graphics) on both card surfaces,
+# and used unchanged in both themes: Linkin Park #1baf7a -> #19a170, Twenty One Pilots #eda100 ->
+# #c28400, Muse #e87ba4 -> #d57197, Avenged Sevenfold #4a3aa7 -> #6851ea.
 BAND_PALETTE: tuple[str, ...] = (
-    "#2a78d6", "#eb6834", "#1baf7a", "#c28400", "#e87ba4", "#008300", "#4a3aa7",
+    "#2a78d6", "#eb6834", "#19a170", "#c28400", "#d57197", "#008300", "#6851ea",
 )
 
 LIGHT: dict[str, str] = {

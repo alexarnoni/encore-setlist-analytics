@@ -16,10 +16,10 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import yaml
-from jinja2 import Environment, StrictUndefined, TemplateSyntaxError, UndefinedError
+from jinja2 import Environment, StrictUndefined, TemplateSyntaxError, UndefinedError, meta
 from markupsafe import Markup
 
 LOCALES: tuple[str, ...] = ("pt-BR", "en")
@@ -84,19 +84,27 @@ def fmt_percent(fraction: float, decimals: int, locale: str) -> str:
     return fmt_number(fraction * 100, decimals, locale) + "%"
 
 
+def _environment() -> Environment:
+    return Environment(undefined=StrictUndefined, autoescape=True)
+
+
 @lru_cache(maxsize=None)
 def _compile(text: str):
-    env = Environment(undefined=StrictUndefined, autoescape=True)
-    return env.from_string(text)
+    return _environment().from_string(text)
 
 
 class Translator:
     """Strict string lookup for one locale, with placeholder values bound in."""
 
-    def __init__(self, locale: str, strings: dict[str, str], values: dict[str, Any] | None = None) -> None:
+    def __init__(self, locale: str, strings: dict[str, str], values: dict[str, Any] | None = None,
+                 fill_missing: Callable[[str], str | None] | None = None) -> None:
         self.locale = locale
         self.strings = strings
         self.values = dict(values or {})
+        # Test hook only: `fill_missing(name)` gives a stand-in for a placeholder that has no value
+        # (or None to leave it missing), so fake marts can render text written for the real data.
+        # The shipped build never sets it.
+        self.fill_missing = fill_missing
 
     def __call__(self, key: str, **extra: Any) -> Markup:
         """Return the string for `key`, placeholders filled; raise if a key or value is missing."""
@@ -104,12 +112,27 @@ class Translator:
             text = self.strings[key]
         except KeyError:
             raise LocaleError(f"[{self.locale}] missing translation key: {key}") from None
+        context = {**self.values, **extra}
+        if self.fill_missing is not None:
+            for name in meta.find_undeclared_variables(_environment().parse(text)):
+                stand_in = None if name in context else self.fill_missing(name)
+                if stand_in is not None:
+                    context[name] = stand_in
         try:
-            return Markup(_compile(text).render(**{**self.values, **extra}))
+            return Markup(_compile(text).render(**context))
         except UndefinedError as exc:
             raise LocaleError(f"[{self.locale}] {key}: unfilled placeholder ({exc.message})") from None
         except TemplateSyntaxError as exc:
             raise LocaleError(f"[{self.locale}] {key}: bad placeholder syntax ({exc.message})") from None
+
+    def value(self, name: str) -> str:
+        """The formatted figure behind a placeholder, for templates that print it outside a string."""
+        if name in self.values:
+            return self.values[name]
+        stand_in = self.fill_missing(name) if self.fill_missing is not None else None
+        if stand_in is None:
+            raise LocaleError(f"[{self.locale}] no value for placeholder: {name}")
+        return stand_in
 
     def plain(self, key: str, **extra: Any) -> str:
         """Like `__call__` but a plain `str`, for chart labels and other non-HTML contexts."""

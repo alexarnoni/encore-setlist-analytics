@@ -9,15 +9,15 @@
   <article class="finding" id="finding-1">
     {{ kicker(t('home.f1.kicker')) }}
     <h2>{{ t('home.f1.h') }}</h2>
-    <div class="hero-stat">−{{ t.values.f1_drop }} <small>{{ t('home.f1.stat_label') }}</small></div>
-    <p>{{ t('home.f1.p') }}</p>
+    <div class="hero-stat">−{{ t.value("dip_metallica_72_seasons_size") }} <small>{{ t('home.f1.stat_label') }}</small></div>
+    {% for p in t.section('home.f1.p') %}<p>{{ p }}</p>{% endfor %}
     {{ figure(charts.f1, t('home.f1.caption')) }}
   </article>
 
   <article class="finding" id="finding-2">
     {{ kicker(t('home.f2.kicker')) }}
     <h2>{{ t('home.f2.h') }}</h2>
-    <p>{{ t('home.f2.p') }}</p>
+    {% for p in t.section('home.f2.p', min_pairs=min_pairs) %}<p>{{ p }}</p>{% endfor %}
     <div class="multiples">
       {% for cell in rotation_panels %}
       <div class="cell">
@@ -36,8 +36,8 @@
   <article class="finding" id="finding-3">
     {{ kicker(t('home.f3.kicker')) }}
     <h2>{{ t('home.f3.h') }}</h2>
-    <div class="hero-stat">{{ t.values.f3_stat }} <small>{{ t('home.f3.stat_label') }}</small></div>
-    <p>{{ t('home.f3.p') }}</p>
+    <div class="hero-stat">{{ t.value("oasis_final") }} <small>{{ t('home.f3.stat_label') }}</small></div>
+    {% for p in t.section('home.f3.p') %}<p>{{ p }}</p>{% endfor %}
     {{ figure(charts.f3, t('home.f3.caption', n_window=n_window)) }}
   </article>
 </section>

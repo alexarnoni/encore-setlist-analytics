@@ -6,6 +6,8 @@ fails the build instead of printing a blank or a stale figure.
 
 from __future__ import annotations
 
+import re
+
 import pandas as pd
 
 from encore.site import bands as bands_mod
@@ -44,16 +46,15 @@ def placeholder_values(marts: dict[str, pd.DataFrame], bands: tuple[str, ...], l
             values[f"{k}_last_year"] = str(int(match.loc[band, "last_year"]))
 
     _add_touring_and_weak_cells(values, marts, bands, locale)
-    _add_headline_values(values, marts, locale)
+    add_findings_values(values, marts, bands, locale)
     values["bands_count"] = str(len(bands))
     values["band_list"] = ", ".join(bands)
     values["shows_total"] = fmt_number(float(shows.sum()), 0, locale)
     return values
 
 
-# Bands behind the home page's featured charts and hero stats.
+# Bands behind the home page's featured charts.
 FEATURED_AGE_BANDS = ("Metallica", "Avenged Sevenfold", "Linkin Park")
-HERO_AGE_BAND = "Metallica"
 HERO_SURVIVAL_BAND = "Oasis"
 
 WEAK_MATCH_RATE = 0.90
@@ -85,20 +86,104 @@ def _add_touring_and_weak_cells(values: dict[str, str], marts: dict[str, pd.Data
             values[f"{k}_weak_share"] = fmt_percent(share, 2, locale)
 
 
-def _add_headline_values(values: dict[str, str], marts: dict[str, pd.DataFrame], locale: str) -> None:
-    """Numbers behind the home page's hero stats.
+# One-year dips in repertoire age that the findings text talks about: id -> (band, year before,
+# year at the low point, year after). The album behind each dip is named in the hand-written text;
+# the marts carry no album release dates.
+DIPS: dict[str, tuple[str, int, int, int]] = {
+    "metallica_death_magnetic": ("Metallica", 2007, 2009, 2010),
+    "metallica_hardwired": ("Metallica", 2015, 2018, 2019),
+    "metallica_72_seasons": ("Metallica", 2022, 2023, 2025),
+    "avenged_nightmare": ("Avenged Sevenfold", 2009, 2010, 2011),
+    "avenged_hail_to_the_king": ("Avenged Sevenfold", 2012, 2013, 2014),
+    "avenged_the_stage": ("Avenged Sevenfold", 2015, 2016, 2017),
+    "linkin_minutes_to_midnight": ("Linkin Park", 2006, 2007, 2008),
+    "linkin_a_thousand_suns": ("Linkin Park", 2009, 2010, 2011),
+    "linkin_living_things": ("Linkin Park", 2011, 2012, 2013),
+}
+MIN_GAP_YEARS = 3
 
-    f1_*: the biggest one-year fall in the hero band's repertoire age (f1_year_prev, f1_year,
-    f1_from, f1_to, f1_drop). f3_*: where the hero band's all-songs survival curve ends
-    (f3_t shows, f3_stat share still played). Left out when the data has no such figure.
+# Names produced by `add_findings_values`: the hand-written findings quote these specific
+# figures of the real data. Tests that render fake marts fill only names that match this pattern.
+FINDINGS_KEY = re.compile(r"^(dip_.+|[a-z0-9_]+_(age|rot|tour|album|gap|final)(_.+)?)$")
+
+
+def add_findings_values(values: dict[str, str], marts: dict[str, pd.DataFrame], bands: tuple[str, ...],
+                        locale: str) -> None:
+    """Numbers the hand-written findings quote. A figure that does not exist is left out.
+
+    Per band `<k>` (see `bands.key`), all formatted for `locale`:
+    `<k>_age_<year>` (repertoire age), `<k>_age_first/_age_first_year/_age_last/_age_last_year`,
+    `<k>_gap_from/_gap_to` (the longest break of 3+ years between years with shows, if any),
+    `<k>_rot_<year>` (rotation of years with 5+ show pairs), `<k>_rot_first3/_rot_last3` and
+    `<k>_rot_first3_from/_to`, `<k>_rot_last3_from/_to` (mean rotation of the first and last three
+    such years), `<k>_tour_<tour>_rotation` and `_shows`, `<k>_final/_final_t` (where the all-songs
+    survival curve ends), `<k>_album_<album>_songs/_abandoned/_censored/_median/_final/_final_t`
+    (albums with 5+ songs), and `dip_<id>_before/_low/_after/_size` for `DIPS`.
     """
-    drop = shape.largest_age_drop(marts["mart_repertoire_age"], HERO_AGE_BAND)
-    if drop:
-        values.update(
-            f1_year_prev=str(int(drop["year_prev"])), f1_year=str(int(drop["year"])),
-            f1_from=fmt_number(drop["age_from"], 1, locale), f1_to=fmt_number(drop["age_to"], 1, locale),
-            # From the rounded ends, so the printed difference matches the printed numbers.
-            f1_drop=fmt_number(round(drop["age_from"], 1) - round(drop["age_to"], 1), 1, locale))
-    end = shape.final_survival(marts["mart_survival_curves"], HERO_SURVIVAL_BAND)
-    if end:
-        values.update(f3_t=fmt_number(end[0], 0, locale), f3_stat=fmt_percent(end[1], 0, locale))
+    age, rot = marts["mart_repertoire_age"], marts["mart_band_rotation_by_year"]
+    tours, curves, summary = marts["mart_tour_rotation"], marts["mart_survival_curves"], marts["mart_survival_summary"]
+
+    for band in bands:
+        k = bands_mod.key(band)
+        yearly = shape.age_by_year(age, band)
+        for year, value in zip(yearly["show_year"], yearly["avg_age"]):
+            values[f"{k}_age_{int(year)}"] = fmt_number(float(value), 1, locale)
+        if len(yearly):
+            first, last = yearly.iloc[0], yearly.iloc[-1]
+            values.update({
+                f"{k}_age_first": fmt_number(float(first["avg_age"]), 1, locale),
+                f"{k}_age_first_year": str(int(first["show_year"])),
+                f"{k}_age_last": fmt_number(float(last["avg_age"]), 1, locale),
+                f"{k}_age_last_year": str(int(last["show_year"]))})
+            years = [int(y) for y in yearly["show_year"]]
+            gaps = [(b - a, a, b) for a, b in zip(years, years[1:]) if b - a >= MIN_GAP_YEARS]
+            if gaps:
+                _, start, end = max(gaps)
+                values[f"{k}_gap_from"], values[f"{k}_gap_to"] = str(start), str(end)
+
+        reliable = shape.rotation_by_year(rot, band)
+        reliable = reliable[~reliable["thin"]]
+        for year, value in zip(reliable["show_year"], reliable["rotation"]):
+            values[f"{k}_rot_{int(year)}"] = fmt_number(float(value), 2, locale)
+        if len(reliable) >= 3:
+            head, tail = reliable.head(3), reliable.tail(3)
+            values.update({
+                f"{k}_rot_first3": fmt_number(float(head["rotation"].mean()), 2, locale),
+                f"{k}_rot_last3": fmt_number(float(tail["rotation"].mean()), 2, locale),
+                f"{k}_rot_first3_from": str(int(head["show_year"].min())),
+                f"{k}_rot_first3_to": str(int(head["show_year"].max())),
+                f"{k}_rot_last3_from": str(int(tail["show_year"].min())),
+                f"{k}_rot_last3_to": str(int(tail["show_year"].max()))})
+
+        for row in tours[tours["band"] == band].itertuples():
+            tour = f"{k}_tour_{bands_mod.key(row.tour_name)}"
+            values[f"{tour}_rotation"] = fmt_number(float(row.rotation), 2, locale)
+            values[f"{tour}_shows"] = fmt_number(float(row.shows), 0, locale)
+
+        end = shape.final_survival(curves, band)
+        if end:
+            values[f"{k}_final_t"], values[f"{k}_final"] = fmt_number(end[0], 0, locale), fmt_percent(end[1], 0, locale)
+        table = shape.album_table(summary, band).set_index("album")
+        for album in shape.survival_albums(summary, band):
+            row = table.loc[album]
+            ak = f"{k}_album_{bands_mod.key(album)}"
+            values.update({f"{ak}_songs": fmt_number(float(row["songs"]), 0, locale),
+                           f"{ak}_abandoned": fmt_number(float(row["abandoned"]), 0, locale),
+                           f"{ak}_censored": fmt_number(float(row["censored"]), 0, locale)})
+            if pd.notna(row["median"]):
+                values[f"{ak}_median"] = fmt_number(float(row["median"]), 0, locale)
+            album_end = shape.final_survival(curves, band, album)
+            if album_end:
+                values[f"{ak}_final_t"] = fmt_number(album_end[0], 0, locale)
+                values[f"{ak}_final"] = fmt_percent(album_end[1], 0, locale)
+
+    for dip_id, (band, before, low, after) in DIPS.items():
+        series = shape.age_by_year(age, band).set_index("show_year")["avg_age"]
+        if not all(year in series.index for year in (before, low, after)):
+            continue
+        b, lo, af = (round(float(series[year]), 1) for year in (before, low, after))
+        values.update({
+            f"dip_{dip_id}_before": fmt_number(b, 1, locale), f"dip_{dip_id}_low": fmt_number(lo, 1, locale),
+            f"dip_{dip_id}_after": fmt_number(af, 1, locale),
+            # Rounded ends again, so the printed size equals the printed difference.
+            f"dip_{dip_id}_size": fmt_number(round(b - lo, 1), 1, locale)})

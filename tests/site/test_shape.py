@@ -142,25 +142,69 @@ def test_methodology_placeholders_from_the_marts(marts) -> None:
     assert en["band_list"].startswith("Arctic Monkeys, Oasis")
 
 
-def test_largest_age_drop_uses_consecutive_years_only() -> None:
-    age = pd.DataFrame({
-        "band": ["X"] * 5, "tour_name": ["A"] * 5, "show_year": [2000, 2001, 2003, 2004, 2005],
-        "aged_performances": [10] * 5, "avg_repertoire_age": [10.0, 12.0, 5.0, 9.0, 6.0],
-    })
-    drop = shape.largest_age_drop(age, "X")
-    # 2001 -> 2003 skips a year and does not count; 2004 -> 2005 falls by 3.0.
-    assert drop == {"year_prev": 2004, "year": 2005, "age_from": 9.0, "age_to": 6.0, "drop": 3.0}
-    rising = age.assign(avg_repertoire_age=[1.0, 2.0, 3.0, 4.0, 5.0])
-    assert shape.largest_age_drop(rising, "X") is None
 
-
-def test_final_survival_and_hero_drop_is_consistent_with_rounded_ends(marts) -> None:
+def test_final_survival(marts) -> None:
     assert shape.final_survival(marts["mart_survival_curves"], "Oasis") == (50, pytest.approx(0.25))
     assert shape.final_survival(marts["mart_survival_curves"], "Nobody") is None
+
+
+def test_findings_values_on_the_fixture(marts) -> None:
+    en = values.placeholder_values(marts, tuple(BANDS), "en")
+    pt = values.placeholder_values(marts, tuple(BANDS), "pt-BR")
+    # Repertoire age (Metallica is band 5): 5 + 5 + (year - 2000), minus 3 in 2003.
+    assert en["metallica_age_2003"] == "10.0" and en["metallica_age_2004"] == "14.0"
+    assert (en["metallica_age_first"], en["metallica_age_first_year"], en["metallica_age_last"]) == ("10.0", "2000", "14.0")
+    # Rotation of Oasis (band 1): 0.31 in 2000-2004 and 0.40 in 2015-2016; first three years vs last three.
+    assert en["oasis_rot_2001"] == "0.31" and pt["oasis_rot_2001"] == "0,31"
+    assert (en["oasis_rot_first3"], en["oasis_rot_first3_from"], en["oasis_rot_first3_to"]) == ("0.31", "2000", "2002")
+    assert (en["oasis_rot_last3"], en["oasis_rot_last3_from"], en["oasis_rot_last3_to"]) == ("0.37", "2004", "2016")
+    # Tours, albums and where the curves end.
+    assert en["muse_tour_tour_a_rotation"] == "0.40" and en["muse_tour_tour_a_shows"] == "30"
+    assert (en["muse_final"], en["muse_final_t"]) == ("25%", "50")
+    assert en["muse_album_album_one_songs"] == "10" and en["muse_album_album_one_median"] == "154"
+    assert en["muse_album_album_one_final"] == "25%" and en["muse_album_album_one_final_t"] == "50"
+    assert "muse_album_non_album_median" not in en  # the curve never reaches 50%: no median to quote
+    assert "muse_album_non_album_songs" in en
+    assert "muse_gap_from" not in en  # no break of 3+ years between the fixture's years
+
+
+def test_thin_years_and_missing_years_have_no_rotation_value() -> None:
     m = fake_marts()
-    m["mart_repertoire_age"] = m["mart_repertoire_age"].assign(
-        avg_repertoire_age=lambda d: d["avg_repertoire_age"] + (d["show_year"] == 2002) * 0.04
-        + (d["show_year"] == 2003) * 0.06)
+    rot = m["mart_band_rotation_by_year"]
+    m["mart_band_rotation_by_year"] = rot.assign(pairs=rot["pairs"].where(rot["show_year"] != 2001, 4))
     en = values.placeholder_values(m, tuple(BANDS), "en")
-    # 12.04 -> 10.06 is a 1.98 fall, but the page prints "12.0" and "10.1", so it must print 1.9, not 2.0.
-    assert (en["f1_from"], en["f1_to"], en["f1_drop"]) == ("12.0", "10.1", "1.9")
+    assert "oasis_rot_2001" not in en and "oasis_rot_2002" in en  # 4 show pairs: too thin to quote
+
+
+def test_the_longest_gap_between_years_is_named() -> None:
+    age = pd.DataFrame({
+        "band": ["Muse"] * 4, "tour_name": ["A"] * 4, "show_year": [2001, 2002, 2005, 2010],
+        "aged_performances": [10] * 4, "avg_repertoire_age": [1.0, 2.0, 3.0, 4.0],
+    })
+    m = fake_marts()
+    m["mart_repertoire_age"] = pd.concat([m["mart_repertoire_age"][m["mart_repertoire_age"]["band"] != "Muse"], age])
+    en = values.placeholder_values(m, tuple(BANDS), "en")
+    assert (en["muse_gap_from"], en["muse_gap_to"]) == ("2005", "2010")  # 2002 -> 2005 is 3 years, 2005 -> 2010 is 5
+
+
+def test_a_dip_prints_the_difference_of_the_printed_numbers() -> None:
+    years = {2007: 19.54, 2009: 15.26, 2010: 18.7}
+    age = pd.DataFrame({
+        "band": ["Metallica"] * 3, "tour_name": ["A"] * 3, "show_year": list(years), "aged_performances": [10] * 3,
+        "avg_repertoire_age": list(years.values()),
+    })
+    m = fake_marts()
+    m["mart_repertoire_age"] = pd.concat([m["mart_repertoire_age"][m["mart_repertoire_age"]["band"] != "Metallica"], age])
+    en = values.placeholder_values(m, tuple(BANDS), "en")
+    # 19.54 - 15.26 = 4.28, but the page prints "19.5" and "15.3", so it must print 4.2, not 4.3.
+    assert (en["dip_metallica_death_magnetic_before"], en["dip_metallica_death_magnetic_low"],
+            en["dip_metallica_death_magnetic_size"], en["dip_metallica_death_magnetic_after"]) == ("19.5", "15.3", "4.2", "18.7")
+    assert "dip_metallica_hardwired_size" not in en  # its years are not in these marts
+
+
+def test_findings_key_pattern_matches_only_findings_names() -> None:
+    for name in ("dip_metallica_hardwired_size", "muse_age_2001", "oasis_rot_first3_from", "metallica_tour_x_rotation",
+                 "oasis_album_be_here_now_median", "linkin_park_gap_to", "muse_final_t"):
+        assert values.FINDINGS_KEY.match(name), name
+    for name in ("muse_1994_matched", "muse_weak_share", "metallica_median", "muse_match", "bands_count", "f3_t"):
+        assert not values.FINDINGS_KEY.match(name), name

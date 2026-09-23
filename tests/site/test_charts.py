@@ -109,20 +109,12 @@ def test_localised_words_appear_in_the_chart(marts) -> None:
     assert "XLABEL" in svg and "YLABEL" in svg and "MEDLABEL" in svg
 
 
-# Contrast of each band colour with the card surface of each theme. The 3:1 target for
-# graphics holds except for the three pairs below, kept as approved colours and listed
-# for a decision (docs/specs/spec-04-progress.md, T5).
-PENDING_DECISION = {("Linkin Park", "light"), ("Muse", "light"), ("Avenged Sevenfold", "dark")}
-
-
+# Every band colour reaches the 3:1 target for graphics on the card surface of both themes.
 @pytest.mark.parametrize("theme_name", ["light", "dark"])
 def test_band_colour_contrast(theme_name: str) -> None:
     for name, colour in theme.band_colors().items():
         ratio = theme.contrast(colour, theme.SURFACES[theme_name])
-        if (name, theme_name) in PENDING_DECISION:
-            assert ratio < 3.0, f"{name} now passes on {theme_name}; remove it from PENDING_DECISION"
-        else:
-            assert ratio >= 3.0, f"{name} on {theme_name}: {ratio:.2f}"
+        assert ratio >= 3.0, f"{name} on {theme_name}: {ratio:.2f}"
 
 
 def test_text_colours_are_readable_in_both_themes() -> None:

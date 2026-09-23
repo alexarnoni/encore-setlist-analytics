@@ -146,24 +146,6 @@ def touring_intensity(rot: pd.DataFrame, since: int = 2015) -> pd.Series:
     return recent.groupby("band")["pairs"].mean()
 
 
-def largest_age_drop(age: pd.DataFrame, band: str) -> dict[str, float] | None:
-    """The biggest year-over-year fall in a band's repertoire age, over consecutive years only.
-
-    Returns year_prev, year, age_from, age_to and drop (positive years), or None when the age
-    never falls between two consecutive years.
-    """
-    series = age_by_year(age, band).set_index("show_year")["avg_age"]
-    best: dict[str, float] | None = None
-    for year, value in series.items():
-        prev = series.get(year - 1)
-        if prev is None or value >= prev:
-            continue
-        if best is None or prev - value > best["drop"]:
-            best = {"year_prev": year - 1, "year": year, "age_from": float(prev), "age_to": float(value),
-                    "drop": float(prev - value)}
-    return best
-
-
 def final_survival(curves: pd.DataFrame, band: str, album: str = BAND_TOTAL, n: int = MAIN_WINDOW
                    ) -> tuple[int, float] | None:
     """Where a survival curve ends: (shows, share still in the setlist), or None without a curve."""

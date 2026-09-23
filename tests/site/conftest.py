@@ -6,18 +6,23 @@ from pathlib import Path
 
 import pytest
 
-from encore.site import build
+from encore.site import build, values
 from tests.site.fixtures import BANDS, fake_marts
 
 BUILT_ON = date(2026, 9, 24)
 ORIGIN = "https://example.test"
 
 
+def findings_fill(name: str) -> str | None:
+    """Stand-in for the real-data figures the findings quote (see `values.FINDINGS_KEY`); nothing else is filled."""
+    return "0" if values.FINDINGS_KEY.match(name) else None
+
+
 @pytest.fixture(scope="session")
 def built_site(tmp_path_factory) -> Path:
     """Build the whole site from the fake marts into a temp dir."""
     out = tmp_path_factory.mktemp("site")
-    build.build_site(fake_marts(), out, built_on=BUILT_ON, origin=ORIGIN, bands=tuple(BANDS))
+    build.build_site(fake_marts(), out, built_on=BUILT_ON, origin=ORIGIN, bands=tuple(BANDS), fill_missing=findings_fill)
     return out
 
 

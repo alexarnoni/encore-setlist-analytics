@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from encore.site import bands, build, i18n
-from tests.site.conftest import BUILT_ON, ORIGIN, parse
+from tests.site.conftest import BUILT_ON, ORIGIN, findings_fill, parse
 from tests.site.fixtures import BANDS, fake_marts
 
 
@@ -110,4 +110,5 @@ def test_a_limitation_without_data_fails_the_build(tmp_path: Path) -> None:
     marts = fake_marts()
     marts["mart_match_quality"] = marts["mart_match_quality"].query("show_year >= 2000")
     with pytest.raises(i18n.LocaleError, match="muse_1994"):
-        build.build_site(marts, tmp_path / "out", built_on=BUILT_ON, origin=ORIGIN, bands=tuple(BANDS))
+        build.build_site(marts, tmp_path / "out", built_on=BUILT_ON, origin=ORIGIN, bands=tuple(BANDS),
+                         fill_missing=findings_fill)
