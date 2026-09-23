@@ -471,3 +471,19 @@ not fetched. **Verified.** 9 tests: the generated site passes and the guard show
 page that the language switcher and hreflang alternates point at, relative and
 fragment-only links, ignored external links, the redirect target, and a build that fails
 and leaves no pages when the nav points at a page that is never written.
+
+### T14 — make targets, README, deploy and DNS notes (done)
+
+`Makefile`: `make site` (`PYTHONPATH=src $(PYTHON) -m encore.site.build`, `PYTHON` overridable
+for a virtualenv) and `make site-serve` (`python -m http.server 8004 --bind 127.0.0.1
+--directory site`; the port is configurable with `SITE_PORT` and is not one of the ports the
+other projects own). README section "Public site (spec 04)": what it is, the policy on
+what the build enforces, build and review, the database requirement (run on the VM or through
+an SSH tunnel), environment variables, tests, the manual deploy through Wrangler direct upload
+or the dashboard, the custom domain and its DNS record (`CNAME encore` to the project's
+`*.pages.dev` address), attribution and fonts, and the reminder that nothing rebuilds the site
+automatically. **Verified.** There is no `make` on this Windows host, so the two recipes were
+run as written: the build passes the content and link checks on all 23 pages, and the serve command
+answers 200 for `/`, `/pt/`, `/en/bands/muse/`, the stylesheet and the font, and `netstat` shows it
+listening on `127.0.0.1:8004` only (never `0.0.0.0`). The Wrangler commands and the dashboard steps
+were **not** run (deploy is yours).

@@ -201,6 +201,74 @@ If `postgres-test` isn't running, every test in `tests/integration/`
 skips (rather than erroring) — the connection attempt happens once per
 session, so a skip run finishes in a few seconds, not minutes.
 
+## Public site (spec 04)
+
+A static, bilingual (pt-BR default, English) site generated from the `analytics` marts and
+published on Cloudflare Pages at `https://encore.alexarnoni.com`. No API, no backend and no
+database access at runtime. The generator lives in `src/encore/site/` (Jinja2 templates, hand-written
+text in `locales/pt-BR.yml` and `locales/en.yml`, matplotlib charts as inline SVG).
+
+- It reads **only** the `analytics` schema, through a read-only session, and makes no setlist.fm request.
+- The build fails, and leaves `site/` empty, on a missing translation key, an unfilled placeholder in
+  the findings, a forbidden field name or a date more precise than a year in any page, missing
+  setlist.fm / MusicBrainz attribution, or a broken internal link.
+- `site/` is gitignored. Publishing is a separate, manual step, and **nothing rebuilds the site
+  automatically**: after a pipeline run, rebuild by hand with `make site`.
+
+### Build and review
+
+```bash
+make site          # build into site/ (PYTHON=... to pick a virtualenv; needs the database, see below)
+make site-serve    # http://127.0.0.1:8004/  (bound to 127.0.0.1 only)
+```
+
+`make site` needs the Encore database on `127.0.0.1:5435` and `POSTGRES_USER` / `POSTGRES_PASSWORD`
+in `.env`. Run it on the VM (`/opt/encore`), or from a workstation through a tunnel:
+
+```bash
+ssh -N -L 5435:127.0.0.1:5435 <vm>      # then, in another terminal:  make site
+```
+
+Optional environment variables: `SITE_OUTPUT_DIR` (default `site`), `SITE_URL` (default
+`https://encore.alexarnoni.com`, used in canonical and hreflang links), `ENCORE_DB_HOST` and
+`ENCORE_DB_PORT`. On Windows use `make` inside WSL, or run `PYTHONPATH=src python -m encore.site.build`.
+
+Tests: `pytest tests/site` (fake marts, no database). Two tests in `tests/site/test_findings.py` use the
+real marts and are skipped without database credentials; they check that every figure quoted in the
+findings exists and that each claim's direction still holds.
+
+### Deploy to Cloudflare Pages (manual)
+
+Either option publishes the contents of `site/` as-is; run `make site` first and review it locally.
+
+**Wrangler direct upload** (needs Node and a Cloudflare login, `npx wrangler login`):
+
+```bash
+npx wrangler pages project create encore --production-branch main   # first time only
+npx wrangler pages deploy site --project-name encore --branch main
+```
+
+**Or the dashboard:** Workers & Pages → Create → Pages → *Upload assets*, name the project `encore`,
+and drag in the `site/` folder (upload the folder's contents, so `index.html` is at the root).
+
+**Custom domain `encore.alexarnoni.com`:** in the Pages project, *Custom domains* → *Set up a custom
+domain* → `encore.alexarnoni.com`. If `alexarnoni.com` is a Cloudflare zone, the DNS record is created
+for you; otherwise add it at the DNS provider yourself:
+
+| Type | Name | Target |
+|---|---|---|
+| CNAME | `encore` | `encore.pages.dev` (the project's own `*.pages.dev` address; it differs if the project name was taken) |
+
+Wait for the certificate to become active (usually a few minutes), then open
+`https://encore.alexarnoni.com/`, which redirects to `/pt/`.
+
+### Attribution and fonts
+
+Every page links to setlist.fm (followable, no `nofollow`) and credits MusicBrainz as CC0; the footer
+says that setlist data is aggregated and that individual setlists are neither stored nor shown.
+IBM Plex Mono (SIL OFL 1.1, latin subset) is self-hosted from `src/encore/site/assets/fonts/`
+(licence and regeneration steps in that folder's README); the site loads nothing from a third party.
+
 ## Deploying to the VM
 
 Per [docs/context/tech.md](docs/context/tech.md): an Oracle Cloud VM
