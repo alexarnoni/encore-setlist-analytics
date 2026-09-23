@@ -2,10 +2,11 @@
 
 Loads MusicBrainz discography (persistent) and each band's full
 setlist.fm history (ephemeral) into PostgreSQL, validates the load, builds
-the analytics marts with dbt (spec-02a), and truncates raw_setlistfm — both
-at the start (so a previous run's leftovers never leak into this run's
-validation) and at the end, with trigger_rule=all_done so it also runs when
-an earlier task fails (adjustment 6).
+the analytics marts with dbt (spec-02a), runs the survival analysis
+(spec-03), and truncates raw_setlistfm — both at the start (so a previous
+run's leftovers never leak into this run's validation) and at the end, with
+trigger_rule=all_done so it also runs when an earlier task fails
+(adjustment 6).
 """
 
 from __future__ import annotations
@@ -24,7 +25,7 @@ from encore.clients.musicbrainz import MusicBrainzClient
 from encore.clients.setlistfm import SetlistFmClient
 from encore.config import Band, load_bands
 from encore.db import ensure_schemas, get_connection
-from encore.dbt_runner import DbtError, run_transform
+from encore.dbt_runner import DbtError, run_analyze, run_transform
 from encore.ingestion import musicbrainz as mb_ingestion
 from encore.ingestion import setlistfm as sf_ingestion
 
@@ -149,6 +150,30 @@ def encore_pipeline():
             raise AirflowFailException(str(exc)) from exc
         return True
 
+    @task
+    def analyze() -> bool:
+        """
+        Run the survival analysis (spec-03 Part B): song abandonment/
+        censoring and Kaplan-Meier curves, written straight to
+        analytics.mart_song_survival/mart_survival_curves/mart_survival_summary
+        (design decision D4 — not dbt models), then the dbt tests tagged
+        `survival` against what was just written.
+
+        Runs after `transform` and before cleanup, while raw_setlistfm still
+        holds this run's data (encore.analysis.io reads views over it, the
+        same window transform has). Unlike `transform`, this step is mostly
+        plain Python rather than only dbt subprocess calls, so any exception
+        is treated as a failure here, not just DbtError (the trailing dbt
+        test step's own kind of failure) — either way there is no retry: the
+        same data would fail the same way. cleanup_raw_setlistfm still runs
+        (trigger_rule=all_done).
+        """
+        try:
+            run_analyze()
+        except Exception as exc:
+            raise AirflowFailException(str(exc)) from exc
+        return True
+
     @task(trigger_rule=TriggerRule.ALL_DONE)
     def cleanup_raw_setlistfm() -> None:
         conn = get_connection()
@@ -163,6 +188,7 @@ def encore_pipeline():
         sf_results: list[dict | None],
         validated: list[dict] | None,
         transformed: bool | None,
+        analyzed: bool | None,
     ) -> None:
         """
         Write this run's summary to ops.pipeline_runs (R6.7).
@@ -170,9 +196,9 @@ def encore_pipeline():
         v1 success heuristic: a task that raised never pushes an XCom,
         so any argument still being None/missing here means its task (or
         one of its mapped instances) failed — good enough for spec-01's
-        skeleton DAG. `transform()` returns True on success specifically
-        so a raised exception there (transformed=None) isn't
-        indistinguishable from success (unlike a bare `None` return
+        skeleton DAG. `transform()`/`analyze()` return True on success
+        specifically so a raised exception there (transformed/analyzed=None)
+        isn't indistinguishable from success (unlike a bare `None` return
         would be).
         """
         context = get_current_context()
@@ -187,6 +213,7 @@ def encore_pipeline():
             mb_result is not None
             and validated is not None
             and transformed is True
+            and analyzed is True
             and all(r is not None for r in sf_results)
         )
 
@@ -214,11 +241,16 @@ def encore_pipeline():
     sf_results = extract_setlistfm.expand(band_dict=bands_as_dicts)
     validated = validate_raw(sf_results)
     transformed = transform()
+    analyzed = analyze()
     cleanup = cleanup_raw_setlistfm()
-    logged = log_run(mb_result, sf_results, validated, transformed)
+    logged = log_run(mb_result, sf_results, validated, transformed, analyzed)
 
-    truncate_start >> budget >> mb_result >> sf_results >> validated >> transformed
-    [validated, transformed] >> cleanup >> logged
+    truncate_start >> budget >> mb_result >> sf_results >> validated >> transformed >> analyzed
+    # cleanup must wait for `analyzed` too, not just `transformed`: it reads
+    # the same raw-data views encore.analysis does, so cleanup running in
+    # parallel with a still-in-flight analyze would be a race, not just a
+    # missing dependency.
+    [validated, transformed, analyzed] >> cleanup >> logged
 
 
 encore_pipeline()

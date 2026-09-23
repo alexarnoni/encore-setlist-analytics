@@ -4,11 +4,11 @@ Tracks `docs/specs/spec-03-rotation-survival.md` (rotation and song survival).
 Same discipline as spec 01 and 02a: small tasks, one commit each, results
 recorded here.
 
-> **STATUS: PLAN APPROVED 2026-09-21 — implementation of T0-T13 in progress.**
-> Work happens only on the branch `spec-03`, in the worktree
-> `D:\projetos\encore-spec03`. T14 (merge and real-data run) waits for the
-> main branch's next full run and its checklist. The running main stack,
-> its image and containers are not touched.
+> **STATUS: T0-T10 done (2026-09-23). T11-T13 not started — see section 11
+> for exactly where to pick up.** Work happens only on the branch
+> `spec-03`, in the worktree `D:\projetos\encore-spec03`. T14 (merge and
+> real-data run) is explicitly on hold until the user asks for it. The
+> running main stack, its image and containers are not touched.
 
 ## 1. Guardrails
 
@@ -222,7 +222,7 @@ to Q1-Q9; the recommended defaults let work start without them.
 - [x] T7 Kaplan-Meier curves and summary
 - [x] T8 database I/O and the three marts
 - [x] T9 dbt sources, tests, forbidden columns
-- [ ] T10 `analyze` task and runner
+- [x] T10 `analyze` task and runner
 - [ ] T11 image with lifelines (arm64 checked)
 - [ ] T12 notebook
 - [ ] T13 documentation
@@ -692,3 +692,164 @@ raising the LATER point instead); a song deleted from `mart_song_survival`
 `mart_song_survival` with `ALTER TABLE` (the forbidden-columns test, dropped
 again afterward). Python suite: 148 passed, 14 skipped (T8's tests, opt-in).
 `tests/spec03` (real DB, opt-in): 14 passed.
+
+### T10 — `analyze` task and runner (done)
+
+`src/encore/dbt_runner.py`: `TRANSFORM_STEPS`'s test step now excludes the
+survival tag (`("test", "--exclude", "tag:survival")` — decision D1: those
+tests need marts `analyze` hasn't written yet when `transform` runs).
+`SURVIVAL_TEST_SELECTOR = ("test", "--select", "tag:survival")`. New
+`run_analyze()`: opens a connection, calls
+`encore.analysis.io.write_survival_marts`, closes the connection in a
+`finally` (even on failure), then runs the survival-tagged dbt tests against
+what was just written. `airflow/dags/encore_pipeline.py`: new `analyze` task
+between `transform` and `cleanup_raw_setlistfm`; unlike `transform` (which
+only ever raises `DbtError`, since it's pure dbt subprocess calls),
+`analyze`'s own Python code (DB I/O, the survival core) can raise other
+exceptions too, so it catches `Exception` broadly rather than just
+`DbtError` — documented as a deliberate difference from `transform`'s
+pattern. `cleanup_raw_setlistfm` and `log_run` now also depend on
+`analyzed`, not just `transformed`: without that, cleanup could start
+truncating `raw_setlistfm` while `analyze` is still reading views over it —
+a race, not just a missing dependency. `log_run` takes `analyzed` and
+requires it to be `True` for the run to count as `success`.
+**Verified.** DAG imports cleanly inside `encore-airflow:3.3.2` **without
+lifelines installed** (the import chain into `encore.analysis.survival`,
+where `lifelines` is imported, is lazy — inside `run_analyze()`'s function
+body — so parsing the DAG never needs it; only actually *running* `analyze`
+does, and that's T11's job). `scripts/spec03/check_dag_structure.py` (new):
+loads the real DAG object inside the image and asserts on it directly —
+task ids, that `analyze` sits exactly between `transform` and
+`cleanup_raw_setlistfm`, that `cleanup_raw_setlistfm`'s and `log_run`'s
+upstream sets both include `analyze`, and the trigger rules
+(`cleanup_raw_setlistfm`/`log_run` = `ALL_DONE`, `analyze` = the default
+`ALL_SUCCESS`). All checks passed. 22 new/changed unit tests in
+`tests/test_dbt_runner.py` for `run_analyze` (writes then tests, in order;
+closes the connection even when the write raises; propagates a failing
+survival test) plus the existing `run_transform` tests updated for the new
+test-step tuple; 2 mutations tried (dropping the `finally` around
+`conn.close()`, swapping the survival selector from `--select` to
+`--exclude`), both caught. Full suite: 151 passed, 14 skipped (T8/T9's
+DB-level tests, opt-in).
+**Deliberately not done, and not attempted:** a real, scheduled
+`airflow dags test`/`airflow tasks test` run of the modified DAG (proving
+"analyze fails → cleanup still runs" by actually triggering it) needs an
+Airflow metadata database, and the only one available is the MAIN stack's,
+which is off limits for spec-03 work (it is pointed at the `master`
+checkout's DAG folder, not this branch's). Spinning up a second, fully
+isolated Airflow scheduler + metadata DB against `spec03-postgres` just for
+this one check would be a disproportionate amount of new infrastructure for
+what it proves: the mechanism itself (`trigger_rule=ALL_DONE` on a
+downstream task, unchanged from `transformed`) was already proven for real
+via actual DAG runs in spec-02a (item 20, and the acceptance runs), and
+`analyzed` is wired into `cleanup_raw_setlistfm`'s upstream set in exactly
+that same, already-proven way — the structural check above confirms the
+wiring is actually present, not just intended. **This is the one thing T14
+must still confirm for real**: after the merge, a full pipeline run on
+`master` should be watched to see `analyze` actually execute in its correct
+position and `cleanup_raw_setlistfm` still run if it were to fail (not
+expected to fail on real data, but worth watching once).
+
+## 11. Handoff for the next session (2026-09-23)
+
+T0-T10 done and pushed to `origin/spec-03` (last commit: see `git log -1`).
+T11-T13 not started. T14 stays blocked until the user says to do it.
+
+### Where things are right now
+
+- Main stack (`master`, `D:\projetos\encore`): untouched, image
+  `encore-airflow:3.3.2` id `327c94e2db5d`, containers healthy, branch
+  `master`, clean tree. Nothing in this session touched it.
+- Worktree: `D:\projetos\encore-spec03`, branch `spec-03`, clean tree, pushed.
+- Isolated environment: container `spec03-postgres` (network `spec03-net`),
+  synthetic data loaded (542 setlists, `tests/support/histories.py`'s
+  scenarios). Bring it back with `bash scripts/spec03/up.sh` if the
+  container was stopped between sessions (data survives in the volume).
+- `lifelines` is installed **only** in the shared host dev `.venv`
+  (`D:\projetos\encore\.venv`, shared by both worktrees) — not in any
+  `requirements.txt`, not in any image. Every real-data check so far
+  (T7-T10) used a **throwaway container** that `pip install`s it on top of
+  `encore-airflow:3.3.2` each time (see the `docker run ... pip install -q
+  lifelines ...` pattern used throughout `docs/specs/spec-03-progress.md`'s
+  T8/T9 log entries) — nothing durable exists yet. T11 is exactly "make this
+  durable": add it to the real requirements files and build the real branch
+  image.
+- arm64 wheels for `lifelines` and everything it pulls in (including the
+  compiled ones matplotlib needs, and the exact pinned numpy/scipy/pandas
+  versions) were confirmed present in T8's log entry — no source-build risk
+  found. T11 should not need to re-derive this, just act on it.
+
+### T11 — image with lifelines (not started)
+
+Plan (from section 5's task table): add `lifelines` to
+`airflow/requirements.txt` and to the root `requirements.txt` (the notebook
+in T12 will need it too, to read `mart_survival_curves` and maybe refit nothing
+— actually the notebook only reads the marts, it does not need lifelines
+itself; double check whether the root `requirements.txt` really needs it
+before adding it there, or whether only `airflow/requirements.txt` does).
+Then:
+
+    export DBT_GIT_COMMIT="spec-03-$(git -C /d/projetos/encore-spec03 log -1 --format=%h)"
+    cd /d/projetos/encore-spec03
+    docker build -t encore-airflow:spec-03 -f airflow/Dockerfile .   # NOT docker compose, NOT the :3.3.2 tag
+    # verify the pinned versions actually resolved (no source build happened):
+    docker run --rm --entrypoint python encore-airflow:spec-03 -c "import lifelines, numpy, scipy, pandas; print(lifelines.__version__, numpy.__version__, scipy.__version__, pandas.__version__)"
+
+Then re-run `write_survival_marts` (T8/T9's throwaway-container command,
+without the `pip install` step this time — the image already has it) and
+the full `tests/spec03` suite, to confirm the durable image behaves
+identically to the throwaway one. Update
+`scripts/spec03/env.sh`'s `S3_IMAGE` default to `encore-airflow:spec-03`
+once it exists, so later `s3py`/`s3dbt` calls use the real branch image
+instead of falling back to `encore-airflow:3.3.2` (which doesn't have
+lifelines and would make `s3py` calls that import
+`encore.analysis.survival` fail).
+**Never** build with tag `encore-airflow:3.3.2` or run `docker compose`
+from this worktree — that would overwrite the main stack's image (see D3 /
+the T0 guardrails).
+
+### T12 — notebook (not started)
+
+`notebooks/02_rotation_survival.ipynb`, reading only from `analytics`
+(same pattern as `notebooks/01_first_kpi.ipynb` on `master`: a
+`read_analytics()` allow-list, read-only session, `DB` config from env vars
+so it can point at `encore_spec03`/`spec03-postgres` for a dev preview and
+at the real database once merged). Three pieces, per the spec:
+1. Rotation by year, small multiples, one panel per band, same y scale
+   (from `mart_band_rotation_by_year`).
+2. Kaplan-Meier curves for one band, one line per album, with confidence
+   bands (from `mart_survival_curves`; Q6's default — only draw albums with
+   >= 5 songs, from `mart_survival_summary.songs` — still applies here).
+3. Table of median survival by band and album for N = 50 (from
+   `mart_survival_summary` filtered to `n_window = 50`).
+Outputs cleared before committing (0 outputs, 0 execution counts, checked
+the same way item 21/notebook 01 was). An executed HTML MAY go to
+`reports/` (gitignored) as with notebook 01 — optional per the spec text
+("may be generated"), do it if there's time, skip if not.
+Load the `dataviz` skill again before writing chart code (small multiples
+need consistent axes across panels; confidence bands are a new chart type
+this project hasn't drawn before — check `references/marks-and-anatomy.md`
+for how to draw a band, not just a line).
+
+### T13 — documentation (not started)
+
+Per section 5's task table: `docs/methodology.md` (rotation and core-song
+definitions, the abandonment/censoring convention exactly as decided in
+section 4a — duration inclusive, N=25/50/100, eligibility rule — and the
+Q4/Q5 caveat about jams/generic titles and about recording-only songs
+without a release year being ineligible), `dbt/README.md` (document the
+`analyze` task and the `tag:survival` split, matching how the existing
+"Running dbt inside Airflow" section documents `transform`), root `README.md`
+(update the architecture diagram/description to mention `analyze` and the
+survival marts, matching how it already documents `transform`), and
+`docs/context/structure.md` (add `src/encore/analysis/` to the layout).
+None of this touches `master` until T14.
+
+### One open thread, not urgent
+
+`docs/specs/spec-02a-followup-progress.md`'s "Bug found and fixed" entry
+about `check_api_budget` comparing against a manually-supplied
+`airflow dags test <date>` logical date instead of `finished_at` is still
+just flagged, not fixed, on `master`. It is unrelated to spec-03 and does
+not block anything here; mentioned so it isn't forgotten if a future
+session is picking priorities.
