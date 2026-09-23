@@ -1,8 +1,11 @@
 version: 2
 
-# analytics = PERSISTENT aggregated marts. Nothing here may carry a
-# setlist id, show date, venue or song title (docs/context/structure.md);
-# the R7.2 singular test guards that.
+# analytics = PERSISTENT aggregated marts. Nothing here may carry a setlist
+# id, a show date, a venue, or a raw (as-typed-on-setlist.fm) song title
+# (docs/context/structure.md); the R7.2 singular test guards those specific
+# names. A display title drawn from the MusicBrainz catalog, like
+# mart_song_survival.song_title (spec-03), is a different thing and is fine
+# at this grain (band + song).
 
 models:
 

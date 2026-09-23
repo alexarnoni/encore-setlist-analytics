@@ -105,12 +105,23 @@ def fetch_show_appearances(conn) -> list[ShowAppearance]:
 def fetch_performance_counts(conn) -> dict[str, dict[str, int]]:
     """{band: {song_key: performance_count}}. Matched, dated performances
     only — the same population int_show_song_sets and the marts use, so a
-    song's eligibility here matches what its appearances actually show."""
+    song's eligibility here matches what its appearances actually show.
+
+    Reads int_performances (a view) through a MATERIALIZED CTE before
+    filtering: filtering it directly makes Postgres re-evaluate the view
+    per output row instead of once — the same anti-pattern that made
+    int_show_song_sets take minutes instead of seconds at production scale
+    (see dbt/models/intermediate/int_show_song_sets.sql).
+    """
     with conn.cursor() as cur:
         cur.execute(
             """
+            WITH all_performances AS MATERIALIZED (
+                SELECT band, title_normalized, is_matched, show_year
+                FROM intermediate.int_performances
+            )
             SELECT band, title_normalized, count(*)
-            FROM intermediate.int_performances
+            FROM all_performances
             WHERE is_matched AND show_year IS NOT NULL
             GROUP BY band, title_normalized
             """

@@ -1,0 +1,145 @@
+version: 2
+
+# The three survival marts (spec-03 Part B) are written directly by
+# src/encore/analysis/io.py (design decision D4, spec-03-progress.md) rather
+# than built by dbt models — `ensure_tables`/`write_survival_marts` own their
+# DDL and content. dbt only documents them here as a source and tests them.
+# They are refreshed by the `analyze` Airflow task, after `transform`'s dbt
+# run and before `cleanup_raw_setlistfm`; their tests are tagged `survival`
+# so `transform`'s own `dbt test` (which runs first, before `analyze` has
+# written anything this run) excludes them — see dbt/README.md.
+
+sources:
+  - name: encore_survival
+    description: Survival marts written by encore.analysis.io, not by dbt.
+    schema: analytics
+    tables:
+      - name: mart_song_survival
+        description: >
+          One row per band and eligible song (>= 3 matched, dated
+          performances, and matched to a studio album or to a recording with
+          a release year). N=50 is this mart's own headline window;
+          mart_survival_curves/summary carry every window in
+          encore.analysis.survival.WINDOWS (25, 50, 100). Years only, never a
+          full date.
+        config:
+          tags: ["survival"]
+        columns:
+          - name: band
+            data_tests:
+              - not_null
+          - name: song_title
+            description: Display title from the MusicBrainz catalog.
+            data_tests:
+              - not_null
+          - name: reference_album
+            description: NULL for a recording-only ("non-album") song.
+          - name: release_year
+            description: NULL when the song has no usable release date.
+          - name: performances
+            description: Matched, dated performances (not distinct shows).
+            data_tests:
+              - not_null
+          - name: debut_year
+            data_tests:
+              - not_null
+          - name: last_year
+            data_tests:
+              - not_null
+          - name: duration_shows_n50
+            description: >
+              Shows from debut to last appearance before abandonment (or to
+              the end of history if censored), inclusive, at window N=50.
+            data_tests:
+              - not_null
+          - name: event_n50
+            description: True if abandoned at N=50, false if censored.
+            data_tests:
+              - not_null
+          - name: returned_after_abandonment
+            description: >
+              True if the song was played again after its first abandonment
+              at N=50. Always false when event_n50 is false (censored songs
+              have no abandonment to return after).
+            data_tests:
+              - not_null
+          - name: computed_at
+            data_tests:
+              - not_null
+
+      - name: mart_survival_curves
+        description: >
+          Kaplan-Meier curve points. Grain: band, album, n_window, t_shows.
+          album is 'all' (every eligible song of the band), a reference album
+          name, or 'non-album' (eligible recording-only songs).
+        config:
+          tags: ["survival"]
+        columns:
+          - name: band
+            data_tests:
+              - not_null
+          - name: album
+            data_tests:
+              - not_null
+          - name: n_window
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: [25, 50, 100]
+          - name: t_shows
+            data_tests:
+              - not_null
+          - name: at_risk
+            data_tests:
+              - not_null
+          - name: events
+            data_tests:
+              - not_null
+          - name: survival_probability
+            description: Between 0 and 1; non-increasing within one curve.
+            data_tests:
+              - not_null
+          - name: ci_lower
+            data_tests:
+              - not_null
+          - name: ci_upper
+            data_tests:
+              - not_null
+          - name: computed_at
+            data_tests:
+              - not_null
+
+      - name: mart_survival_summary
+        description: >
+          One row per band, album and n_window: how many songs, events and
+          censored songs went into that curve, and its median survival time.
+        config:
+          tags: ["survival"]
+        columns:
+          - name: band
+            data_tests:
+              - not_null
+          - name: album
+            data_tests:
+              - not_null
+          - name: n_window
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: [25, 50, 100]
+          - name: songs
+            data_tests:
+              - not_null
+          - name: events
+            data_tests:
+              - not_null
+          - name: censored
+            data_tests:
+              - not_null
+          - name: median_survival_shows
+            description: NULL when the curve never drops below 0.5.
+          - name: computed_at
+            data_tests:
+              - not_null

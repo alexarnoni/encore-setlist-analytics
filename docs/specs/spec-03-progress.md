@@ -221,7 +221,7 @@ to Q1-Q9; the recommended defaults let work start without them.
 - [x] T6 survival core + unit tests
 - [x] T7 Kaplan-Meier curves and summary
 - [x] T8 database I/O and the three marts
-- [ ] T9 dbt sources, tests, forbidden columns
+- [x] T9 dbt sources, tests, forbidden columns
 - [ ] T10 `analyze` task and runner
 - [ ] T11 image with lifelines (arm64 checked)
 - [ ] T12 notebook
@@ -621,3 +621,74 @@ narrowly re-selecting one view for a quick manual check. Fixed with a full
 development includes `+` (downstream) or is followed by a full `dbt run`
 before trusting anything built on top of the changed view.
 Full suite after this: 148 passed, 14 skipped (all `tests/spec03`, opt-in).
+
+### T9 — dbt sources, tests, forbidden columns for the survival marts (done)
+
+`dbt/models/analytics/_survival_sources.yml`: documents
+`mart_song_survival`/`mart_survival_curves`/`mart_survival_summary` as a dbt
+**source** (`encore_survival`), not a model — they are written directly by
+`encore.analysis.io` (D4), dbt only documents and tests them. Every column's
+generic tests (`not_null`, `accepted_values` on `n_window` in {25,50,100})
+are tagged `survival` at the table level, so `transform`'s own `dbt test`
+(which will run `--exclude tag:survival`, see T10) never touches tables the
+Python module hasn't written yet on a fresh run. New singular tests, all
+tagged `survival`: `assert_survival_probability_between_0_and_1`,
+`assert_survival_curve_non_increasing` (via `lag()` per band/album/n_window),
+`assert_survival_summary_events_plus_censored_equals_songs` (all three from
+requirement 11's own wording), `assert_survival_curve_ci_brackets_probability`
+(extra, not in the spec's wording — a confidence interval that doesn't
+bracket its own point estimate, or leaves [0,1], is a bug), and
+`assert_song_survival_reconciles_with_int_performances` (**requirement
+15**: re-derives eligibility in SQL from `int_performances` +
+`int_song_catalog`, independently of `encore.analysis.survival.is_eligible`,
+and compares per-band song counts against the mart). Forbidden-columns list
+(`assert_no_forbidden_columns_in_analytics`) extended with `show_key`,
+`show_id`, `show_index`, `setlist_url` (defensive; nothing currently uses
+them). Fixed a real contradiction in `analytics/schema.yml`'s header: it
+said nothing in `analytics` may carry a "song title", which `mart_song_survival.song_title`
+(a legitimate MusicBrainz display title, not a raw setlist.fm one) would
+have violated literally — reworded to name the four forbidden columns
+specifically.
+**Performance, found and fixed before it became a problem.**
+`fetch_performance_counts` (T8) and the new reconciliation test both filtered
+`int_performances` — a view — directly, the exact anti-pattern that made
+`int_show_song_sets` take 4+ minutes at production scale in T2. The
+reconciliation test took **35 s even at synthetic scale (542 setlists)**,
+which was the tell; fixed both with the same `MATERIALIZED` CTE trick (query
+the view once, filter afterward): the test dropped to **1.8 s**, and a full
+`write_survival_marts()` run at production scale (~7,000 setlists, the same
+`scripts/spec03/scale_data.sql` dataset as T2/T3) completed in **11.2 s**
+total (fetch + compute + write), with all 34 `tag:survival` tests passing in
+11.1 s at that size.
+**An operational lesson from testing at scale, not a code bug:** while a
+manual `write_survival_marts()` check was running slow (pre-fix) inside a
+throwaway container, I `docker stop`'d the container to investigate — but
+the query kept running server-side, and its long-held read snapshot then
+blocked a later `dbt run`'s `DROP ... CASCADE` on `int_performances` with a
+relation lock, hanging that dbt run for 5+ minutes. Found via
+`pg_stat_activity` (a `wait_event_type = Lock` row waiting on the orphaned
+query's PID) and resolved with `pg_terminate_backend()`. Recorded because it
+is a real trap in this exact workflow (throwaway containers + shared
+Postgres + manual `docker stop`): stopping a container is not enough to
+cancel a query it started; the backend must be terminated at the database
+too, or the query itself cancelled first.
+**Verified.** Full project: `dbt run` 19/19, `dbt test` 160 pass + 6 warn
+(the same pre-existing NULL-year warnings), 0 errors — includes the 34
+`tag:survival` tests. `--exclude tag:survival` runs exactly the 133 tests
+`transform` will run (unaffected by the survival marts' existence);
+`--select tag:survival` runs exactly the 34 new/extended ones. **6
+mutations, all caught, each on real mart data (these tables are Python-
+written, not dbt models, so the mutation is a direct `UPDATE`/`DELETE`/
+`ALTER TABLE`, not editing a `.sql` file) — each restored by recomputing the
+marts from the source data afterward:** a probability set to 1.5; a
+confidence interval's lower bound pushed above the point estimate (my first
+attempt targeted `t_shows=0`, where probability is always exactly 1.0 by
+construction — no row matched; redone against a real interior point);
+`events` bumped by 1 so `events + censored ≠ songs`; a curve point raised
+above its predecessor to break monotonicity (my first attempt raised the
+wrong point, one that was already below its own successor — redone by
+raising the LATER point instead); a song deleted from `mart_song_survival`
+(the reconciliation test); a `venue` column added directly to
+`mart_song_survival` with `ALTER TABLE` (the forbidden-columns test, dropped
+again afterward). Python suite: 148 passed, 14 skipped (T8's tests, opt-in).
+`tests/spec03` (real DB, opt-in): 14 passed.
