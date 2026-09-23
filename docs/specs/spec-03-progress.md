@@ -410,3 +410,14 @@ same band), only by the oracle; joining against `mart_tour_rotation` with a
 LEFT join instead of INNER (so excluded-tour pairs leak in) — caught by both
 `assert_rotation_marts_agree_on_pair_counts` and the oracle. Both restored,
 model `diff` clean.
+
+### Performance check, T4-T5, at production scale
+
+Same ~7,000-setlist / ~132,000-entry synthetic dataset as T2-T3
+(`scripts/spec03/scale_data.sql`). `mart_tour_rotation` 18.3 s (768 rows),
+`mart_band_rotation_by_year` 6.5 s (253 rows); all 25 rotation-related dbt
+tests pass at this size. Data removed afterwards, back to 542 synthetic rows.
+
+**Part A (rotation) of spec 03 is complete: T2-T5 done.** Part B (survival,
+T6-T9) is next.
+
