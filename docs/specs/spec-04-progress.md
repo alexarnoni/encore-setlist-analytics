@@ -573,3 +573,15 @@ Wording only; no figure, claim or caveat changed, and every number is still a pl
    and the before and after values (32.3 to 25.4) moved into the numbers paragraph.
 Tests: 159 in `tests/site` (new: lede order, metrics in concert terms, discography/MusicBrainz
 distinction, censored gloss, performances confined to the methodology page, short hero label).
+
+### Last text fixes (2026-09-23)
+
+1. "Eligible songs" / "músicas elegíveis" is glossed inline at its first use in each band's text
+   ("those played at least 3 times and found in MusicBrainz"); the precise rule stays in the
+   methodology, and the home page's finding 03 has a caveat with the counting rule.
+2. Finding 03's hero label stands on its own: "of the songs on (What's the Story) Morning Glory?
+   were still being played 735 shows after their live debut" / "das músicas de (What's the Story)
+   Morning Glory? ainda eram tocadas 735 shows depois da estreia ao vivo".
+3. The abandonment definition (`methodology.survival.p.2`) says "played at least 3 times in total" /
+   "tocadas pelo menos 3 vezes no total" instead of "performances" / "execuções".
+Tests: 162 in `tests/site`; full suite 318 passed, 14 skipped; the build passes the policy and link checks.
