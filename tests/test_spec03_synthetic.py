@@ -174,11 +174,11 @@ MUSE_EXPECTED = {
          "returns_and_stays": (250, False, True, 2), "hiatus": (10, True, False, 0),
          "recording_with_year": (4, True, False, 0)},
     50: {"filler": (260, False, False, 0), "exact": (56, True, True, 1), "short": (55, True, False, 0),
-         "censored": (161, False, False, 0), "returns": (78, True, True, 1),
+         "censored": (131, False, False, 0), "returns": (78, True, True, 1),
          "returns_and_stays": (250, False, True, 2), "hiatus": (10, True, False, 0),
          "recording_with_year": (4, True, False, 0)},
     100: {"filler": (260, False, False, 0), "exact": (56, True, False, 0), "short": (55, True, False, 0),
-          "censored": (161, False, False, 0), "returns": (78, True, False, 0),
+          "censored": (131, False, False, 0), "returns": (78, True, False, 0),
           "returns_and_stays": (250, False, True, 1), "hiatus": (10, True, False, 0),
           "recording_with_year": (4, True, False, 0)},
 }
@@ -218,8 +218,8 @@ def test_a_song_that_returns_and_then_leaves_is_an_event():
 def test_a_song_played_once_has_duration_one():
     # played once at show 7 of 100 and never again for the next 50 shows: abandoned, duration 1
     assert o.outcome([7], 100, window=50) == o.Outcome(7, 7, 1, True, False, 0)
-    # played once at show 70 of 100: fewer than 50 shows remain, so it is censored (100 - 70 + 1)
-    assert o.outcome([70], 100, window=50) == o.Outcome(70, 70, 31, False, False, 0)
+    # played once at show 70 of 100: fewer than 50 shows remain, so it is censored, duration 1
+    assert o.outcome([70], 100, window=50) == o.Outcome(70, 70, 1, False, False, 0)
 
 
 def test_arctic_eligibility(pool, catalog):

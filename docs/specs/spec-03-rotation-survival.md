@@ -36,10 +36,10 @@ Read the context files in `docs/context/` and `docs/methodology.md` before start
 - Show index: position of the show in the band's full chronological show history (shows with at least one matched song).
 - **Live debut** of a song: the first show index where it was played.
 - **Gap**: a run of at least N = 50 consecutive shows, all inside the band's history, without the song. A gap between two appearances is an **intermediate gap** (the song returned); the run after the last appearance is the **final gap**.
-- **Abandonment event**: the **final gap** only. The song is abandoned when its last appearance is at least N shows before the end of the band's history, i.e. it left the setlist and did not return. Duration = shows from live debut to that last appearance.
-- **Censored**: every other song: still played (last appearance fewer than N shows before the end of the history), or it left and came back. Duration = shows from live debut to its last appearance if it had an intermediate gap, otherwise to the end of history.
+- **Abandonment event**: the **final gap** only. The song is abandoned when its last appearance is at least N shows before the end of the band's history, i.e. it left the setlist and did not return. Duration = shows from live debut to that last appearance (inclusive).
+- **Censored**: every other song: still played (last appearance fewer than N shows before the end of the history), or it left and came back. Duration = shows from live debut to its last appearance (the same rule as for an event; it is not extended to the end of the history).
 - `returned_after_abandonment` is true when the song had at least one intermediate gap, and `gaps_count` is the number of intermediate gaps. Both are independent of the event.
-- *Changed 2026-09-23:* the first version counted the first gap as the event, which turned songs that were dropped for a while and brought back into abandonments even when still played today.
+- *Changed 2026-09-23:* the first version counted the first gap as the event, which turned songs that were dropped for a while and brought back into abandonments even when still played today. Duration was also unified: every song, event or censored, runs from debut to its last appearance.
 - Eligible songs: catalog songs with at least 3 performances. Non-album songs are included under the album label `non-album`.
 
 ### Requirements

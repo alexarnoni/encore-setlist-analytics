@@ -119,7 +119,7 @@ def test_song_mart_uses_window_50_specifically_not_some_other_window():
     song_rows, _, _ = survival_io.compute_marts_from_data(appearances, performance_counts, catalog, NOW)
 
     _, _, _, _, _, _, _, duration_n50, event_n50, _, _, _ = next(r for r in song_rows if r[1] == "Song X")
-    assert (duration_n50, event_n50) == (40, False)  # censored at window 50, NOT abandoned as at window 25
+    assert (duration_n50, event_n50) == (3, False)  # censored at window 50 (debut to last appearance), NOT abandoned as at window 25
 
 
 def test_debut_and_last_year_come_from_the_real_show_dates_not_the_index():

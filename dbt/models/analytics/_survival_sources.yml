@@ -48,9 +48,8 @@ sources:
               - not_null
           - name: duration_shows_n50
             description: >
-              Shows from debut to the last appearance, inclusive, at window
-              N=50. A censored song that never had a 50-show gap runs to the
-              end of history instead.
+              Shows from debut to the song's last appearance, inclusive, for
+              every song (abandoned or censored). Same at every window.
             data_tests:
               - not_null
           - name: event_n50

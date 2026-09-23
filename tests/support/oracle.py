@@ -197,8 +197,8 @@ def outcome(indices: list[int], total: int, window: int) -> Outcome:
     a GAP when shows a+1..a+window all exist and none of them has the song. A
     gap followed by a later appearance is intermediate (the song returned); a
     gap with no later appearance is the final one, i.e. the song left for good
-    and is an event. Duration is inclusive (last - debut + 1); a censored song
-    that never had a gap runs to the end of the history instead."""
+    and is an event. Duration is inclusive, debut to the song's last appearance,
+    for every song."""
     seen = set(indices)
     debut, last = indices[0], indices[-1]
     gaps = 0
@@ -209,9 +209,7 @@ def outcome(indices: list[int], total: int, window: int) -> Outcome:
                 gaps += 1
             else:
                 left_for_good = True
-    if left_for_good or gaps:
-        return Outcome(debut, last, last - debut + 1, left_for_good, gaps > 0, gaps)
-    return Outcome(debut, last, total - debut + 1, False, False, 0)
+    return Outcome(debut, last, last - debut + 1, left_for_good, gaps > 0, gaps)
 
 
 def eligible_songs(shows: list[SyntheticShow], band: str,

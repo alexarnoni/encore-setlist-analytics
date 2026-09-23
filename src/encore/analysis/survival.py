@@ -15,10 +15,9 @@ Conventions (approved decisions, spec-03-progress.md section 4a):
   however long the calendar gap between two consecutive indices is).
 * Same-date shows are ordered by show_key (Q8); undated shows have no index
   and cannot enter a duration.
-* Duration is INCLUSIVE, in shows, from the live debut to the last
-  appearance: `last_index - debut_index + 1`. A song played once has
-  duration 1. The exception is a censored song that never had a gap: it runs
-  to the end of history, `total_shows - debut_index + 1`.
+* Duration is INCLUSIVE, in shows, from the live debut to the song's LAST
+  appearance, for every song (event or censored):
+  `last_index - debut_index + 1`. A song played once has duration 1.
 * A GAP at a window N is a run of at least N consecutive shows, all inside
   the band's history, without the song. A gap between two appearances is an
   INTERMEDIATE gap (the song came back); the run after the last appearance is
@@ -27,9 +26,7 @@ Conventions (approved decisions, spec-03-progress.md section 4a):
   appearance is at least N shows before the end of the history, so the song
   left and did not return. Duration = debut to that last appearance.
 * Every other song is censored: it is still in the repertoire, or it left
-  and came back. A censored song that had at least one intermediate gap has
-  duration debut to its last appearance; one that never had a gap runs to the
-  end of history.
+  and came back.
 * `gaps_count` is the number of intermediate gaps at that N, and
   `returned_after_abandonment` is `gaps_count > 0`. Both are independent of
   the event: a song can return and later leave for good.
@@ -151,11 +148,7 @@ def outcome_for_window(indices: list[int], total_shows: int, window: int) -> Win
     debut, last = indices[0], indices[-1]
     gaps = sum(1 for before, after in zip(indices, indices[1:]) if after - before - 1 >= window)
     left_for_good = total_shows - last >= window
-    if left_for_good or gaps:
-        duration = last - debut + 1
-    else:
-        duration = total_shows - debut + 1
-    return WindowOutcome(duration, left_for_good, gaps > 0, gaps)
+    return WindowOutcome(last - debut + 1, left_for_good, gaps > 0, gaps)
 
 
 def compute_survival(

@@ -22,11 +22,9 @@ New Year inside a tour) and excludes the same small tours as
 ## Survival: duration, abandonment, censoring
 
 Duration is measured **in band shows**, not calendar time, from a song's
-live debut to its last appearance before it is dropped, **inclusive**:
-`last_index - debut_index + 1`, so a song played in exactly one show has
-duration 1. A song still in rotation at the end of the available history is
-**censored** with the same rule applied up to the end: `total_shows -
-debut_index + 1`.
+live debut to its last appearance, **inclusive**: `last_index - debut_index +
+1`, so a song played in exactly one show has duration 1. The same rule
+applies to every song, abandoned or censored.
 
 **Abandonment** ("absent from the band's next N shows") is checked for
 N = 25, 50 and 100. A **gap** is a run of N or more consecutive shows, fully
@@ -35,14 +33,13 @@ inside the history, without the song. A gap between two appearances is an
 appearance is the **final gap**. The abandonment event is the **final gap
 only**: the song is abandoned if its last appearance is at least N shows
 before the end of the history (`total_shows - last_index >= N`), that is, it
-left the setlist and did not return. Duration is then debut to that last
-appearance. Every other song is **censored**: it is still being played, or it
+left the setlist and did not return. Every other song is **censored**: it is still being played, or it
 left for a while and came back (matching the product rule, "censored if
 fewer than N shows remain").
 
-- A censored song that had at least one intermediate gap has duration debut
-  to its last appearance.
-- A censored song that never had a gap runs to the end of the history.
+- **Duration is one rule for every song**, abandoned or censored: shows from
+  the live debut to the song's last appearance, inclusive. It is not extended
+  to the end of the history for a song that is still played.
 - `gaps_count` is the number of intermediate gaps at that N, and
   `returned_after_abandonment` is `gaps_count > 0`. Neither depends on the
   event: a song can return and later leave for good (an event with
