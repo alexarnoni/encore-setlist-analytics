@@ -217,7 +217,7 @@ to Q1-Q9; the recommended defaults let work start without them.
 - [x] T2 `int_show_song_sets`
 - [x] T3 `int_show_pairs` + Jaccard test
 - [x] T4 `mart_tour_rotation`
-- [ ] T5 `mart_band_rotation_by_year`
+- [x] T5 `mart_band_rotation_by_year`
 - [ ] T6 survival core + unit tests
 - [ ] T7 Kaplan-Meier curves and summary
 - [ ] T8 database I/O and the three marts
@@ -386,3 +386,27 @@ way, since it compares the full set of tours); core threshold 90% -> 50%
 distinct_songs still holds — only the oracle test does, which is exactly why
 it exists); rotation defined as `mean_jaccard` instead of `1 - mean_jaccard`
 (both fail). All restored, model `diff` clean.
+
+### T5 — `mart_band_rotation_by_year` (done)
+
+`dbt/models/analytics/mart_band_rotation_by_year.sql` (grain band/show_year;
+pairs, mean_jaccard, rotation, weighted by pairs — every pair counts once
+regardless of tour). A pair belongs to the year of its **second** show
+(decision Q3). Only pairs from tours present in `mart_tour_rotation` are
+counted (an inner join against it, not a re-filter of `int_show_pairs`), so
+the two marts agree by construction rather than by coincidence. Schema entry,
+`assert_mart_band_rotation_by_year_unique_grain`,
+`..._internal_consistency` (rotation formula and bounds), and — new kind for
+this pair of marts — `assert_rotation_marts_agree_on_pair_counts` (sum of
+pairs per band must match between the two marts, full outer join so a
+missing band fails too), plus `tests/spec03/test_band_rotation_by_year.py`.
+**Verified.** Equals the oracle exactly for every band/year; Metallica's
+M72-like tour (crossing New Year) splits into 10 pairs in 2022 and 24 in 2023
+(19 from M72 + 5 from the Steady Tour), matching the T4 numbers and the
+Q3 rule read literally. Mutations: grouping by the pair's *first* show instead
+of the second — **not caught by any dbt test** (both marts still agree in
+total pair count, since the pairs just move to different years within the
+same band), only by the oracle; joining against `mart_tour_rotation` with a
+LEFT join instead of INNER (so excluded-tour pairs leak in) — caught by both
+`assert_rotation_marts_agree_on_pair_counts` and the oracle. Both restored,
+model `diff` clean.
