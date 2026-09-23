@@ -36,7 +36,25 @@ redirect:
 home:
   title: Como as bandas usam o próprio catálogo
 comparison:
+  kicker: sete bandas, uma escala
   title: Comparação
+  lede: As mesmas medidas para todas as bandas, nos mesmos eixos.
+  age:
+    h: Idade do repertório por ano
+    p: "Média de anos entre o primeiro lançamento de uma música e a noite em que ela é tocada. Uma linha que sobe é uma banda apoiada em material mais antigo; uma linha que cai é um álbum novo tomando conta do show."
+    title: Idade do repertório por ano, todas as bandas
+    desc: "Gráfico de linhas da idade média do repertório por ano para as sete bandas. A tabela de dados abaixo lista todos os valores."
+    caption: "Idade média do repertório das músicas tocadas em cada ano, ponderada por execuções."
+  rotation:
+    h: Rotação por ano
+    p: "O quanto uma banda muda o setlist de um show para o seguinte dentro de uma turnê. 0 é o mesmo setlist toda noite; 1 é nenhuma música em comum."
+    title: Rotação por ano, todas as bandas
+    desc: "Gráfico de linhas da rotação por ano para as sete bandas. A tabela de dados abaixo lista todos os valores."
+    caption: "Rotação entre shows consecutivos da mesma turnê, por ano."
+  survival:
+    h: Sobrevivência mediana por banda
+    p: "Quantos shows uma música dura no repertório ao vivo, contados da estreia ao último show em que aparece. A mediana é o número de shows após o qual metade das músicas da banda foi abandonada; ela não é atingida quando menos da metade chega a ser."
+    note: "Medida em shows, não em tempo (veja Metodologia): 50 shows cobrem períodos muito diferentes para cada banda. Abandonada significa que a música saiu do setlist por pelo menos 50 shows e não voltou; censurada, que ainda é tocada ou que voltou."
 methodology:
   kicker: como os números são feitos
   title: Metodologia
@@ -104,6 +122,25 @@ about:
       1: "O código, as notas de metodologia e as especificações estão no <a href='{{ repo_url }}'>GitHub</a>. Feito por <a href='{{ author_url }}'>alexarnoni</a>."
 chart:
   table: Tabela de dados
+  year: Ano
+  age_ylabel: Anos desde o lançamento
+  rotation_ylabel: "Rotação (0 = mesmo setlist)"
+  survival_xlabel: Shows desde a estreia
+  survival_ylabel: Parcela ainda no setlist
+  tour_xlabel: Idade do repertório (anos)
+  median: mediana
+  mean: média
+  tour: Turnê
+  shows: Shows
+  median_age: Idade mediana
+  mean_age: Idade média
+  album: Álbum
+  all_songs: Todas as músicas
+  songs_n: "{{ n }} músicas"
+  t_header: "após {t} shows"
+  thin_note: "Marcadores vazados: anos com menos de {{ min_pairs }} pares de shows, fora da linha."
+  small_album_note: "* menos de {{ min_songs }} músicas: listado, mas não desenhado."
+  ci_note: "As faixas sombreadas são intervalos de confiança de 95%."
 labels:
   band: Banda
   songs: Músicas

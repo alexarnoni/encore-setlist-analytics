@@ -15,7 +15,7 @@ import pandas as pd
 from markupsafe import Markup, escape
 
 from encore.site import bands as bands_mod
-from encore.site import i18n, shape, theme
+from encore.site import i18n, sections, shape, theme
 
 
 @dataclass(frozen=True)
@@ -105,6 +105,16 @@ def context(page: Page, *, locale: str, t: i18n.Translator, marts: dict[str, pd.
     """Page-specific template variables (grows as page content is added)."""
     ctx: dict[str, Any] = {"t": t, "locale": locale, "lang": locale, "page": page, "band": page.band,
                            "bands": bands, "band_slug": bands_mod.slug(page.band) if page.band else None}
+    ctx["min_pairs"], ctx["min_songs"] = shape.MIN_PAIRS, shape.MIN_SONGS
+    if page.key == "comparison":
+        ctx["charts"] = {
+            "age": sections.age_chart(marts, bands, t, prefix="cmp-age", title=t.plain("comparison.age.title"),
+                                      desc=t.plain("comparison.age.desc")),
+            "rotation": sections.rotation_chart(marts, bands, t, prefix="cmp-rot",
+                                                title=t.plain("comparison.rotation.title"),
+                                                desc=t.plain("comparison.rotation.desc")),
+        }
+        ctx["survival"] = sections.survival_totals_rows(marts, bands, t, locale, band_cell)
     if page.key == "methodology":
         ctx["sensitivity"] = sensitivity_table(marts, bands, locale, t)
         ctx["match"] = match_table(marts, bands, locale, t)

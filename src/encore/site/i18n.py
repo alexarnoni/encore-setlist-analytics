@@ -111,6 +111,10 @@ class Translator:
         except TemplateSyntaxError as exc:
             raise LocaleError(f"[{self.locale}] {key}: bad placeholder syntax ({exc.message})") from None
 
+    def plain(self, key: str, **extra: Any) -> str:
+        """Like `__call__` but a plain `str`, for chart labels and other non-HTML contexts."""
+        return str(self(key, **extra))
+
     def section(self, prefix: str, **extra: Any) -> list[Markup]:
         """Return every string under `prefix.` in key order (for paragraphs `p1`, `p2`, ...)."""
         keys = sorted(k for k in self.strings if k.startswith(f"{prefix}."))

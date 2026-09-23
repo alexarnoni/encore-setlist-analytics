@@ -54,7 +54,7 @@ p { margin: 0 0 1em; max-width: 68ch; }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--signal); display: inline-block; }
 
 /* Text furniture */
-main { padding-top: 2.5rem; padding-bottom: 3rem; }
+main.wrap { padding-top: 2.5rem; padding-bottom: 3rem; }
 .kicker { font: 500 0.75rem var(--font-mono); color: var(--signal); letter-spacing: 0.02em; margin: 0 0 0.4rem; }
 .kicker::before { content: "// "; }
 .lede { font-size: 1.125rem; color: var(--muted); max-width: 62ch; }
@@ -110,6 +110,6 @@ ul.plain li { margin: 0 0 1em; }
 @media (max-width: 640px) {
   .bar { gap: 0.5rem 1rem; }
   .nav { order: 3; width: 100%; }
-  main { padding-top: 1.5rem; }
+  main.wrap { padding-top: 1.5rem; }
 }
 @media (prefers-reduced-motion: no-preference) { .pill { transition: border-color 0.15s; } }
