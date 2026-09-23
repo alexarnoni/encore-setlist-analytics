@@ -4,7 +4,7 @@ Tracks `docs/specs/spec-04-site.md` (public bilingual static site). Same
 discipline as specs 01 to 03: small tasks, one commit each, results recorded
 here.
 
-> **STATUS: plan approved 2026-09-23 (see section 3, answers). T0 done, T1 in progress. T12 stops for review of the findings text.**
+> **STATUS: T0-T1 done. HOLDING before T2 until the visual identity proposal is approved (no CSS before that). T12 stops for review of the findings text.**
 > Work happens only on branch `spec-04`, in the worktree
 > `D:\projetos\encore-spec04` (main directory stays on `master`).
 
@@ -76,11 +76,10 @@ functions on DataFrames), `charts.py` + `theme.py` (matplotlib to SVG),
 
 **D2 — Themes and inline SVG (revised 2026-09-23, R6.2 changed).** Light by
 default with a header toggle; the choice lives in `localStorage` (reads and
-writes in try/catch, page works without it). Initial value: stored choice, else
-`prefers-color-scheme`, else light. A few lines of inline script in `<head>`
+writes in try/catch, page works without it). Initial value (revised again): stored choice, else
+light; **no OS fallback** (localStorage key `encore-theme`). A few lines of inline script in `<head>`
 set `data-theme` on `<html>` before first paint (no flash); the toggle button
-flips it and stores it. Without JS, CSS falls back to
-`prefers-color-scheme` through `:root:not([data-theme])`. Colours are tokens on
+flips it and stores it. Without JS the site is simply light. Colours are tokens on
 `:root` and `:root[data-theme="dark"]`. matplotlib writes fixed colours, so
 charts are drawn with sentinel colours and post-processed into CSS custom
 properties (`var(--band-muse)`, `var(--ink)`, ...) that follow the active
@@ -141,3 +140,12 @@ _T0 done._
 
 
 **R6.2 changed (2026-09-23).** Light default plus a header toggle with localStorage persistence replaces pure `prefers-color-scheme`. Spec and D2 updated; affects T5, T6 and T15.
+
+**Visual identity (2026-09-23).** Encore is a standalone app on its own
+subdomain, not a page of the portfolio hub and not a copy of Astraea's dark
+space look. Shared principles only: data density, monospaced numbers and labels,
+status chips, a status line under the header, `//` kickers. Header: name left,
+section nav right, language and theme as pills at the end (theme toggle key
+`encore-theme`, initial value stored choice else light). A proposal (palette,
+typography, page sketch) is shown and approved **before any CSS**; T6 and T5
+follow it.
