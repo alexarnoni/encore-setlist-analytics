@@ -861,9 +861,10 @@ the owner: the event is the LAST gap.
 **New rule** (`docs/methodology.md`, spec section Part B, `product.md`): a gap is
 N or more consecutive shows without the song, inside the history. A song is
 abandoned only if its FINAL gap (after its last appearance) is a full gap, i.e.
-it left and did not return; duration = debut to last appearance. Otherwise it is
-censored (still played, or it returned): duration = debut to last appearance if
-it had an intermediate gap, else to the end of history.
+it left and did not return. Otherwise it is censored (still played, or it
+returned). **Duration is one rule for every song** (owner decision, same day):
+debut to the song's last appearance, inclusive, never extended to the end of the
+history.
 `returned_after_abandonment` = at least one intermediate gap;
 new column `gaps_count` = number of intermediate gaps (mart_song_survival, N=50).
 
@@ -875,8 +876,9 @@ table migrates on the next run), dbt source docs and a new singular test
 literal definition; synthetic Muse plan gained a `returns_and_stays` song (two
 intermediate gaps, still played at the end). Unit tests cover a song that returns
 and stays, a song that returns and then leaves for good, gap boundaries, and the
-end-to-end scenario. Four mutations (final-gap `>=`, a returned song counted as
-an event, intermediate-gap boundary, censored-returned duration) each turn a test
+end-to-end scenario. Five mutations (final-gap `>=`, a returned song counted as
+an event, intermediate-gap boundary, censored-returned duration, censored duration
+extended to the end of history) each turn a test
 red; the dbt consistency test was also turned red by hand and restored.
 Full suite in the branch image against `spec03-postgres`, DB-level tests on:
 170 passed; `dbt test --select tag:survival` PASS=36. The isolated table was
