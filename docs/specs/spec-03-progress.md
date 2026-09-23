@@ -4,7 +4,7 @@ Tracks `docs/specs/spec-03-rotation-survival.md` (rotation and song survival).
 Same discipline as spec 01 and 02a: small tasks, one commit each, results
 recorded here.
 
-> **STATUS: T0-T10, T13 done (2026-09-23). T11-T12 not started — see section 11
+> **STATUS: T0-T11, T13 done (2026-09-23). T12 not started — see section 11
 > for exactly where to pick up.** Work happens only on the branch
 > `spec-03`, in the worktree `D:\projetos\encore-spec03`. T14 (merge and
 > real-data run) is explicitly on hold until the user asks for it. The
@@ -223,7 +223,7 @@ to Q1-Q9; the recommended defaults let work start without them.
 - [x] T8 database I/O and the three marts
 - [x] T9 dbt sources, tests, forbidden columns
 - [x] T10 `analyze` task and runner
-- [ ] T11 image with lifelines (arm64 checked)
+- [x] T11 image with lifelines (arm64 checked)
 - [ ] T12 notebook
 - [x] T13 documentation
 - [ ] T14 merge gate, full run, real-data sanity checks
@@ -749,6 +749,32 @@ must still confirm for real**: after the merge, a full pipeline run on
 `master` should be watched to see `analyze` actually execute in its correct
 position and `cleanup_raw_setlistfm` still run if it were to fail (not
 expected to fail on real data, but worth watching once).
+
+### T11 — image with lifelines (done 2026-09-23)
+
+- `lifelines` added to `airflow/requirements.txt` (unpinned, the Airflow
+  constraints file decides) and to root `requirements.txt` (`==0.30.0`): the
+  notebook does not need it, but the host unit tests (`tests/test_survival*.py`)
+  import it, so the dev environment does.
+- Built `encore-airflow:spec-03` (id `9dd295366879`, 3.81 GB; +~140 MB over the
+  main image) with `DBT_GIT_COMMIT=spec-03-<hash>`. Never tagged `:3.3.2`, no
+  `docker compose`: `encore-airflow:3.3.2` still `327c94e2db5d`, main
+  containers untouched.
+- Resolved: lifelines 0.30.0, numpy 2.5.3, scipy 1.18.1, pandas 3.0.5,
+  matplotlib 3.11.2 (numpy/scipy/pandas come from the base image). No source
+  build except `autograd-gamma` 0.5.0, a pure-Python sdist (no compiled files).
+- **arm64:** `pip download --platform manylinux2014_aarch64/manylinux_2_28_aarch64
+  --only-binary=:all: --python-version 3.12` succeeded for all 10 new packages
+  (autograd, contourpy, cycler, fonttools, formulaic, interface-meta,
+  kiwisolver, lifelines, matplotlib, pillow).
+- In the built image (no `pip install` step): `write_survival_marts` gives
+  127 / 464 / 123 rows (same as the throwaway-container run in T8), and
+  `tests/spec03` + `tests/test_survival.py` + `tests/test_survival_km.py` pass
+  (41 passed; pytest installed in a throwaway container only).
+- `scripts/spec03/env.sh`: `S3_IMAGE` now defaults to `encore-airflow:spec-03`.
+- Environment note: the host `.venv` can no longer import scipy (a Windows
+  Application Control policy blocks its DLL), so lifelines-dependent tests run
+  in the branch image, not on the host.
 
 ## 11. Handoff for the next session (2026-09-23)
 

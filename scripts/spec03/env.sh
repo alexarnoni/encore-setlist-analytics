@@ -17,9 +17,9 @@ S3_CONTAINER=spec03-postgres
 S3_NETWORK=spec03-net
 S3_VOLUME=spec03-pgdata
 S3_HOST_PORT=5446                                # published on 127.0.0.1 only
-# Image used to run dbt and Python. Before the branch image exists this is the
-# current one (only ever `docker run` from it: it is never rebuilt or retagged).
-S3_IMAGE="${S3_IMAGE:-encore-airflow:3.3.2}"
+# Image used to run dbt and Python: the spec-03 branch image (has lifelines). It
+# is only ever `docker run` from; `encore-airflow:3.3.2` is never rebuilt or retagged.
+S3_IMAGE="${S3_IMAGE:-encore-airflow:spec-03}"
 
 # psql inside the spec-03 Postgres.
 s3psql() { docker exec -i "$S3_CONTAINER" psql -U "$POSTGRES_USER" -d encore -v ON_ERROR_STOP=1 "$@"; }

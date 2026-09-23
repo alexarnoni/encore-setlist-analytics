@@ -6,3 +6,4 @@ jupyter==1.1.1
 pytest==8.3.4
 PyYAML==6.0.2
 psycopg2-binary==2.9.10
+lifelines==0.30.0
