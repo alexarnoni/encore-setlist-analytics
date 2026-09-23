@@ -172,3 +172,16 @@ yml column lists (drift check), non-allowlisted / schema-qualified / injected
 names refused with no SQL issued, session read-only, `data_as_of`. `pytest`
 164 passed, 14 skipped. Real smoke read of the six marts from 127.0.0.1:5435:
 404 / 141 / 165 / 172 / 3,762 / 219 rows, 7 bands each, data as of 2026-09-23.
+
+### T3 — locale layer (done)
+
+`src/encore/site/i18n.py` (nested YAML flattened to dotted keys; `Translator`
+with strict key lookup, strict `{{ placeholders }}` through Jinja
+`StrictUndefined`, HTML-escaped values, `section()` for paragraph groups,
+pt-BR/en number and percent formatting), skeleton `locales/pt-BR.yml` and
+`en.yml` (site, nav, language, theme, status, footer strings; more keys arrive
+with each page task). **Verified.** Tests: shipped locales have identical keys;
+a key in one locale only, a missing file, a non-string value, a missing key
+lookup, an unfilled placeholder and bad placeholder syntax each fail; values
+are escaped while locale markup is kept; pt-BR `1.234,5` vs en `1,234.5`.
+19 site tests pass.
