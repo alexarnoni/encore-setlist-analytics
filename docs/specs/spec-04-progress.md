@@ -236,3 +236,34 @@ Lines are 2px with markers and a legend, so they stay readable, but Avenged
 Sevenfold on dark is visibly dim. `test_band_colour_contrast` lists these three
 as known exceptions and will tell us when they are fixed. Awaiting your call at
 the T12 stop.
+
+### T6 — base layout, CSS, theme toggle, build pipeline (done)
+
+`build.py` (`build_site(marts, out, built_on, origin)`: empties `out`, renders
+every page in both locales, root redirect, assets; `main()` reads the real marts),
+`pages.py` (page registry, locale-prefixed hrefs, nav, language switch, hreflang
+and canonical data), templates `base.html` (head with the theme script before
+the stylesheet, header with brand / nav / language pills / theme pill, status
+line as one `data-build-stamp` element, footer with setlist.fm, MusicBrainz
+(CC0) and source links), `redirect.html`, page skeletons; `assets/site.css`
+(approved identity: paper/charcoal tokens generated from `theme.py`, mono labels,
+pills and chips, `//` kickers, stackable tables so nothing scrolls sideways) and
+`assets/fonts.css` (linked only when self-hosted IBM Plex Mono files exist; see
+the font note below). Theme script: stored choice (`encore-theme`), else light,
+every localStorage access in try/catch, toggle hidden without JavaScript.
+**Verified.** 11 build tests (same page set in both locales, redirect to `/pt/`,
+`lang`, hreflang pair plus x-default, canonical, switcher keeps the page,
+followable setlist.fm link and CC0 credit on every page, theme script content
+and order, stamp element, stylesheet tokens, a missing key fails the build).
+Real-data build (23 pages) served locally and checked in the browser pane:
+desktop header, toggle flips `data-theme`, stores `encore-theme` and the dark
+theme is applied before paint after navigating to another page and locale;
+375px phone layout wraps header, chips and text with no horizontal scroll.
+
+**Font note (needs your yes).** The IBM Plex Mono woff2 files (latin subset,
+400 and 500) are not in the repository and downloading them needs your
+permission: source github.com/IBM/plex (SIL OFL), about 30 KB in total, plus
+`fonttools` and `brotli` from PyPI to subset them. Until then the mono stack
+falls back to the system monospace (`ui-monospace`, Cascadia Mono, Consolas);
+`fonts.css` and the copy step are already wired and switch on when
+`src/encore/site/assets/fonts/*.woff2` exist.

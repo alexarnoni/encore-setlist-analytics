@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ layout.title }}</title>
+<meta name="description" content="{{ t('site.description') }}">
+<link rel="canonical" href="{{ layout.canonical }}">
+{% for hreflang, url in layout.alternates %}
+<link rel="alternate" hreflang="{{ hreflang }}" href="{{ url }}">
+{% endfor %}
+<script>
+(function () {
+  var d = document.documentElement, theme = null;
+  try { theme = localStorage.getItem('encore-theme'); } catch (e) {}
+  if (theme !== 'dark') { theme = 'light'; }
+  d.setAttribute('data-theme', theme);
+  d.classList.add('js');
+  document.addEventListener('DOMContentLoaded', function () {
+    var button = document.querySelector('.theme-toggle');
+    if (!button) { return; }
+    button.setAttribute('aria-pressed', theme === 'dark');
+    button.addEventListener('click', function () {
+      var next = d.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      d.setAttribute('data-theme', next);
+      button.setAttribute('aria-pressed', next === 'dark');
+      try { localStorage.setItem('encore-theme', next); } catch (e) {}
+    });
+  });
+})();
+</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<a class="skip" href="#main">{{ t('skip.link') }}</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="brand" href="{{ layout.home_href }}">{{ t('site.name') }}</a>
+    <nav class="nav" aria-label="{{ t('nav.label') }}">
+      {% for item in layout.nav %}
+      <a href="{{ item.href }}"{% if item.current %} aria-current="page"{% endif %}>{{ item.label }}</a>
+      {% endfor %}
+    </nav>
+    <div class="pills">
+      <div class="pill-group" role="group" aria-label="{{ t('lang.label') }}">
+        {% for option in layout.switch %}
+        <a class="pill" href="{{ option.href }}" hreflang="{{ option.locale }}" lang="{{ option.locale }}" title="{{ option.name }}"{% if option.current %} aria-current="true"{% endif %}>{{ option.label }}</a>
+        {% endfor %}
+      </div>
+      <button class="pill theme-toggle" type="button" aria-label="{{ t('theme.toggle') }}" aria-pressed="false">
+        <span class="on-light">{{ t('theme.light') }}</span><span class="on-dark">{{ t('theme.dark') }}</span>
+      </button>
+    </div>
+  </div>
+</header>
+<div class="statusline" data-build-stamp>
+  <div class="wrap">
+    <span class="chip"><i class="dot" aria-hidden="true"></i>{{ t('status.data_as_of') }} <time datetime="{{ as_of }}">{{ as_of }}</time></span>
+    <span class="chip">{{ t('status.built') }} <time datetime="{{ built_on }}">{{ built_on }}</time></span>
+    <span class="chip">{{ bands_total }} {{ t('status.bands') }}</span>
+    <span class="chip">{{ t.number(shows_total) }} {{ t('status.shows') }}</span>
+  </div>
+</div>
+<main id="main" class="wrap">
+{% block main %}{% endblock %}
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <p>{{ t('footer.setlistfm') }} <a href="{{ setlistfm_url }}">setlist.fm</a> — {{ t('footer.setlistfm_note') }}</p>
+    <p>{{ t('footer.musicbrainz') }} <a href="{{ musicbrainz_url }}">MusicBrainz</a> {{ t('footer.musicbrainz_license') }}</p>
+    <p><a href="{{ repo_url }}">{{ t('footer.source') }}</a></p>
+  </div>
+</footer>
+</body>
+</html>

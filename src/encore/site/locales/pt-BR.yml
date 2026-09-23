@@ -29,3 +29,15 @@ footer:
   musicbrainz: Dados de catálogo do
   musicbrainz_license: (CC0).
   source: Código-fonte
+skip:
+  link: Pular para o conteúdo
+redirect:
+  text: "Escolha um idioma:"
+home:
+  title: Como as bandas usam o próprio catálogo
+comparison:
+  title: Comparação
+methodology:
+  title: Metodologia
+about:
+  title: Sobre
