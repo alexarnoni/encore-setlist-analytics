@@ -72,7 +72,9 @@ def test_ensure_tables_creates_all_three_marts_and_commits():
     assert any("mart_song_survival" in sql for sql in executed)
     assert any("mart_survival_curves" in sql for sql in executed)
     assert any("mart_survival_summary" in sql for sql in executed)
-    assert all("CREATE TABLE IF NOT EXISTS" in sql for sql in executed)
+    assert all(("CREATE TABLE IF NOT EXISTS" in sql) or ("ADD COLUMN IF NOT EXISTS" in sql) for sql in executed)
+    # a mart_song_survival created before gaps_count existed gets the column
+    assert any("ADD COLUMN IF NOT EXISTS gaps_count" in sql for sql in executed)
     conn.commit.assert_called_once()
 
 
@@ -95,12 +97,12 @@ def test_song_survival_rows_have_the_right_shape_and_n50_window():
 
     row = next(r for r in song_rows if r[1] == "Song X")
     band, song_title, reference_album, release_year, performances_n, debut_year, last_year, \
-        duration_n50, event_n50, returned, computed_at = row
+        duration_n50, event_n50, returned, gaps, computed_at = row
     assert (band, song_title, reference_album, release_year) == (BAND, "Song X", "Album", 2000)
     assert performances_n == 3
     assert debut_year == 2000  # week 1 of 2000-01-01
     assert last_year == 2000  # week 3, still January 2000
-    assert (duration_n50, event_n50, returned) == (3, True, False)
+    assert (duration_n50, event_n50, returned, gaps) == (3, True, False, 0)
     assert computed_at is NOW
     assert curve_rows and summary_rows  # sanity: the other two marts got something too
 
@@ -116,7 +118,7 @@ def test_song_mart_uses_window_50_specifically_not_some_other_window():
 
     song_rows, _, _ = survival_io.compute_marts_from_data(appearances, performance_counts, catalog, NOW)
 
-    _, _, _, _, _, _, _, duration_n50, event_n50, _, _ = next(r for r in song_rows if r[1] == "Song X")
+    _, _, _, _, _, _, _, duration_n50, event_n50, _, _, _ = next(r for r in song_rows if r[1] == "Song X")
     assert (duration_n50, event_n50) == (40, False)  # censored at window 50, NOT abandoned as at window 25
 
 

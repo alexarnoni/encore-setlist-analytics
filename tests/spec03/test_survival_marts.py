@@ -14,10 +14,10 @@ def test_song_survival_matches_the_oracle_at_window_50(conn, shows, catalog):
     rows = fetch(
         conn,
         "select band, song_title, performances, duration_shows_n50, event_n50, "
-        "returned_after_abandonment from analytics.mart_song_survival",
+        "returned_after_abandonment, gaps_count from analytics.mart_song_survival",
     )
-    got = {(band, title): (performances, duration, event, returned)
-           for band, title, performances, duration, event, returned in rows}
+    got = {(band, title): (performances, duration, event, returned, gaps)
+           for band, title, performances, duration, event, returned, gaps in rows}
 
     bands = {s.band for s in shows}
     assert bands  # sanity: the fixture actually has data
@@ -30,11 +30,12 @@ def test_song_survival_matches_the_oracle_at_window_50(conn, shows, catalog):
         assert mart_titles == set(expected), band  # exactly the eligible songs, no more, no less
 
         for title, outcome in expected.items():
-            performances, duration, event, returned = got[(band, title)]
+            performances, duration, event, returned, gaps = got[(band, title)]
             assert performances == expected_perf[title], (band, title)
             assert duration == outcome.duration, (band, title)
             assert event == outcome.event, (band, title)
             assert returned == outcome.returned, (band, title)
+            assert gaps == outcome.gaps, (band, title)
 
 
 def test_song_survival_years_are_within_the_bands_show_history(conn, shows):

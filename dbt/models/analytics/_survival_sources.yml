@@ -48,19 +48,30 @@ sources:
               - not_null
           - name: duration_shows_n50
             description: >
-              Shows from debut to last appearance before abandonment (or to
-              the end of history if censored), inclusive, at window N=50.
+              Shows from debut to the last appearance, inclusive, at window
+              N=50. A censored song that never had a 50-show gap runs to the
+              end of history instead.
             data_tests:
               - not_null
           - name: event_n50
-            description: True if abandoned at N=50, false if censored.
+            description: >
+              True if the song left for good at N=50: its last appearance is
+              at least 50 shows before the end of the history. False if it is
+              still played, or if it left and came back (censored).
             data_tests:
               - not_null
           - name: returned_after_abandonment
             description: >
-              True if the song was played again after its first abandonment
-              at N=50. Always false when event_n50 is false (censored songs
-              have no abandonment to return after).
+              True if the song had at least one intermediate gap of 50 or more
+              shows, i.e. it left and came back (gaps_count > 0). It says
+              nothing about the event: a song can return and later leave for
+              good.
+            data_tests:
+              - not_null
+          - name: gaps_count
+            description: >
+              Number of intermediate gaps of 50 or more shows (the final gap
+              after the last appearance is not counted; it is the event).
             data_tests:
               - not_null
           - name: computed_at

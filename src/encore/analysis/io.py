@@ -55,10 +55,17 @@ def ensure_tables(conn) -> None:
                 duration_shows_n50 INTEGER NOT NULL,
                 event_n50 BOOLEAN NOT NULL,
                 returned_after_abandonment BOOLEAN NOT NULL,
+                gaps_count INTEGER NOT NULL DEFAULT 0,
                 computed_at TIMESTAMPTZ NOT NULL,
                 PRIMARY KEY (band, song_title)
             )
             """
+        )
+        # A table created before gaps_count existed: add it (rows are replaced
+        # in full by the same transaction that calls this).
+        cur.execute(
+            "ALTER TABLE analytics.mart_song_survival "
+            "ADD COLUMN IF NOT EXISTS gaps_count INTEGER NOT NULL DEFAULT 0"
         )
         cur.execute(
             """
@@ -181,6 +188,7 @@ def _song_survival_rows(
                 outcome.duration_shows[SONG_MART_WINDOW],
                 outcome.event[SONG_MART_WINDOW],
                 outcome.returned_after_abandonment[SONG_MART_WINDOW],
+                outcome.gaps_count[SONG_MART_WINDOW],
                 computed_at,
             )
         )
@@ -270,7 +278,7 @@ def write_survival_marts(conn, computed_at: datetime | None = None) -> tuple[int
                     cur,
                     "INSERT INTO analytics.mart_song_survival (band, song_title, reference_album, release_year, "
                     "performances, debut_year, last_year, duration_shows_n50, event_n50, "
-                    "returned_after_abandonment, computed_at) VALUES %s",
+                    "returned_after_abandonment, gaps_count, computed_at) VALUES %s",
                     song_rows,
                 )
             if curve_rows:

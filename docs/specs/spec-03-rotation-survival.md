@@ -35,9 +35,11 @@ Read the context files in `docs/context/` and `docs/methodology.md` before start
 - Time is measured in **band shows**, not calendar time, so hiatuses do not count as abandonment.
 - Show index: position of the show in the band's full chronological show history (shows with at least one matched song).
 - **Live debut** of a song: the first show index where it was played.
-- **Abandonment event**: the song is absent from the next N = 50 shows after an appearance. Duration = shows from live debut to the last appearance before the gap.
-- **Censored**: the last appearance of the song is fewer than 50 shows before the end of the band's history. Duration = shows from live debut to the end of history.
-- Only the **first** abandonment counts as the event. A song that returns later is flagged `returned_after_abandonment`.
+- **Gap**: a run of at least N = 50 consecutive shows, all inside the band's history, without the song. A gap between two appearances is an **intermediate gap** (the song returned); the run after the last appearance is the **final gap**.
+- **Abandonment event**: the **final gap** only. The song is abandoned when its last appearance is at least N shows before the end of the band's history, i.e. it left the setlist and did not return. Duration = shows from live debut to that last appearance.
+- **Censored**: every other song: still played (last appearance fewer than N shows before the end of the history), or it left and came back. Duration = shows from live debut to its last appearance if it had an intermediate gap, otherwise to the end of history.
+- `returned_after_abandonment` is true when the song had at least one intermediate gap, and `gaps_count` is the number of intermediate gaps. Both are independent of the event.
+- *Changed 2026-09-23:* the first version counted the first gap as the event, which turned songs that were dropped for a while and brought back into abandonments even when still played today.
 - Eligible songs: catalog songs with at least 3 performances. Non-album songs are included under the album label `non-album`.
 
 ### Requirements
@@ -46,7 +48,7 @@ Read the context files in `docs/context/` and `docs/methodology.md` before start
    - computes duration, event and censoring per song for N = 25, 50 and 100;
    - fits Kaplan-Meier curves with lifelines per band, and per band and reference album;
    - writes only aggregated results to `analytics`.
-7. Mart `analytics.mart_song_survival`, grain band and song (canonical MusicBrainz title). Columns: band, song_title, reference_album, release_year, performances, debut_year, last_year, duration_shows_n50, event_n50, returned_after_abandonment, computed_at. Years only, never full dates.
+7. Mart `analytics.mart_song_survival`, grain band and song (canonical MusicBrainz title). Columns: band, song_title, reference_album, release_year, performances, debut_year, last_year, duration_shows_n50, event_n50, returned_after_abandonment, gaps_count, computed_at. Years only, never full dates.
 8. Mart `analytics.mart_survival_curves`, grain band, album (or `all`), N and time step. Columns: band, album, n_window, t_shows, at_risk, events, survival_probability, ci_lower, ci_upper, computed_at.
 9. Mart `analytics.mart_survival_summary`, grain band, album (or `all`) and N. Columns: band, album, n_window, songs, events, censored, median_survival_shows (null when the curve never drops below 0.5), computed_at.
 10. New Airflow task `analyze` between `transform` and `cleanup_raw_setlistfm`. It runs the Python module after dbt, fails the DAG on error, and cleanup still runs.
