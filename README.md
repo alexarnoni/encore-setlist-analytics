@@ -215,11 +215,33 @@ text in `locales/pt-BR.yml` and `locales/en.yml`, matplotlib charts as inline SV
 - `site/` is gitignored. Publishing is a separate, manual step, and **nothing rebuilds the site
   automatically**: after a pipeline run, rebuild by hand with `make site`.
 
+### One-time setup
+
+The generator is the `encore.site` package under `src/`. Install the project in editable mode once, in the
+virtualenv you build with, so `encore` is importable from any directory (no `PYTHONPATH`):
+
+```bash
+python -m venv .venv && source .venv/bin/activate     # Windows: .venv/Scripts/activate (Git Bash) or .venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+pip install -e .                                       # from the repository root; needs pyproject.toml
+```
+
+Re-run `pip install -e .` if you move or re-clone the repository (an editable install points at the
+directory it was made from). The `make site` target also sets `PYTHONPATH=src` itself, so it works
+before the install too.
+
 ### Build and review
 
 ```bash
 make site          # build into site/ (PYTHON=... to pick a virtualenv; needs the database, see below)
 make site-serve    # http://127.0.0.1:8004/  (bound to 127.0.0.1 only)
+```
+
+Without `make`, the same two commands are:
+
+```bash
+python -m encore.site.build                                   # after `pip install -e .`
+python -m http.server 8004 --bind 127.0.0.1 --directory site
 ```
 
 `make site` needs the Encore database on `127.0.0.1:5435` and `POSTGRES_USER` / `POSTGRES_PASSWORD`
@@ -231,7 +253,7 @@ ssh -N -L 5435:127.0.0.1:5435 <vm>      # then, in another terminal:  make site
 
 Optional environment variables: `SITE_OUTPUT_DIR` (default `site`), `SITE_URL` (default
 `https://encore.alexarnoni.com`, used in canonical and hreflang links), `ENCORE_DB_HOST` and
-`ENCORE_DB_PORT`. On Windows use `make` inside WSL, or run `PYTHONPATH=src python -m encore.site.build`.
+`ENCORE_DB_PORT`. On Windows there is no `make` by default: install it in WSL (`sudo apt install make`) or use the two plain commands above.
 
 Tests: `pytest tests/site` (fake marts, no database). Two tests in `tests/site/test_findings.py` use the
 real marts and are skipped without database credentials; they check that every figure quoted in the

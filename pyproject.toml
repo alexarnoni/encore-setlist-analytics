@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "encore"
+version = "0.1.0"
+description = "Encore: how bands use their catalog in live shows (pipeline, analysis and the static site generator)"
+requires-python = ">=3.12"
+# Dependencies are pinned in requirements.txt (the virtualenv and the images install from it); this file
+# only makes `src/encore` importable: `pip install -e .`, then `python -m encore.site.build` works from anywhere.
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"encore.site" = ["templates/*.html", "assets/*.css", "assets/fonts/*", "locales/*.yml"]
