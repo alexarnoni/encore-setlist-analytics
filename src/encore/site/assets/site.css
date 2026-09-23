@@ -61,6 +61,19 @@ main.wrap { padding-top: 2.5rem; padding-bottom: 3rem; }
 .kicker { font: 500 0.75rem var(--font-mono); color: var(--signal); letter-spacing: 0.02em; margin: 0 0 0.4rem; }
 .kicker::before { content: "// "; }
 .lede { font-size: 1.125rem; color: var(--muted); max-width: 62ch; }
+/* Layer 1 of a finding: the plain-language claim, read first. */
+h2.claim { font-size: clamp(1.35rem, 2.4vw + 0.9rem, 1.8rem); line-height: 1.25; max-width: 30ch; margin-bottom: 0.9rem; }
+.lede.claim { color: var(--ink); font-size: 1.25rem; font-weight: 500; line-height: 1.4; margin-bottom: 0.75rem; }
+.finding > .lede { color: var(--ink); }
+/* One line under a chart on how to read it. */
+.read { font: 400 0.8125rem/1.5 var(--font-mono); color: var(--ink); margin: 0.6rem 0 0; max-width: 78ch; }
+.read strong { font-weight: 500; }
+.read strong::after { content: ""; }
+/* Layer 3: caveats and limits, collapsed and set in smaller type, out of the main flow. */
+details.caveats { margin-top: 1rem; border-left: 2px solid var(--line); padding-left: 0.9rem; font-size: 0.8125rem; line-height: 1.55; color: var(--muted); }
+details.caveats > summary { font: 500 0.75rem var(--font-mono); color: var(--muted); }
+details.caveats ul { margin: 0.6rem 0 0; padding-left: 1.1rem; max-width: 74ch; }
+details.caveats li { margin: 0 0 0.5rem; }
 .mono, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 section { margin-top: 3rem; }
 .section-head { margin-bottom: 1rem; }

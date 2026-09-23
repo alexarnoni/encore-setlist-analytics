@@ -100,6 +100,14 @@ def match_table(marts: dict[str, pd.DataFrame], bands: tuple[str, ...], locale: 
     return {"headers": headers, "rows": rows}
 
 
+def band_findings(band: str, t: i18n.Translator) -> dict[str, Any]:
+    """A band's findings in three layers: a plain lead, the key numbers, and the caveats (band-specific, then common)."""
+    k = bands_mod.key(band)
+    extra = {"min_pairs": shape.MIN_PAIRS}
+    caveats = [*t.section(f"findings.{k}.caveats", **extra), t("findings.common", **extra)]
+    return {"lead": t(f"findings.{k}.lead"), "numbers": t(f"findings.{k}.numbers"), "caveats": caveats}
+
+
 def band_context(band: str, *, locale: str, t: i18n.Translator, marts: dict[str, pd.DataFrame],
                  bands: tuple[str, ...]) -> dict[str, Any]:
     """Everything a band page shows: header chips, findings, four charts, album table, other bands."""
@@ -120,7 +128,7 @@ def band_context(band: str, *, locale: str, t: i18n.Translator, marts: dict[str,
     return {
         "band_token": theme.band_token(band),
         "chips": chips,
-        "findings": t.section(f"findings.{bands_mod.key(band)}.p"),
+        "findings": band_findings(band, t),
         "charts": {
             "age": sections.age_chart(marts, (band,), t, prefix=f"{slug}-age", **chart_text("age")),
             "tours": sections.tour_chart(marts, band, t, prefix=f"{slug}-tours", **chart_text("tours")),

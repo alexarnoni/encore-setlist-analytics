@@ -122,7 +122,7 @@ def add_findings_values(values: dict[str, str], marts: dict[str, pd.DataFrame], 
     `<k>_age_<year>` (repertoire age), `<k>_age_first/_age_first_year/_age_last/_age_last_year`,
     `<k>_gap_from/_gap_to` (the longest break of 3+ years between years with shows, if any),
     `<k>_rot_<year>` (rotation of years with 5+ show pairs), `<k>_rot_first3/_rot_last3` and
-    `<k>_rot_first3_years`, `<k>_rot_last3_years` (the years behind those two means, listed), `<k>_tour_<tour>_rotation` and `_shows`, `<k>_final/_final_t` (where the all-songs
+    `<k>_rot_first3_years`, `<k>_rot_last3_years` (the years behind those two means, listed), `<k>_tour_<tour>_rotation`, `_shows` and `_overlap`, `<k>_final/_final_t` (where the all-songs
     survival curve ends), `<k>_album_<album>_songs/_abandoned/_censored/_median/_final/_final_t`
     (albums with 5+ songs), and `dip_<id>_before/_low/_after/_size` for `DIPS`.
     """
@@ -163,6 +163,8 @@ def add_findings_values(values: dict[str, str], marts: dict[str, pd.DataFrame], 
             tour = f"{k}_tour_{bands_mod.key(row.tour_name)}"
             values[f"{tour}_rotation"] = fmt_number(float(row.rotation), 2, locale)
             values[f"{tour}_shows"] = fmt_number(float(row.shows), 0, locale)
+            # Mean overlap of consecutive shows (Jaccard: songs in common over all songs played on the two nights).
+            values[f"{tour}_overlap"] = fmt_percent(float(row.mean_jaccard), 0, locale)
 
         at = shape.survival_at(curves, band, shape.BAND_TOTAL, shape.COMMON_HORIZON)
         if at:

@@ -35,25 +35,76 @@ def test_both_locales_quote_exactly_the_same_figures() -> None:
             assert placeholders({key: loaded["en"][key]}) == placeholders({key: loaded["pt-BR"][key]}), key
 
 
-def test_every_band_has_findings_in_both_locales() -> None:
+DECADE = re.compile(r"\b(?:19|20)\d0s?\b")  # "the 1980s" / "anos 1980" is a decade, not a figure
+SENTENCE_END = re.compile(r"[.!?](?:\s|$)")
+
+
+def layer_one() -> dict[str, dict[str, str]]:
+    """Every plain-language lead of the site, per locale: home headings, the added concrete sentence, band leads."""
+    out = {}
     for locale, strings in i18n.load_locales().items():
+        keys = [k for k in strings if k in ("home.f1.h", "home.f2.h", "home.f2.lead_more", "home.f3.h")
+                or (k.startswith("findings.") and k.endswith(".lead"))]
+        out[locale] = {k: strings[k] for k in keys}
+    return out
+
+
+def test_layer_one_is_plain_language_with_no_numbers_or_placeholders() -> None:
+    for locale, leads in layer_one().items():
+        assert len(leads) == 4 + len(BANDS), locale  # 3 headings + 1 concrete sentence + 7 band leads
+        for key, text in leads.items():
+            assert "{{" not in text and not re.search(r"\d", DECADE.sub("", text)), (locale, key, text)
+
+
+def test_every_finding_has_its_three_layers_in_both_locales() -> None:
+    for locale, strings in i18n.load_locales().items():
+        for f in ("f1", "f2", "f3"):
+            assert strings[f"home.{f}.h"] and strings[f"home.{f}.numbers"], (locale, f)
+            assert any(k.startswith(f"home.{f}.caveats.") for k in strings), (locale, f)
         for band in BANDS:
-            keys = [k for k in strings if k.startswith(f"findings.{bands.key(band)}.p.")]
-            assert 2 <= len(keys) <= 3, (locale, band, keys)  # the spec asks for two or three sentences
+            k = bands.key(band)
+            assert strings[f"findings.{k}.lead"] and strings[f"findings.{k}.numbers"], (locale, band)
+            assert any(key.startswith(f"findings.{k}.caveats.") for key in strings), (locale, band)
+            sentences = len(SENTENCE_END.findall(strings[f"findings.{k}.numbers"]))
+            assert 2 <= sentences <= 4, (locale, band, sentences)  # two or three sentences with the key numbers
+        assert strings["findings.common"] and strings["caveats.summary"]
+
+
+def test_every_chart_kind_has_a_reading_line_in_both_locales() -> None:
+    for locale, strings in i18n.load_locales().items():
+        for kind in ("age", "rotation", "rotation_small", "tours", "survival"):
+            assert len(strings[f"read.{kind}"]) > 60, (locale, kind)
+        assert strings["read.label"]
 
 
 def test_partial_findings_say_so() -> None:
-    """The brief: where a finding is partial the text must say so, never promise "all bands but one"."""
+    """The brief: where a finding is partial the text says so, and never promises "all bands but one"."""
     en = i18n.load_locales()["en"]
-    assert "weakly" in en["home.f1.h"] and "did not settle either" in en["home.f2.h"]
-    assert "Linkin Park" in en["home.f2.p.1"] and "It did not fall for Linkin Park" in en["home.f2.p.1"]
-    assert "short, censored curve" in en["home.f3.p.4"] and "Dig Out Your Soul" in en["home.f3.p.4"]
-    # Cross-band comparison is at a common horizon; the end-of-history values are a per-band detail.
-    assert "same horizon" in en["home.f3.p.1"] and "not a ranking" in en["home.f3.p.2"]
+    assert "only a hint for the other two" in en["home.f1.numbers"]
+    assert "does not show that the release caused it" in " ".join(v for k, v in en.items() if k.startswith("home.f1.caveats"))
+    assert en["home.f2.h"].startswith("Most of these bands") and "all bands" not in en["home.f2.h"]
+    assert "It did not fall for Linkin Park" in en["home.f2.numbers"]
+    assert "short, censored curve" in en["home.f3.caveats.3"] and "Dig Out Your Soul" in en["home.f3.caveats.3"]
+    assert "not a ranking" in en["home.f3.caveats.1"] and "same horizon" not in en["home.f3.h"]
     assert "500 shows" in en["methodology.survival.p.4"] and "longer career" in en["methodology.survival.p.4"]
-    assert "the high end" not in " ".join(en.values())
-    assert "does not show that the release caused it" in en["home.f1.p.3"]
-    assert "2000s" not in " ".join(en.values())  # the "2000s albums below 30%" claim was dropped
+    assert "the high end" not in " ".join(en.values()) and "2000s" not in " ".join(en.values())
+
+
+def test_the_concrete_sentence_for_finding_two_only_claims_what_the_data_supports() -> None:
+    """The marts have no city or per-show data and consecutive M72 shows overlap by about a quarter, so the text
+    must say "a substantially different set", never "no repeated songs" or "two shows in the same city"."""
+    for locale, strings in i18n.load_locales().items():
+        sentence = strings["home.f2.lead_more"].lower()
+        assert "same city" not in sentence and "mesma cidade" not in sentence, locale
+        assert "without repeating" not in sentence and "sem repetir" not in sentence, locale
+    en = i18n.load_locales()["en"]["home.f2.lead_more"]
+    assert "substantially different set" in en and "nearly the same songs" in en
+
+
+def test_the_hero_of_finding_three_is_morning_glory_and_the_oasis_horizon_figure_is_in_the_numbers() -> None:
+    en = i18n.load_locales()["en"]
+    assert "Morning Glory" in en["home.f3.stat_label"]
+    assert "{{ oasis_surv_500 }} for Oasis" in en["home.f3.numbers"]
 
 
 def _real_marts():
@@ -107,6 +158,10 @@ def test_the_claims_in_the_text_hold_on_the_real_data(real) -> None:
     assert last >= first
     first, last = ends("Metallica")
     assert last > 3 * first
+    overlap = real["mart_tour_rotation"].set_index(["band", "tour_name"])["mean_jaccard"]
+    assert overlap[("Metallica", "M72 World Tour")] < 0.3  # "a substantially different set"
+    assert overlap[("Metallica", "Damaged Justice")] > 0.8 and overlap[("Metallica", "Kill 'Em All for One")] > 0.9
+    assert overlap[("Metallica", "M72 World Tour")] > 0.1  # consecutive M72 shows do overlap, so "no repeated songs" would be false
     tours = real["mart_tour_rotation"].set_index(["band", "tour_name"])["rotation"]
     assert 0.74 < tours[("Metallica", "M72 World Tour")] < 0.76
     assert 0.84 < float(shape.rotation_by_year(rot, "Metallica").set_index("show_year").rotation[2024]) < 0.87
