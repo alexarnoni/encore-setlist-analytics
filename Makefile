@@ -18,7 +18,7 @@ COMPOSE_DEV := docker compose -f infra/docker-compose.yml -f infra/docker-compos
 DBT_GIT_COMMIT := $(shell git log -1 --format=%h -- dbt 2>/dev/null)$(shell git diff --quiet HEAD -- dbt 2>/dev/null || echo -dirty)
 export DBT_GIT_COMMIT
 
-.PHONY: up up-dev build down ps logs
+.PHONY: up up-dev build down ps logs site site-serve
 
 up:
 	$(COMPOSE) up -d
@@ -39,3 +39,17 @@ ps:
 
 logs:
 	$(COMPOSE) logs -f
+
+# --- Public static site (spec 04). Not part of the Docker stack and never run by the pipeline. ---
+# Override PYTHON to use a virtualenv, e.g. `make site PYTHON=.venv/bin/python`.
+PYTHON ?= python3
+SITE_PORT ?= 8004
+
+# Build site/ from the analytics marts (reads the `analytics` schema only, no setlist.fm request).
+# Needs the database on 127.0.0.1:5435 (run on the VM, or through an SSH tunnel) and POSTGRES_* in .env.
+site:
+	PYTHONPATH=src $(PYTHON) -m encore.site.build
+
+# Serve site/ for local review. Bound to 127.0.0.1 only, never 0.0.0.0.
+site-serve:
+	$(PYTHON) -m http.server $(SITE_PORT) --bind 127.0.0.1 --directory site
