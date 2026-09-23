@@ -582,3 +582,42 @@ proceed as planned: add it to `airflow/requirements.txt` (and the root
 this check becomes moot once the real build succeeds on the branch image.
 **Still not wired to real data end to end**, and not yet dbt-documented or
 tested (T9), not yet called from the DAG (T10).
+
+### T8 addendum — verified for real against the isolated database
+
+Not only unit-tested: ran `write_survival_marts` for real against
+`spec03-postgres`'s synthetic data (in a throwaway container with
+`lifelines` installed on top of `encore-airflow:3.3.2`, so as not to touch
+any real image ahead of T11) — 127 song rows, 464 curve rows, 123 summary
+rows, no errors. `tests/spec03/test_survival_marts.py` (new, 4 tests)
+compares the written marts against `oracle.survival_outcomes` (T1's
+independent implementation, predating T6): for every band and the N=50
+mart, the set of songs is exactly the oracle's eligible set (no more, no
+less), and performances/duration/event/returned agree exactly; the
+summary mart's songs/events/censored agree with the oracle at every window
+(25/50/100), not only 50; debut_year/last_year fall inside the band's real
+show-history year range; every real curve point is bounded and each curve
+is non-increasing (the unit tests in test_survival_km.py checked the same
+properties on tiny hand-built data — this repeats it at real synthetic
+scale, ~127 songs across 5 bands). Manually cross-checked Muse's 7 rows by
+hand first (matching them to `muse_plan()`'s roles by their performance-count
+fingerprint, since real catalog song titles replace the plan's descriptive
+names) before writing the automated version — all 7 matched T1's
+`MUSE_EXPECTED[50]` table exactly, including which 2 of the 9 planned roles
+are correctly absent (too few performances; recording-only with no year).
+**A footgun found while doing this, not a pipeline bug.** Running
+`dbt run --select int_show_song_sets` alone (to refresh just that view for
+a quick check) made `intermediate.int_show_pairs` **disappear** — a later
+test failed with `relation "intermediate.int_show_pairs" does not exist`.
+Cause: dbt-postgres's view materialization does `DROP ... CASCADE` before
+`CREATE VIEW`, so rebuilding an upstream view cascades away any dependent
+view not included in the same `--select`. **Not a risk in the real
+pipeline**: `transform`'s `dbt run` always runs the whole project, no
+`--select`, so every run rebuilds every view together in one pass and
+nothing is ever missing in between. It only bit me here because I was
+narrowly re-selecting one view for a quick manual check. Fixed with a full
+`dbt run` (127 pass + 6 warn — the same by-design NULL-year warnings as
+`master`); noting it so a future narrow `--select` during spec-03
+development includes `+` (downstream) or is followed by a full `dbt run`
+before trusting anything built on top of the changed view.
+Full suite after this: 148 passed, 14 skipped (all `tests/spec03`, opt-in).
