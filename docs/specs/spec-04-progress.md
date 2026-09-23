@@ -289,3 +289,19 @@ and a build without Muse's weak years fails with the missing placeholder name
 placeholder resolves and the rendered numbers equal `docs/methodology.md`
 (sensitivity table 337/337/337 ... 378/463/819; pairs per year 64, 52, 40, 40,
 28/31/30, busiest 127; Muse 0.25% of performances, overall match 99.0%).
+
+### T8 — comparison page (done)
+
+`sections.py` (chart and table builders shared by comparison, band and home:
+`age_chart`, `rotation_chart`, `tour_chart`, `survival_chart`, totals and album
+tables, band facts; every label comes from the locale files through
+`Translator.plain`), `comparison.html`, chart and comparison text in both
+locales. Two charts with all seven bands (repertoire age by year, rotation by
+year with hollow thin years and the note under it) and the median survival
+table at N = 50 in band order, each chart with its data table. **Verified.**
+4 comparison tests (two SVGs, all seven band colours present, data tables with
+all bands, thin-year note, table order and fixture values, Portuguese page
+words). Real-data page checked in the browser pane at 1000px: charts legible,
+band colours consistent with the notebooks (amber darkened), table numbers equal
+the sensitivity table's N = 50 column. Fixed on the way: `.wrap`'s padding
+overrode `main`'s top padding (now `main.wrap`).

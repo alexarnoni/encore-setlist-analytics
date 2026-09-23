@@ -36,7 +36,25 @@ redirect:
 home:
   title: How bands use their own catalog
 comparison:
+  kicker: seven bands, one scale
   title: Comparison
+  lede: The same measures for every band, on the same axes.
+  age:
+    h: Repertoire age by year
+    p: "Average number of years between a song's first release and the night it is played. A line that climbs is a band leaning on older material; a line that drops is a new album taking over the set."
+    title: Repertoire age by year, all bands
+    desc: "Line chart of average repertoire age by year for the seven bands. The data table below lists every value."
+    caption: "Average repertoire age of the songs played in each year, weighted by performances."
+  rotation:
+    h: Rotation by year
+    p: "How much a band changes its setlist from one show to the next within a tour. 0 is the same setlist every night; 1 is no song in common."
+    title: Rotation by year, all bands
+    desc: "Line chart of rotation by year for the seven bands. The data table below lists every value."
+    caption: "Rotation between consecutive shows of the same tour, by year."
+  survival:
+    h: Median survival by band
+    p: "How many shows a song lasts in the live repertoire, counted from its live debut to its last appearance. The median is the number of shows after which half of a band's songs have been abandoned; it is not reached when fewer than half ever are."
+    note: "Measured in shows, not in time (see Methodology): 50 shows cover a very different span for each band. Abandoned means the song left the setlist for at least 50 shows and did not return; censored means it is still played, or it returned."
 methodology:
   kicker: how the numbers are built
   title: Methodology
@@ -104,6 +122,25 @@ about:
       1: "The code, the methodology notes and the specs are on <a href='{{ repo_url }}'>GitHub</a>. Built by <a href='{{ author_url }}'>alexarnoni</a>."
 chart:
   table: Data table
+  year: Year
+  age_ylabel: Years since release
+  rotation_ylabel: "Rotation (0 = same setlist)"
+  survival_xlabel: Shows since debut
+  survival_ylabel: Share still in the setlist
+  tour_xlabel: Repertoire age (years)
+  median: median
+  mean: mean
+  tour: Tour
+  shows: Shows
+  median_age: Median age
+  mean_age: Mean age
+  album: Album
+  all_songs: All songs
+  songs_n: "{{ n }} songs"
+  t_header: "after {t} shows"
+  thin_note: "Hollow markers: years with fewer than {{ min_pairs }} show pairs, left out of the line."
+  small_album_note: "* fewer than {{ min_songs }} songs: listed but not drawn."
+  ci_note: "Shaded bands are 95% confidence intervals."
 labels:
   band: Band
   songs: Songs

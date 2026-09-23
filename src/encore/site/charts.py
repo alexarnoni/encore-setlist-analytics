@@ -110,8 +110,8 @@ def finalize_svg(raw: str, *, title: str, desc: str, prefix: str) -> str:
         tag = re.sub(r'\s(width|height)="[^"]*"', "", match.group(0))
         return (f'{tag[:-1]} role="img" aria-labelledby="{prefix}-title {prefix}-desc" '
                 f'class="chart-svg">'
-                f'<title id="{prefix}-title">{escape(title)}</title>'
-                f'<desc id="{prefix}-desc">{escape(desc)}</desc>')
+                f'<title id="{prefix}-title">{escape(str(title))}</title>'
+                f'<desc id="{prefix}-desc">{escape(str(desc))}</desc>')
 
     return re.sub(r"<svg\b[^>]*>", open_tag, svg, count=1)
 

@@ -1,4 +1,26 @@
 {% extends "base.html" %}
+{% from "_macros.html" import table, figure, kicker with context %}
 {% block main %}
+{{ kicker(t('comparison.kicker')) }}
 <h1>{{ t('comparison.title') }}</h1>
+<p class="lede">{{ t('comparison.lede') }}</p>
+
+<section id="age">
+  <h2>{{ t('comparison.age.h') }}</h2>
+  <p>{{ t('comparison.age.p') }}</p>
+  {{ figure(charts.age, t('comparison.age.caption')) }}
+</section>
+
+<section id="rotation">
+  <h2>{{ t('comparison.rotation.h') }}</h2>
+  <p>{{ t('comparison.rotation.p') }}</p>
+  {{ figure(charts.rotation, t('comparison.rotation.caption') ~ ' ' ~ t('chart.thin_note', min_pairs=min_pairs)) }}
+</section>
+
+<section id="survival">
+  <h2>{{ t('comparison.survival.h') }}</h2>
+  <p>{{ t('comparison.survival.p') }}</p>
+  <div class="card">{{ table(survival.headers, survival.rows) }}</div>
+  <p class="note">{{ t('comparison.survival.note') }}</p>
+</section>
 {% endblock %}
