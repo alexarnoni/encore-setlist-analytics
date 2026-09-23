@@ -107,3 +107,56 @@ models:
       - name: computed_at
         data_tests:
           - not_null
+
+  - name: mart_tour_rotation
+    description: >
+      How much a band's setlist changes between consecutive shows of the same
+      tour (spec-03). Grain: band, tour_name. rotation = 1 - mean Jaccard
+      similarity of consecutive-show pairs; 0 means an identical setlist every
+      night, 1 means completely different sets each time. Tours with fewer
+      than 5 shows, and the 'Unknown tour' bucket, have no row here (rotation
+      cannot be measured on them). Rebuilt from scratch on every run;
+      computed_at is the only column expected to differ between two runs on
+      the same data.
+    columns:
+      - name: band
+        data_tests:
+          - not_null
+      - name: tour_name
+        description: "Never 'Unknown tour' (excluded: not a real tour)."
+        data_tests:
+          - not_null
+      - name: first_year
+        data_tests:
+          - not_null
+      - name: last_year
+        data_tests:
+          - not_null
+      - name: shows
+        description: Distinct dated shows of the tour. Always >= 5.
+        data_tests:
+          - not_null
+      - name: pairs
+        description: Consecutive show pairs; always shows - 1.
+        data_tests:
+          - not_null
+      - name: mean_jaccard
+        data_tests:
+          - not_null
+      - name: rotation
+        description: 1 - mean_jaccard, between 0 and 1.
+        data_tests:
+          - not_null
+      - name: median_setlist_size
+        data_tests:
+          - not_null
+      - name: core_songs
+        description: Songs present in at least 90% of the tour's shows.
+        data_tests:
+          - not_null
+      - name: distinct_songs
+        data_tests:
+          - not_null
+      - name: computed_at
+        data_tests:
+          - not_null
