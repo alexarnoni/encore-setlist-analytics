@@ -205,3 +205,34 @@ missing value dropped. Real-data note: the odd median cells (for example
 Metallica "Unknown tour" 2023, median 1.0 against a mean of 15.1) confirm the
 minimum-shows filter for the tour chart; the threshold is reviewed on real
 charts in T15.
+
+### T5 — chart theme and SVG renderer (done)
+
+`theme.py` (single source of tokens: light/dark surfaces and inks, band palette,
+`tokens_css()`, WCAG `contrast()`), `charts.py` (`line_chart` for yearly series
+with hollow thin years and a compact small-multiple mode, `tour_median_bars`,
+`km_chart`, `finalize_svg`). Charts are drawn with the light tokens as
+sentinels and rewritten to `var(--token)`: no fixed hex left, fonts set to the
+page mono stack, ids prefixed per chart, `role="img"` with `<title>`/`<desc>`,
+data table returned with every chart (thin years marked `*`), deterministic
+output. **Verified.** 12 chart tests plus the rest of the suite green; both themes
+checked live in the browser pane by toggling `data-theme` on a preview page
+(all four chart types recolour, no re-render). Fixes from that review: compact
+panels shrunk so they stay legible at grid width, the "mean" legend moved off the
+last bar.
+
+**Decision needed: band colour contrast (approved: only amber may change).**
+Twenty One Pilots' amber is now `#c28400` (3.1:1 on the light card, 5.3:1 on
+dark), same shade everywhere. Three other pairs miss the 3:1 graphics target
+with the notebook colours, which I kept:
+
+| Band | Colour | Light card | Dark card | Proposed fix (passes both) |
+|---|---|---|---|---|
+| Linkin Park | `#1baf7a` | 2.74 | 5.99 | `#19a170` (3.21 / 5.12) |
+| Muse | `#e87ba4` | 2.62 | 6.27 | `#d57197` (3.08 / 5.33) |
+| Avenged Sevenfold | `#4a3aa7` | 8.33 | 1.97 | `#6851ea` (5.17 / 3.18) |
+
+Lines are 2px with markers and a legend, so they stay readable, but Avenged
+Sevenfold on dark is visibly dim. `test_band_colour_contrast` lists these three
+as known exceptions and will tell us when they are fixed. Awaiting your call at
+the T12 stop.
