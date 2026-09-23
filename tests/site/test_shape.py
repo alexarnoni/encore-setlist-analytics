@@ -156,8 +156,10 @@ def test_findings_values_on_the_fixture(marts) -> None:
     assert (en["metallica_age_first"], en["metallica_age_first_year"], en["metallica_age_last"]) == ("10.0", "2000", "14.0")
     # Rotation of Oasis (band 1): 0.31 in 2000-2004 and 0.40 in 2015-2016; first three years vs last three.
     assert en["oasis_rot_2001"] == "0.31" and pt["oasis_rot_2001"] == "0,31"
-    assert (en["oasis_rot_first3"], en["oasis_rot_first3_from"], en["oasis_rot_first3_to"]) == ("0.31", "2000", "2002")
-    assert (en["oasis_rot_last3"], en["oasis_rot_last3_from"], en["oasis_rot_last3_to"]) == ("0.37", "2004", "2016")
+    assert (en["oasis_rot_first3"], en["oasis_rot_first3_years"]) == ("0.31", "2000, 2001 and 2002")
+    # The last three years are 2004, 2015 and 2016: listed, not shown as the range 2004-2016.
+    assert (en["oasis_rot_last3"], en["oasis_rot_last3_years"]) == ("0.37", "2004, 2015 and 2016")
+    assert pt["oasis_rot_last3_years"] == "2004, 2015 e 2016"
     # Tours, albums and where the curves end.
     assert en["muse_tour_tour_a_rotation"] == "0.40" and en["muse_tour_tour_a_shows"] == "30"
     assert (en["muse_final"], en["muse_final_t"]) == ("25%", "50")
@@ -165,6 +167,7 @@ def test_findings_values_on_the_fixture(marts) -> None:
     assert en["muse_album_album_one_final"] == "25%" and en["muse_album_album_one_final_t"] == "50"
     assert "muse_album_non_album_median" not in en  # the curve never reaches 50%: no median to quote
     assert "muse_album_non_album_songs" in en
+    assert "muse_surv_500" not in en  # the fixture curves stop at 50 shows: no value at the 500-show horizon
     assert "muse_gap_from" not in en  # no break of 3+ years between the fixture's years
 
 
@@ -208,3 +211,27 @@ def test_findings_key_pattern_matches_only_findings_names() -> None:
         assert values.FINDINGS_KEY.match(name), name
     for name in ("muse_1994_matched", "muse_weak_share", "metallica_median", "muse_match", "bands_count", "f3_t"):
         assert not values.FINDINGS_KEY.match(name), name
+
+
+def test_survival_at_a_horizon_and_the_songs_still_followed() -> None:
+    curves = pd.DataFrame({
+        "band": ["X"] * 4, "album": ["all"] * 4, "n_window": [50] * 4, "t_shows": [10, 300, 480, 900],
+        "survival_probability": [0.9, 0.6, 0.5, 0.3], "at_risk": [40, 30, 25, 6], "events": [1] * 4,
+        "ci_lower": [0.8] * 4, "ci_upper": [1.0] * 4,
+    })
+    assert shape.survival_at(curves, "X", "all", 500) == (0.5, 25)  # step function: the last step at or before 500
+    assert shape.survival_at(curves, "X", "all", 900) == (0.3, 6)
+    assert shape.survival_at(curves, "X", "all", 901) is None  # the curve stops before the horizon
+    assert shape.survival_at(curves, "X", "all", 5) == (1.0, 40)  # before the first event nobody has left yet
+    assert shape.survival_at(curves, "Y", "all", 500) is None
+
+
+def test_horizon_values_are_formatted_and_guarded() -> None:
+    m = fake_marts()
+    curves = m["mart_survival_curves"]
+    extra = curves[(curves["album"] == "all") & (curves["n_window"] == 50) & (curves["t_shows"] == 50)].assign(
+        t_shows=600, survival_probability=0.4, at_risk=12)
+    m["mart_survival_curves"] = pd.concat([curves, extra])
+    en = values.placeholder_values(m, tuple(BANDS), "en")
+    assert en["muse_surv_500"] == "25%" and en["muse_atrisk_500"] == "25"  # step at t = 50: 1 - 5 x 0.15, 30 - 5 at risk
+    assert values.FINDINGS_KEY.match("muse_surv_500") and values.FINDINGS_KEY.match("muse_atrisk_500")

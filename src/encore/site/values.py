@@ -102,9 +102,16 @@ DIPS: dict[str, tuple[str, int, int, int]] = {
 }
 MIN_GAP_YEARS = 3
 
+
+def _join_years(years, locale: str) -> str:
+    """`2008, 2009 and 2025` (pt-BR: `2008, 2009 e 2025`): the actual years, never a range that looks continuous."""
+    items = [str(int(y)) for y in years]
+    word = "e" if locale == "pt-BR" else "and"
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + f" {word} {items[-1]}"
+
 # Names produced by `add_findings_values`: the hand-written findings quote these specific
 # figures of the real data. Tests that render fake marts fill only names that match this pattern.
-FINDINGS_KEY = re.compile(r"^(dip_.+|[a-z0-9_]+_(age|rot|tour|album|gap|final)(_.+)?)$")
+FINDINGS_KEY = re.compile(r"^(dip_.+|[a-z0-9_]+_(age|rot|tour|album|gap|final|surv|atrisk)(_.+)?)$")
 
 
 def add_findings_values(values: dict[str, str], marts: dict[str, pd.DataFrame], bands: tuple[str, ...],
@@ -115,8 +122,7 @@ def add_findings_values(values: dict[str, str], marts: dict[str, pd.DataFrame], 
     `<k>_age_<year>` (repertoire age), `<k>_age_first/_age_first_year/_age_last/_age_last_year`,
     `<k>_gap_from/_gap_to` (the longest break of 3+ years between years with shows, if any),
     `<k>_rot_<year>` (rotation of years with 5+ show pairs), `<k>_rot_first3/_rot_last3` and
-    `<k>_rot_first3_from/_to`, `<k>_rot_last3_from/_to` (mean rotation of the first and last three
-    such years), `<k>_tour_<tour>_rotation` and `_shows`, `<k>_final/_final_t` (where the all-songs
+    `<k>_rot_first3_years`, `<k>_rot_last3_years` (the years behind those two means, listed), `<k>_tour_<tour>_rotation` and `_shows`, `<k>_final/_final_t` (where the all-songs
     survival curve ends), `<k>_album_<album>_songs/_abandoned/_censored/_median/_final/_final_t`
     (albums with 5+ songs), and `dip_<id>_before/_low/_after/_size` for `DIPS`.
     """
@@ -150,16 +156,18 @@ def add_findings_values(values: dict[str, str], marts: dict[str, pd.DataFrame], 
             values.update({
                 f"{k}_rot_first3": fmt_number(float(head["rotation"].mean()), 2, locale),
                 f"{k}_rot_last3": fmt_number(float(tail["rotation"].mean()), 2, locale),
-                f"{k}_rot_first3_from": str(int(head["show_year"].min())),
-                f"{k}_rot_first3_to": str(int(head["show_year"].max())),
-                f"{k}_rot_last3_from": str(int(tail["show_year"].min())),
-                f"{k}_rot_last3_to": str(int(tail["show_year"].max()))})
+                f"{k}_rot_first3_years": _join_years(head["show_year"], locale),
+                f"{k}_rot_last3_years": _join_years(tail["show_year"], locale)})
 
         for row in tours[tours["band"] == band].itertuples():
             tour = f"{k}_tour_{bands_mod.key(row.tour_name)}"
             values[f"{tour}_rotation"] = fmt_number(float(row.rotation), 2, locale)
             values[f"{tour}_shows"] = fmt_number(float(row.shows), 0, locale)
 
+        at = shape.survival_at(curves, band, shape.BAND_TOTAL, shape.COMMON_HORIZON)
+        if at:
+            values[f"{k}_surv_{shape.COMMON_HORIZON}"] = fmt_percent(at[0], 0, locale)
+            values[f"{k}_atrisk_{shape.COMMON_HORIZON}"] = fmt_number(at[1], 0, locale)
         end = shape.final_survival(curves, band)
         if end:
             values[f"{k}_final_t"], values[f"{k}_final"] = fmt_number(end[0], 0, locale), fmt_percent(end[1], 0, locale)
