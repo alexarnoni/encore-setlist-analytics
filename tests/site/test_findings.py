@@ -261,3 +261,36 @@ def test_the_hero_number_of_finding_one_has_a_short_label() -> None:
         assert "{{" not in strings["home.f1.stat_label"]  # the before and after values moved into the numbers paragraph
     for locale, strings in i18n.load_locales().items():
         assert "dip_metallica_72_seasons_before" in strings["home.f1.numbers"] and "dip_metallica_72_seasons_low" in strings["home.f1.numbers"]
+
+
+def test_eligible_songs_is_glossed_at_first_use_on_every_band_page() -> None:
+    """"Eligible" is a technical filter (see Methodology): its first use in a band's text explains it inline."""
+    for locale, strings in i18n.load_locales().items():
+        word = "eligible songs" if locale == "en" else "músicas elegíveis"
+        for band in BANDS:
+            text = strings[f"findings.{bands.key(band)}.numbers"]
+            if word not in text:
+                continue
+            after = text[text.index(word) + len(word):]
+            assert after.startswith(" ("), (locale, band)  # "eligible songs (those played at least 3 times ...)"
+            assert "3" in after[:80] and "MusicBrainz" in after[:120], (locale, band)
+            assert text.count(word) == 1 or "(" not in text[text.rindex(word) + len(word):][:3], (locale, band)  # only the first is glossed
+
+
+def test_the_home_hero_label_of_finding_three_stands_on_its_own() -> None:
+    for locale, strings in i18n.load_locales().items():
+        label = strings["home.f3.stat_label"]
+        assert "elegíve" not in label and "eligible" not in label, locale
+        assert not re.match(r"(of|das) the \d|das \{\{ *\w*songs", label), locale  # no "das 9 ..." under a big number
+        assert "{{ oasis_album_whats_the_story_morning_glory_songs }}" not in label, locale
+    en, pt = i18n.load_locales()["en"], i18n.load_locales()["pt-BR"]
+    assert en["home.f3.stat_label"].startswith("of the songs on (What's the Story) Morning Glory?")
+    assert pt["home.f3.stat_label"].startswith("das músicas de (What's the Story) Morning Glory?")
+    assert "3 times" in en["home.f3.caveats.5"] and "3 vezes" in pt["home.f3.caveats.5"]  # the counting rule stays visible
+
+
+def test_the_abandonment_definition_uses_plain_wording() -> None:
+    for locale, strings in i18n.load_locales().items():
+        text = strings["methodology.survival.p.2"]
+        assert not re.search(r"performance|execuç|execuc", text, re.I), locale
+        assert ("played at least 3 times in total" in text) or ("tocadas pelo menos 3 vezes no total" in text), locale

@@ -19,10 +19,10 @@ def test_hero_stats_and_the_three_layers_render(built_site: Path) -> None:
     # The fixture has no 2022/2023 Metallica data and no Morning Glory album, so the figures the findings quote
     # from real data are the stand-in "0"; the structure around them is what is checked.
     assert "years off Metallica's setlist in 2023, the year of 72 Seasons" in text
-    assert "eligible songs of (What's the Story) Morning Glory? are still played after 0 shows" in text
+    assert "of the songs on (What's the Story) Morning Glory? were still being played 0 shows after their live debut" in text
     assert "500 shows after a song's live debut" in text  # the Oasis horizon figure is in the numbers
     pt = text_of(built_site, "pt", "").text
-    assert "músicas elegíveis de (What's the Story) Morning Glory? ainda são tocadas após 0 shows" in pt
+    assert "das músicas de (What's the Story) Morning Glory? ainda eram tocadas 0 shows depois da estreia ao vivo" in pt
     html = (built_site / "en" / "index.html").read_text(encoding="utf8")
     for n in (1, 2, 3):
         block = html[html.index(f'id="finding-{n}"'):]
