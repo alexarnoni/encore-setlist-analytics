@@ -45,3 +45,6 @@ reports/
 
 # spec-03 local dev artifacts (MusicBrainz dump cache)
 .spec03-local/
+
+# spec-04 generated static site (deploy is a separate, manual step)
+/site/
