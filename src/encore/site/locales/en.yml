@@ -1,0 +1,31 @@
+site:
+  name: encore
+  tagline: How bands use their own catalog in live shows
+  description: Repertoire age, rotation and song survival for seven bands, built from aggregated setlist data.
+nav:
+  label: Main
+  bands: Bands
+  comparison: Comparison
+  methodology: Methodology
+  about: About
+lang:
+  label: Language
+  pt-BR: PT
+  en: EN
+  pt-BR_name: Português
+  en_name: English
+theme:
+  toggle: Toggle theme
+  light: Light
+  dark: Dark
+status:
+  data_as_of: data as of
+  built: built
+  bands: bands
+  shows: shows
+footer:
+  setlistfm: Setlist data from
+  setlistfm_note: aggregated; individual setlists are not stored or shown.
+  musicbrainz: Catalog data from
+  musicbrainz_license: (CC0).
+  source: Source code

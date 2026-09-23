@@ -1,0 +1,31 @@
+site:
+  name: encore
+  tagline: Como as bandas usam o próprio catálogo nos shows
+  description: Idade do repertório, rotação e sobrevivência das músicas de sete bandas, a partir de dados agregados de setlists.
+nav:
+  label: Principal
+  bands: Bandas
+  comparison: Comparação
+  methodology: Metodologia
+  about: Sobre
+lang:
+  label: Idioma
+  pt-BR: PT
+  en: EN
+  pt-BR_name: Português
+  en_name: English
+theme:
+  toggle: Alternar tema
+  light: Claro
+  dark: Escuro
+status:
+  data_as_of: dados de
+  built: gerado em
+  bands: bandas
+  shows: shows
+footer:
+  setlistfm: Dados de setlist de
+  setlistfm_note: agregados; setlists individuais não são armazenados nem exibidos.
+  musicbrainz: Dados de catálogo do
+  musicbrainz_license: (CC0).
+  source: Código-fonte
