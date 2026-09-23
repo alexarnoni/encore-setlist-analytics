@@ -4,7 +4,7 @@ Tracks `docs/specs/spec-03-rotation-survival.md` (rotation and song survival).
 Same discipline as spec 01 and 02a: small tasks, one commit each, results
 recorded here.
 
-> **STATUS: T0-T14 done (2026-09-23), merged to master. Abandonment rule changed to the LAST gap on branch `spec-03` (not yet on master, not yet run on real data): see the T14 addendum — see section 11
+> **STATUS: T0-T14 done (2026-09-23), merged to master. Abandonment rule changed to the LAST gap and run on real data: see the T14 addendum — see section 11
 > for exactly where to pick up.** Work happens only on the branch
 > `spec-03`, in the worktree `D:\projetos\encore-spec03`. T14 (merge and
 > real-data run) is explicitly on hold until the user asks for it. The
@@ -884,15 +884,44 @@ Full suite in the branch image against `spec03-postgres`, DB-level tests on:
 170 passed; `dbt test --select tag:survival` PASS=36. The isolated table was
 created with the old shape first, so the `ALTER` migration ran for real there.
 
-**Not done: the real marts still hold the OLD first-gap numbers.** `analyze`
-reads the views over `raw_setlistfm`, which is empty after every run, so it
-cannot be re-run alone: a full pipeline run (~480 setlist.fm requests) on the new
-code is needed, after `master` gets this commit and the main image is rebuilt.
-The T14 sanity-check numbers above (event counts, debut-album section) describe
-the old rule and must be re-read after that run.
+**Full run with the new rule, `manual__2026-09-23T15:53:28` (2026-09-23).**
+Merged into `master` by fast-forward (`65faa3b`, not pushed at the time of
+writing), main image rebuilt (`encore-airflow:3.3.2`, id `08f26be4eb09`), one
+full run: success, 479 setlist.fm requests (958 for the day), `raw_setlistfm`
+empty afterwards, DAG paused again. transform: PASS=131 WARN=2 ERROR=0 (the same
+457-recordings warnings), `assert_marts_reconcile_with_int_performances` PASS.
+analyze: 664 song / 3762 curve / 219 summary rows, `dbt test --select
+tag:survival` PASS=36, `assert_song_survival_reconciles_with_int_performances`
+PASS, and the new `assert_song_survival_gaps_consistent` PASS. The existing
+production table was migrated by the `ADD COLUMN` path.
 
-**The T14 caveat "read returned_after_abandonment together with the curves"
-no longer applies.**
+**Sanity check 2 under the new rule: passes.** Debut-album songs still played in
+2025 or later are now all censored, with very long durations: Kill 'Em All 3 of
+3 (mean 2108 shows), Master of Puppets 5 of 5 (1805), Definitely Maybe 6 of 6
+(876), Hybrid Theory 7 of 7 (933), Showbiz 1 of 1 (1494). Twenty One Pilots'
+debut album is the exception (2 songs played in 2025 but marked events): their
+last appearance is in early 2025 and the band plays enough shows a year that it
+is already 50+ shows before the end of the history.
+
+**Old rule (first gap) vs new rule (last gap), all eligible songs, N = 50**
+(songs / abandoned / censored / median shows):
+
+| Band | Old | New |
+|---|---|---|
+| Arctic Monkeys | 90 / 70 / 20 / 152 | 90 / 54 / 36 / 337 |
+| Avenged Sevenfold | 71 / 54 / 17 / 87 | 71 / 44 / 27 / 463 |
+| Linkin Park | 98 / 70 / 28 / 141 | 98 / 58 / 40 / 265 |
+| Metallica | 107 / 88 / 19 / 152 | 107 / 62 / 45 / 1235 |
+| Muse | 125 / 99 / 26 / 172 | 125 / 84 / 41 / 480 |
+| Oasis | 80 / 72 / 8 / 115 | 80 / 49 / 31 / 163 |
+| Twenty One Pilots | 93 / 62 / 31 / 150 | 93 / 49 / 44 / 674 |
+
+Medians grew because a song's duration now runs to its last appearance, not to
+its first gap. At N = 25/50/100 the medians for `all` are: Arctic Monkeys
+337/337/337, Linkin Park 265/265/265 (the curve crosses 0.5 at the same step),
+Avenged Sevenfold 378/463/819, Metallica 998/1235/1458, Muse 334/480/544, Oasis
+127/163/163, Twenty One Pilots 526/674/713. Old-rule numbers and the T14
+addendum's sanity-check paragraphs above are superseded by this section.
 
 ## 11. Handoff for the next session (2026-09-23)
 
