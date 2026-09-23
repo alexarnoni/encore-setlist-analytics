@@ -46,7 +46,7 @@ Findings are written by hand in the locale files, not generated. Numbers inside 
 
 ### R6. Design and accessibility
 1. Responsive, readable on mobile, no horizontal scrolling.
-2. Light and dark themes, light by default, with a theme toggle in the header (matching alexarnoni.com). The choice is persisted in `localStorage`; `prefers-color-scheme` is used only as the initial value when nothing is stored. The same band colour per band in both themes, and every chart is readable in both.
+2. Light and dark themes, light by default, with a theme toggle in the header (matching alexarnoni.com). The choice is persisted in `localStorage` under `encore-theme`; the initial value is the stored choice, else light (the OS preference is not used). The same band colour per band in both themes, and every chart is readable in both.
 3. Each chart has a text alternative (a short summary or a data table) so the page works without images.
 4. Keep the total page weight small. No web fonts unless self-hosted.
 

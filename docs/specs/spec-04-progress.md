@@ -4,7 +4,7 @@ Tracks `docs/specs/spec-04-site.md` (public bilingual static site). Same
 discipline as specs 01 to 03: small tasks, one commit each, results recorded
 here.
 
-> **STATUS: T0-T11 done (2026-09-23). STOPPED before T12 (findings text) as requested: decisions needed, see the T11 section. T12 stops for review of the findings text.**
+> **STATUS: T0-T16 done (2026-09-23). Merged to master. The only open item is the manual deploy and DNS step (README). T12 stops for review of the findings text.**
 > Work happens only on branch `spec-04`, in the worktree
 > `D:\projetos\encore-spec04` (main directory stays on `master`).
 
@@ -125,13 +125,14 @@ Each task is one commit, run `pytest` before declaring it done.
 | **T15** | Real-data build and review: all pages, both locales, forbidden check passes on real output, page weight measured, phone-sized viewport (375px) and both themes checked in the browser pane, toggle and persistence exercised, no horizontal scroll. | — (fixes as needed) | Recorded here: page count, total KB per page, screenshots reviewed, `pytest` green. |
 | **T16** | Acceptance and handoff: acceptance list checked, merge to `master`. The **deploy and DNS are yours**; I stop after documenting them. | this file | Checklist below. |
 
-## 6. Acceptance checklist (from the spec)
+## 6. Acceptance checklist (from the spec), checked 2026-09-23
 
-- [ ] `make site` produces both locales with all pages from real marts
-- [ ] Every page passes the forbidden content check
-- [ ] Phone-sized viewport and both themes render correctly; toggle works and persists across reloads
-- [ ] Tests pass
-- [ ] Published at encore.alexarnoni.com (manual step, user)
+- [x] `make site` produces both locales with all pages from real marts (23 files: 11 pages per
+      locale plus the root redirect; the `make` recipe was run as written, there is no `make` on this host)
+- [x] Every page passes the forbidden content check (build-time policy check, real data)
+- [x] Phone-sized viewport and both themes render correctly; toggle works and persists (T15)
+- [x] Tests pass (303 passed, 14 skipped; the skips are the integration tests that need a Postgres test container)
+- [ ] Published at encore.alexarnoni.com: **manual step, yours** (README, "Public site")
 
 ## 7. Task log
 
@@ -507,3 +508,12 @@ were **not** run (deploy is yours).
 - **Accessibility spot check** (10 pages): every chart has `role="img"`, a title and a description;
   every figure has a data table; one `h1` per page; no empty links; no console errors.
 - **Not done here, by design:** nothing was deployed and no DNS record was created.
+
+### T16 — acceptance and handoff (done)
+
+Acceptance list above. R6.2 in the spec was aligned with what was built (stored choice, else
+light, key `encore-theme`, no OS fallback). The branch was merged into `master` (fast-forward,
+not pushed). What is left is yours: `make site` on a machine that reaches the database, review, deploy to
+Cloudflare Pages and add the DNS record (README, "Public site (spec 04)"). After each pipeline run,
+rebuild by hand with `make site`; a run that changes the data can make a sentence in the findings
+untrue, and `pytest tests/site/test_findings.py` (real marts) says so before you publish.
