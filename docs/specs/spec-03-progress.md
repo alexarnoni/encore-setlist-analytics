@@ -4,7 +4,7 @@ Tracks `docs/specs/spec-03-rotation-survival.md` (rotation and song survival).
 Same discipline as spec 01 and 02a: small tasks, one commit each, results
 recorded here.
 
-> **STATUS: T0-T11, T13 done (2026-09-23). T12 not started — see section 11
+> **STATUS: T0-T13 done (2026-09-23). Only T14 (on hold) remains — see section 11
 > for exactly where to pick up.** Work happens only on the branch
 > `spec-03`, in the worktree `D:\projetos\encore-spec03`. T14 (merge and
 > real-data run) is explicitly on hold until the user asks for it. The
@@ -224,7 +224,7 @@ to Q1-Q9; the recommended defaults let work start without them.
 - [x] T9 dbt sources, tests, forbidden columns
 - [x] T10 `analyze` task and runner
 - [x] T11 image with lifelines (arm64 checked)
-- [ ] T12 notebook
+- [x] T12 notebook
 - [x] T13 documentation
 - [ ] T14 merge gate, full run, real-data sanity checks
 
@@ -776,10 +776,29 @@ expected to fail on real data, but worth watching once).
   Application Control policy blocks its DLL), so lifelines-dependent tests run
   in the branch image, not on the host.
 
+### T12 — notebook (done 2026-09-23)
+
+`notebooks/02_rotation_survival.ipynb`, same pattern as notebook 01: a
+`read_analytics()` allow-list of the three marts, read-only session, DB from
+env vars (`ENCORE_DB_HOST` / `ENCORE_DB_PORT`, default 127.0.0.1:5435). Three
+pieces: (1) rotation by year, small multiples, one panel per band, shared 0-1
+y axis, years with < 5 pairs drawn hollow and left out of the line; (2)
+Kaplan-Meier curves for one band (`BAND`), one step line per album with a
+shaded 95% band, `non-album` grey, dashed "all eligible songs" line, only
+albums with >= 5 songs; (3) median survival table for N = 50 (`not reached`
+when the curve never crosses 0.5, `*` on albums with < 5 songs).
+Verified by executing a copy (in the scratchpad, never in the repo) against
+`spec03-postgres` with `ENCORE_DB_PORT=5446`: no errors, both figures and the
+table rendered and were inspected. The synthetic data is thin (one year for
+one band, no abandonment events), so the curves are flat at 1.0 there; the
+layout, not the numbers, is what this preview validates. The committed file has
+0 outputs and 0 execution counts. The optional executed HTML in `reports/` was
+skipped (it would only show synthetic data); generate it after the real run.
+
 ## 11. Handoff for the next session (2026-09-23)
 
-T0-T10 and T13 done and pushed to `origin/spec-03` (last commit: see
-`git log -1`). T11-T12 not started. T14 stays blocked until the user says
+T0-T13 done and pushed to `origin/spec-03` (last commit: see
+`git log -1`). T14 stays blocked until the user says
 to do it.
 
 **T13 done (2026-09-23, commit `5920122`):** `docs/methodology.md`
