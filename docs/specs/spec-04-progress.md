@@ -4,7 +4,7 @@ Tracks `docs/specs/spec-04-site.md` (public bilingual static site). Same
 discipline as specs 01 to 03: small tasks, one commit each, results recorded
 here.
 
-> **STATUS: T0-T1 done. HOLDING before T2 until the visual identity proposal is approved (no CSS before that). T12 stops for review of the findings text.**
+> **STATUS: T0-T2 done. Visual identity approved (below); T3 next. T12 stops for review of the findings text.**
 > Work happens only on branch `spec-04`, in the worktree
 > `D:\projetos\encore-spec04` (main directory stays on `master`).
 
@@ -149,3 +149,26 @@ section nav right, language and theme as pills at the end (theme toggle key
 `encore-theme`, initial value stored choice else light). A proposal (palette,
 typography, page sketch) is shown and approved **before any CSS**; T6 and T5
 follow it.
+
+**Visual identity approved (2026-09-23).** Palette as proposed (paper
+`#f5f2ea` / charcoal `#161512`, card `#fcfcfb` / `#1e1d19`, crimson signal used
+only for `//` kickers and the data dot; seven band colours unchanged, Twenty
+One Pilots' amber may be darkened once, same shade everywhere). **Font: IBM
+Plex Mono, self-hosted, latin subset, weights 400 and 500** (JetBrains Mono was
+considered and dropped: the portfolio is moving away from it); body on the
+system sans stack. Status line carries dates only, no pipeline status claim.
+**Home findings differ in shape:** 01 (repertoire age) and 03 (permanent
+catalog) use the hero-stat block; 02 (rotation) uses **seven-band small
+multiples**, since it is a comparison (affects T5 chart set and T10).
+
+### T2 — marts loader and fixture (done)
+
+`src/encore/site/marts.py`: allowlist of six marts (`mart_song_survival`
+excluded, nothing song-level is needed), schema fixed to `analytics`, name
+validated before any SQL, read-only session, `data_as_of` = latest
+`computed_at` (Q2). `tests/site/fixtures.py`: fake marts for 7 bands, two
+tours, all three windows. **Verified.** Tests: fixture columns equal the dbt
+yml column lists (drift check), non-allowlisted / schema-qualified / injected
+names refused with no SQL issued, session read-only, `data_as_of`. `pytest`
+164 passed, 14 skipped. Real smoke read of the six marts from 127.0.0.1:5435:
+404 / 141 / 165 / 172 / 3,762 / 219 rows, 7 bands each, data as of 2026-09-23.
