@@ -487,3 +487,23 @@ run as written: the build passes the content and link checks on all 23 pages, an
 answers 200 for `/`, `/pt/`, `/en/bands/muse/`, the stylesheet and the font, and `netstat` shows it
 listening on `127.0.0.1:8004` only (never `0.0.0.0`). The Wrangler commands and the dashboard steps
 were **not** run (deploy is yours).
+
+### T15 — real-data build and review (done, 2026-09-23)
+
+`python -m encore.site.build` against the real marts (data as of 2026-09-23): **23 files**
+(11 pages per locale plus the root redirect); content policy check and link check passed.
+- **Page weight.** HTML 0.3 to 156 KB per page (gzip 0.3 to 19 KB); stylesheet 8 KB (2.5 KB
+  gzip); two self-hosted fonts 36.8 KB. The heaviest page (the Portuguese home, 19 KB gzip) is
+  about 58 KB transferred including CSS and fonts. Nothing else is loaded: no third-party
+  request, and no JavaScript besides the short theme script.
+- **Fonts.** `document.fonts` reports IBM Plex Mono 400 and 500 as loaded from the site itself.
+- **Phone.** All 22 content pages, both locales, loaded at 375px in same-origin iframes: none wider
+  than the viewport, no element past the right edge, every chart at least 294 px wide. The home
+  page and a band page were also looked at on a 375x812 viewport.
+- **Themes.** Light is the default with nothing stored (the root redirects to `/pt/`); the toggle
+  switches to dark, stores `encore-theme`, and dark is applied on the next page and locale; charts
+  recolour through CSS variables. Avenged Sevenfold (`#6851ea`), previously the dim one on dark,
+  is clearly visible. The stored value was reset to light afterwards.
+- **Accessibility spot check** (10 pages): every chart has `role="img"`, a title and a description;
+  every figure has a data table; one `h1` per page; no empty links; no console errors.
+- **Not done here, by design:** nothing was deployed and no DNS record was created.
