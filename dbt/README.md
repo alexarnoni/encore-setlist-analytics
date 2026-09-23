@@ -96,11 +96,40 @@ Notes on the invocation:
 The `transform` task of `encore_pipeline` runs `dbt seed --full-refresh`,
 `dbt run` and `dbt test`, in that order, using the copy of this directory baked into the
 image (`/opt/airflow/dbt`, see `airflow/Dockerfile`). It executes after
-`validate_raw` and before `cleanup_raw_setlistfm`, in the same DAG run, so
+`validate_raw` and before `analyze`, in the same DAG run, so
 raw setlist.fm data is still there when dbt reads it. The code lives in
 `src/encore/dbt_runner.py`; the image's `DBT_*` environment variables
 select the project, profile, output paths and turn off colors, so the
 task passes no flags.
+
+`transform`'s `dbt run`/`dbt test` **exclude** everything tagged
+`survival` (`--exclude tag:survival`): the survival marts
+(`mart_song_survival`, `mart_survival_curves`, `mart_survival_summary`)
+are not dbt models — they are written directly by the `analyze` task
+(`src/encore/analysis`, see below) using `lifelines`, which dbt-postgres
+cannot run. The `survival` tag exists on their dbt-side sources/tests
+(`dbt/models/analytics/survival_sources.yml`,
+`dbt/tests/assert_survival_*.sql`) so `dbt test` still validates them, just
+in a separate, later invocation, after `analyze` has written them.
+
+## Running the `analyze` task
+
+`analyze` runs between `transform` and `cleanup_raw_setlistfm`, still
+inside the window where raw setlist.fm data exists (`int_show_song_sets`
+and eligibility both read through it). It is plain Python, not dbt:
+`src/encore/analysis/__main__.py` reads the show/song sets and song
+attributes needed for survival, computes duration/event/censoring for
+N = 25/50/100 (`src/encore/analysis/survival.py`, see
+[`docs/methodology.md`](../docs/methodology.md) for the exact convention),
+fits Kaplan-Meier curves per band and per band + album with `lifelines`,
+and writes `mart_song_survival`, `mart_survival_curves` and
+`mart_survival_summary` in one transaction (idempotent, atomic — a
+mid-write failure leaves the previous content in place). Afterward,
+`dbt test --select tag:survival` runs to validate the marts it just wrote
+(reconciliation against `int_performances`, probability bounds, grain
+uniqueness). If `analyze` fails, the task fails immediately (no retry, same
+data would fail the same way) and `cleanup_raw_setlistfm`/`log_run` still
+run (`trigger_rule=all_done`), same as a `transform` failure.
 
 - **Logs.** dbt's output is streamed line by line into the Airflow task
   log (each line prefixed `[dbt]`), so it is visible while the task runs.

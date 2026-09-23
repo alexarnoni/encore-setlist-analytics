@@ -5,6 +5,60 @@ rules themselves live in [`context/product.md`](context/product.md); this
 file records what the data can and cannot support, so the public
 methodology page (later spec) can be written from it.
 
+## Rotation between shows
+
+For each pair of consecutive shows by the same band and tour (ordered by
+date, then by `setlist_id` on same-date shows — a deterministic but
+arbitrary tie-break; shows without a date cannot be ordered and are left
+out of both pairs and the show index), the setlist sets (every matched
+song, including jams/solos/generic entries — see below) are compared with
+the Jaccard index. **Rotation** for a tour is `1 - mean Jaccard` over its
+pairs; a tour is only scored with **5 or more shows**. **Core songs** for a
+tour are songs present in at least 90% of its shows. `mart_band_rotation_by_year`
+assigns each pair to the year of its **second** show (a pair can straddle
+New Year inside a tour) and excludes the same small tours as
+`mart_tour_rotation`.
+
+## Survival: duration, abandonment, censoring
+
+Duration is measured **in band shows**, not calendar time, from a song's
+live debut to its last appearance before it is dropped, **inclusive**:
+`last_index - debut_index + 1`, so a song played in exactly one show has
+duration 1. A song still in rotation at the end of the available history is
+**censored** with the same rule applied up to the end: `total_shows -
+debut_index + 1`.
+
+**Abandonment** ("absent from the band's next N shows") is checked for
+N = 25, 50 and 100: after an appearance at show index *i*, the song is
+abandoned if there is a later gap of **N or more consecutive shows**
+without it, fully inside the history (`internal gap >= N`, or `total_shows
+- last_index >= N` at the tail). Only the **first** such gap counts as the
+abandonment event; if the song reappears afterward it is flagged
+`returned_after_abandonment`, but the survival duration and event/censoring
+status are not changed. A song with no such gap by the end of the history
+is censored, matching the product rule ("censored if fewer than N shows
+remain").
+
+**Eligibility** for survival analysis: a catalog song needs at least 3
+**performances** (not distinct shows — a song played twice in one show
+counts as 2 performances for eligibility, but durations are measured in
+distinct shows) and must be matched either to a studio album
+(`reference_album` not null) or to a recording with a known release year.
+**Recording-only songs without a release year are not eligible** for
+survival — there is no basis to place them on the catalog timeline.
+Recording-only songs that do have a release year are eligible, under the
+album label `non-album` (the same label used for era KPIs in
+`product.md`). This is a for-now decision, to be revisited once real-run
+numbers show how many songs it affects.
+
+**Jams, solos and generic setlist entries** (e.g. `Helpless (jam)`,
+matched as a recording-only catalog song) are **not filtered out** of
+rotation or survival — the spec excludes them from catalog KPIs in
+principle, but the data has no reliable jam/solo flag, so they are counted
+as-is wherever they match the catalog. This can inflate set sizes, lower
+Jaccard, and add spurious "songs" to survival tables. Recorded here as a
+known limitation rather than patched with a filter.
+
 ## Known limitations
 
 ### Muse, 1994-1995: low catalog match (accepted)
