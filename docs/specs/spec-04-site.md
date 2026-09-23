@@ -46,7 +46,7 @@ Findings are written by hand in the locale files, not generated. Numbers inside 
 
 ### R6. Design and accessibility
 1. Responsive, readable on mobile, no horizontal scrolling.
-2. Light and dark mode through `prefers-color-scheme`, with the same band colour per band in both.
+2. Light and dark themes, light by default, with a theme toggle in the header (matching alexarnoni.com). The choice is persisted in `localStorage`; `prefers-color-scheme` is used only as the initial value when nothing is stored. The same band colour per band in both themes, and every chart is readable in both.
 3. Each chart has a text alternative (a short summary or a data table) so the page works without images.
 4. Keep the total page weight small. No web fonts unless self-hosted.
 
@@ -66,7 +66,7 @@ Findings are written by hand in the locale files, not generated. Numbers inside 
 
 - `make site` produces both locales with all pages from real marts.
 - Every page passes the forbidden content check.
-- The site renders correctly on a phone-sized viewport and in dark mode.
+- The site renders correctly on a phone-sized viewport, in both themes, with the toggle working and the choice persisted.
 - The published site is reachable at encore.alexarnoni.com.
 - Tests pass.
 

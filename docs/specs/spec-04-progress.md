@@ -74,12 +74,20 @@ functions on DataFrames), `charts.py` + `theme.py` (matplotlib to SVG),
 `templates/`, `assets/` (one CSS file, inlined or linked, no web fonts),
 `locales/pt-BR.yml`, `locales/en.yml`.
 
-**D2 — Dark mode for inline SVG.** matplotlib writes fixed colours. Charts are
-drawn with sentinel colours and post-processed so fills and strokes become CSS
-custom properties (`var(--band-muse)`, `var(--ink)`, ...). The page CSS defines
-each under `prefers-color-scheme`, so the same band keeps the same hue in
-both modes. `svg.fonttype: none` keeps text as text (small files, selectable,
-styled by CSS).
+**D2 — Themes and inline SVG (revised 2026-09-23, R6.2 changed).** Light by
+default with a header toggle; the choice lives in `localStorage` (reads and
+writes in try/catch, page works without it). Initial value: stored choice, else
+`prefers-color-scheme`, else light. A few lines of inline script in `<head>`
+set `data-theme` on `<html>` before first paint (no flash); the toggle button
+flips it and stores it. Without JS, CSS falls back to
+`prefers-color-scheme` through `:root:not([data-theme])`. Colours are tokens on
+`:root` and `:root[data-theme="dark"]`. matplotlib writes fixed colours, so
+charts are drawn with sentinel colours and post-processed into CSS custom
+properties (`var(--band-muse)`, `var(--ink)`, ...) that follow the active
+theme, so a toggle recolours charts with no re-render. The same band keeps the
+same hue in both themes, chosen so it holds contrast against both surfaces
+(checked in T5). `svg.fonttype: none` keeps text as text. This is the only
+JavaScript on the site (no chart library, no data fetching, R1.3).
 
 **D3 — Accessibility.** Each chart is a `<figure>` with `role="img"`,
 `<title>`/`<desc>` and a `<details>` data table (years/values, or median
@@ -105,8 +113,8 @@ Each task is one commit, run `pytest` before declaring it done.
 | **T2** | Read-only marts loader with table allowlist; fake-marts fixture (all 7 bands, a few years, all three N) shaped like the real marts. | `src/encore/site/marts.py`, `tests/site/fixtures.py`, `tests/site/test_marts.py` | Test: non-allowlisted table refused, session is read-only, fixture columns equal the dbt/io column lists. Real read of the 7 marts smoke-checked. |
 | **T3** | Locale layer: load both YAMLs, key-parity check, strict placeholder fill (Q4/R4), locale-aware number formatting. | `src/encore/site/i18n.py`, `locales/*.yml` (skeleton), `tests/site/test_i18n.py` | Tests: missing key, extra key, unfilled placeholder each fail the build. |
 | **T4** | Data shaping: repertoire age by year (Q5), rotation by year, KM curves, album table, median table, N sensitivity table, match quality by band, headline numbers as placeholder values. | `src/encore/site/shape.py`, `tests/site/test_shape.py` | Tests against the fixture with hand-computed expected values (weighted mean, medians `not reached`, `all`/`non-album` handling). |
-| **T5** | Chart theme + SVG renderer: theme extracted from notebook 02, sentinel-colour post-processing (D2), text alternative per chart (D3). | `theme.py`, `charts.py`, `tests/site/test_charts.py` | Tests: output is inline `<svg>`, contains no hex colours outside the CSS variables, has `<title>`/`<desc>`, and is deterministic. Visual check of one chart of each type in the browser pane, light and dark. |
-| **T6** | Base template + CSS: layout, language switcher preserving the page, `<html lang>`, hreflang, footer with build/run stamps (Q1/Q2), setlist.fm and MusicBrainz (CC0) attribution, `site/index.html` redirect, mobile and dark styles. | `templates/base.html`, `assets/site.css`, `build.py` | Tests: both locales get the same page set, every page has `lang`, hreflang pair, a followable setlist.fm link without `nofollow`. |
+| **T5** | Chart theme + SVG renderer: theme extracted from notebook 02, sentinel-colour post-processing (D2), text alternative per chart (D3), band colours checked for contrast on both surfaces. | `theme.py`, `charts.py`, `tests/site/test_charts.py` | Tests: output is inline `<svg>`, contains no hex colours outside the CSS variables, has `<title>`/`<desc>`, and is deterministic. Contrast check of each band colour against both surfaces. Visual check of one chart of each type in the browser pane in both themes, toggled live. |
+| **T6** | Base template + CSS: layout, language switcher preserving the page, `<html lang>`, hreflang, footer with build/run stamps (Q1/Q2), setlist.fm and MusicBrainz (CC0) attribution, `site/index.html` redirect, mobile styles, theme toggle in the header with pre-paint init script and localStorage persistence (D2). | `templates/base.html`, `assets/site.css`, `build.py` | Tests: both locales get the same page set, every page has `lang`, hreflang pair, a followable setlist.fm link without `nofollow`, a toggle button in the header, and a head script that sets `data-theme` from localStorage, else `prefers-color-scheme`, else light. |
 | **T7** | Methodology and About pages (content from `docs/methodology.md`, sensitivity table, match quality by band, data policy, known limitations incl. Muse 1994-1995 and shows-vs-time, stack, GitHub link). | templates, locale files | Tests: pages exist in both locales; sensitivity table numbers equal the fixture; a real build shows the same numbers as `docs/methodology.md`. |
 | **T8** | Comparison page: repertoire age and rotation for all bands, median survival table. | template, `charts.py` use | Page in fixture build; no-JS text alternative present. |
 | **T9** | Band pages (7): age by year, rotation by year, KM by album, album table, findings placeholder slot. | template, `build.py` | One page per band and locale; album table equals `mart_survival_summary`; min-songs/min-pairs handling matches the notebook (hollow points, albums under 5 songs not drawn). |
@@ -115,14 +123,14 @@ Each task is one commit, run `pytest` before declaring it done.
 | **T12** | Findings text: draft pt-BR and en for each band and the three headlines using placeholders (R4), from the real marts. **Stops for your review of the text.** | `locales/*.yml` | Build fails if a placeholder has no value (test); real build fills them; you approve wording. |
 | **T13** | Link check over the generated site (internal links, anchors, hreflang targets, switcher targets). | `tests/site/test_links.py` | Passes on fixture build; a deliberately broken link fails it. |
 | **T14** | `make site` and `make site-serve` (127.0.0.1 only, never 0.0.0.0), README section: build, review, Wrangler direct-upload or dashboard deploy, DNS for `encore.alexarnoni.com`, "rebuild by hand after a pipeline run". | `Makefile`, `README.md` | `make site` and `make site-serve` work (via WSL or the venv); README steps read cleanly. |
-| **T15** | Real-data build and review: all pages, both locales, forbidden check passes on real output, page weight measured, phone-sized viewport (375px) and dark mode checked in the browser pane, no horizontal scroll. | — (fixes as needed) | Recorded here: page count, total KB per page, screenshots reviewed, `pytest` green. |
+| **T15** | Real-data build and review: all pages, both locales, forbidden check passes on real output, page weight measured, phone-sized viewport (375px) and both themes checked in the browser pane, toggle and persistence exercised, no horizontal scroll. | — (fixes as needed) | Recorded here: page count, total KB per page, screenshots reviewed, `pytest` green. |
 | **T16** | Acceptance and handoff: acceptance list checked, merge to `master`. The **deploy and DNS are yours**; I stop after documenting them. | this file | Checklist below. |
 
 ## 6. Acceptance checklist (from the spec)
 
 - [ ] `make site` produces both locales with all pages from real marts
 - [ ] Every page passes the forbidden content check
-- [ ] Phone-sized viewport and dark mode render correctly
+- [ ] Phone-sized viewport and both themes render correctly; toggle works and persists across reloads
 - [ ] Tests pass
 - [ ] Published at encore.alexarnoni.com (manual step, user)
 
@@ -131,3 +139,5 @@ Each task is one commit, run `pytest` before declaring it done.
 _T0 done._
 
 
+
+**R6.2 changed (2026-09-23).** Light default plus a header toggle with localStorage persistence replaces pure `prefers-color-scheme`. Spec and D2 updated; affects T5, T6 and T15.
