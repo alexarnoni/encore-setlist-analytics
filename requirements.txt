@@ -8,3 +8,6 @@ PyYAML==6.0.2
 psycopg2-binary==2.9.10
 lifelines==0.30.0
 Jinja2==3.1.6
+# Font subsetting (dev only, see src/encore/site/assets/fonts/README.md)
+fonttools==4.65.0
+brotli==1.2.0

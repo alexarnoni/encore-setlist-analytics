@@ -13,6 +13,7 @@ import os
 import shutil
 from datetime import date
 from pathlib import Path
+from typing import Callable
 
 import pandas as pd
 from dotenv import load_dotenv
@@ -76,6 +77,7 @@ def _copy_assets(out: Path) -> None:
 def build_site(
     marts: dict[str, pd.DataFrame], out: Path, *, built_on: date, origin: str | None = None,
     locales_dir: Path = i18n.LOCALES_DIR, bands: tuple[str, ...] | None = None,
+    fill_missing: Callable[[str], str | None] | None = None,
 ) -> list[Path]:
     """Render every page of every locale into `out` and return the written files.
 
@@ -93,7 +95,8 @@ def build_site(
     _clear(out)
     written: list[Path] = []
     for locale in i18n.LOCALES:
-        t = i18n.Translator(locale, strings[locale], values.placeholder_values(marts, bands, locale))
+        t = i18n.Translator(locale, strings[locale], values.placeholder_values(marts, bands, locale),
+                            fill_missing=fill_missing)
         for page in page_list:
             ctx = pages.context(page, locale=locale, t=t, marts=marts, bands=bands)
             ctx.update(

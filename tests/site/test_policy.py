@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from encore.site import build, policy
-from tests.site.conftest import BUILT_ON, ORIGIN
+from tests.site.conftest import BUILT_ON, ORIGIN, findings_fill
 from tests.site.fixtures import BANDS, fake_marts
 
 STAMP = ('<div data-build-stamp><time datetime="2026-09-23">2026-09-23</time> '
@@ -110,7 +110,7 @@ def test_the_build_fails_and_leaves_no_pages_when_marts_carry_a_forbidden_field(
     marts["mart_survival_summary"] = s.assign(album=s["album"].replace({"Album One": "Live show_id 42"}))
     out = tmp_path / "site"
     with pytest.raises(policy.PolicyError, match="show_id"):
-        build.build_site(marts, out, built_on=BUILT_ON, origin=ORIGIN, bands=tuple(BANDS))
+        build.build_site(marts, out, built_on=BUILT_ON, origin=ORIGIN, bands=tuple(BANDS), fill_missing=findings_fill)
     assert out.exists() and list(out.iterdir()) == []
 
 
@@ -119,4 +119,5 @@ def test_the_build_fails_when_a_precise_date_reaches_a_page(tmp_path: Path) -> N
     s = marts["mart_survival_summary"]
     marts["mart_survival_summary"] = s.assign(album=s["album"].replace({"Album Two": "Live 2019-05-01"}))
     with pytest.raises(policy.PolicyError, match="date more precise than a year"):
-        build.build_site(marts, tmp_path / "site", built_on=date(2026, 9, 24), origin=ORIGIN, bands=tuple(BANDS))
+        build.build_site(marts, tmp_path / "site", built_on=date(2026, 9, 24), origin=ORIGIN, bands=tuple(BANDS),
+                         fill_missing=findings_fill)

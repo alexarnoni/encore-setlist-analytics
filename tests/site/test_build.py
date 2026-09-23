@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from encore.site import bands, build, i18n
-from tests.site.conftest import BUILT_ON, ORIGIN, parse
+from tests.site.conftest import BUILT_ON, ORIGIN, findings_fill, parse
 from tests.site.fixtures import BANDS, fake_marts
 
 FIXED = ["", "comparison/", "methodology/", "about/"]
@@ -115,4 +115,4 @@ def test_missing_translation_key_fails_the_build(tmp_path: Path) -> None:
         (tmp_path / "loc" / f"{locale}.yml").write_text(yaml.safe_dump(nested, allow_unicode=True), encoding="utf8")
     with pytest.raises(i18n.LocaleError, match="footer.source"):
         build.build_site(fake_marts(), tmp_path / "out", built_on=BUILT_ON, origin=ORIGIN,
-                         locales_dir=tmp_path / "loc", bands=tuple(BANDS))
+                         locales_dir=tmp_path / "loc", bands=tuple(BANDS), fill_missing=findings_fill)
