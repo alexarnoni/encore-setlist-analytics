@@ -4,7 +4,7 @@ Tracks `docs/specs/spec-03-rotation-survival.md` (rotation and song survival).
 Same discipline as spec 01 and 02a: small tasks, one commit each, results
 recorded here.
 
-> **STATUS: T0-T10 done (2026-09-23). T11-T13 not started — see section 11
+> **STATUS: T0-T10, T13 done (2026-09-23). T11-T12 not started — see section 11
 > for exactly where to pick up.** Work happens only on the branch
 > `spec-03`, in the worktree `D:\projetos\encore-spec03`. T14 (merge and
 > real-data run) is explicitly on hold until the user asks for it. The
@@ -225,7 +225,7 @@ to Q1-Q9; the recommended defaults let work start without them.
 - [x] T10 `analyze` task and runner
 - [ ] T11 image with lifelines (arm64 checked)
 - [ ] T12 notebook
-- [ ] T13 documentation
+- [x] T13 documentation
 - [ ] T14 merge gate, full run, real-data sanity checks
 
 ## 8. Decisions log
@@ -752,8 +752,20 @@ expected to fail on real data, but worth watching once).
 
 ## 11. Handoff for the next session (2026-09-23)
 
-T0-T10 done and pushed to `origin/spec-03` (last commit: see `git log -1`).
-T11-T13 not started. T14 stays blocked until the user says to do it.
+T0-T10 and T13 done and pushed to `origin/spec-03` (last commit: see
+`git log -1`). T11-T12 not started. T14 stays blocked until the user says
+to do it.
+
+**T13 done (2026-09-23, commit `5920122`):** `docs/methodology.md`
+(rotation/core-song definitions, the full duration/abandonment/censoring
+convention, the Q4/Q5 jam and recording-only-without-year caveats),
+`dbt/README.md` (new "Running the `analyze` task" section, `tag:survival`
+split explained next to how `transform` is documented), root `README.md`
+(architecture diagram and prose now show `analyze` between `transform` and
+`cleanup_raw_setlistfm`), `docs/context/structure.md` (`src/encore/analysis/`
+added to the layout). Docs only, no code touched; fast unit test suite
+(151 passed, 14 skipped) re-run as a sanity check, not because docs could
+break it.
 
 ### Where things are right now
 
