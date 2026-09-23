@@ -2,11 +2,12 @@ import logging
 import shutil
 import subprocess
 import sys
+from unittest.mock import MagicMock
 
 import pytest
 
 from encore import dbt_runner
-from encore.dbt_runner import DbtError, dbt_binary, run_dbt, run_transform
+from encore.dbt_runner import DbtError, dbt_binary, run_analyze, run_dbt, run_transform
 
 @pytest.fixture(autouse=True)
 def _no_real_report(monkeypatch):
@@ -68,7 +69,7 @@ def test_run_transform_runs_seed_run_test_in_order(monkeypatch):
 
     run_transform()
 
-    assert calls == [("seed", "--full-refresh"), ("run",), ("test",)]
+    assert calls == [("seed", "--full-refresh"), ("run",), ("test", "--exclude", "tag:survival")]
 
 
 def test_run_transform_stops_at_the_first_failing_step(monkeypatch):
@@ -181,7 +182,7 @@ def test_run_transform_logs_the_version_before_any_dbt_step(monkeypatch):
 
     run_transform()
 
-    assert events == ["version", ("seed", "--full-refresh"), ("run",), ("test",)]
+    assert events == ["version", ("seed", "--full-refresh"), ("run",), ("test", "--exclude", "tag:survival")]
 
 
 # --- diagnostic report after dbt test --------------------------------------
@@ -206,16 +207,17 @@ def test_report_runs_after_dbt_test(monkeypatch):
 
     run_transform()
 
-    assert events == ["version", ("seed", "--full-refresh"), ("run",), ("test",), "report"]
+    assert events == ["version", ("seed", "--full-refresh"), ("run",), ("test", "--exclude", "tag:survival"), "report"]
 
 
 def test_report_still_runs_when_dbt_test_fails_and_the_error_propagates(monkeypatch):
-    events = _record_calls(monkeypatch, fail_on=("test",))
+    test_step = ("test", "--exclude", "tag:survival")
+    events = _record_calls(monkeypatch, fail_on=test_step)
 
     with pytest.raises(DbtError):
         run_transform()
 
-    assert events[-2:] == [("test",), "report"]
+    assert events[-2:] == [test_step, "report"]
 
 
 @pytest.mark.parametrize("failing", [("seed", "--full-refresh"), ("run",)])
@@ -226,5 +228,65 @@ def test_report_is_skipped_when_seed_or_run_fails(monkeypatch, failing):
         run_transform()
 
     assert "report" not in events
-    assert ("test",) not in events
+    assert ("test", "--exclude", "tag:survival") not in events
 
+
+# --- run_analyze: survival marts, then the tag:survival dbt tests ----------
+
+
+def test_run_analyze_writes_marts_then_runs_the_survival_tagged_tests(monkeypatch):
+    import encore.db as encore_db
+
+    events: list = []
+    fake_conn = MagicMock()
+
+    def fake_write(conn):
+        assert conn is fake_conn
+        events.append("write")
+        return (3, 4, 5)
+
+    monkeypatch.setattr("encore.analysis.io.write_survival_marts", fake_write)
+    monkeypatch.setattr(encore_db, "get_connection", lambda: fake_conn)
+    monkeypatch.setattr(dbt_runner, "run_dbt", lambda command, **_: events.append(tuple(command)))
+
+    run_analyze()
+
+    assert events == ["write", ("test", "--select", "tag:survival")]
+    fake_conn.close.assert_called_once()
+
+
+def test_run_analyze_closes_the_connection_even_if_writing_fails(monkeypatch):
+    import encore.db as encore_db
+
+    closed = []
+
+    class FakeConn:
+        def close(self):
+            closed.append(True)
+
+    def fake_write(conn):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr("encore.analysis.io.write_survival_marts", fake_write)
+    monkeypatch.setattr(encore_db, "get_connection", lambda: FakeConn())
+    monkeypatch.setattr(dbt_runner, "run_dbt", lambda command, **_: pytest.fail("dbt should not run"))
+
+    with pytest.raises(RuntimeError, match="boom"):
+        run_analyze()
+
+    assert closed == [True]
+
+
+def test_run_analyze_propagates_a_failing_survival_test(monkeypatch):
+    import encore.db as encore_db
+
+    monkeypatch.setattr("encore.analysis.io.write_survival_marts", lambda conn: (0, 0, 0))
+    monkeypatch.setattr(encore_db, "get_connection", lambda: type("C", (), {"close": lambda self: None})())
+
+    def failing_run_dbt(command, **_):
+        raise DbtError(command, 1)
+
+    monkeypatch.setattr(dbt_runner, "run_dbt", failing_run_dbt)
+
+    with pytest.raises(DbtError):
+        run_analyze()

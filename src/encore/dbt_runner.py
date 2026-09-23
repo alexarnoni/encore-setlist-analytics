@@ -33,11 +33,21 @@ _FINGERPRINT_SKIP_FILES = frozenset({".user.yml"})
 # a plain `dbt seed` only truncates and reloads an existing table and never
 # adds a column: after a seed gained a column it would "load" fine (0 rows
 # when the seed is header-only) yet leave the table without it.
+#
+# The test step excludes tag:survival (spec-03 design decision D1): those
+# tests cover analytics.mart_song_survival/mart_survival_curves/
+# mart_survival_summary, which the `analyze` task writes AFTER `transform` —
+# on a fresh database they don't exist yet when this step runs, and even once
+# they do, testing last run's content here would be pointless.
+# `SURVIVAL_TEST_SELECTOR`/`run_analyze` below cover them once `analyze` has
+# written this run's content.
 TRANSFORM_STEPS: tuple[tuple[str, ...], ...] = (
     ("seed", "--full-refresh"),
     ("run",),
-    ("test",),
+    ("test", "--exclude", "tag:survival"),
 )
+
+SURVIVAL_TEST_SELECTOR: tuple[str, ...] = ("test", "--select", "tag:survival")
 
 
 class DbtError(RuntimeError):
@@ -174,3 +184,35 @@ def run_transform(*, executable: str | None = None) -> None:
         # Skipped if seed/run failed: the views may not be consistent.
         # Best effort and log-only; see encore.transform_report.
         log_transform_report()
+
+
+def run_analyze(*, executable: str | None = None) -> None:
+    """
+    Run the survival analysis (spec-03 Part B), between `transform` and
+    `cleanup_raw_setlistfm`: writes analytics.mart_song_survival /
+    mart_survival_curves / mart_survival_summary directly (design decision
+    D4 — not a dbt model), then runs the dbt tests tagged `survival` against
+    what was just written.
+
+    Reads intermediate.int_show_song_sets and intermediate.int_performances,
+    views over this run's raw setlist.fm data, so this must run while
+    `raw_setlistfm` still has it — the same window `transform` has, and
+    before `cleanup_raw_setlistfm`.
+
+    Either step raising propagates: the caller (the `analyze` Airflow task)
+    is responsible for turning that into a failed task. `cleanup_raw_setlistfm`
+    and `log_run` have `trigger_rule=all_done`, so they still run either way.
+    """
+    from encore.analysis.io import write_survival_marts
+    from encore.db import get_connection
+
+    conn = get_connection()
+    try:
+        song_rows, curve_rows, summary_rows = write_survival_marts(conn)
+        logger.info(
+            "Survival marts written: %d song rows, %d curve rows, %d summary rows",
+            song_rows, curve_rows, summary_rows,
+        )
+    finally:
+        conn.close()
+    run_dbt(SURVIVAL_TEST_SELECTOR, executable=executable)
