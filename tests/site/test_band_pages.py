@@ -25,10 +25,10 @@ def test_every_band_page_has_its_sections_and_charts(built_site: Path, index: in
 
 def test_band_header_chips_come_from_the_marts(built_site: Path) -> None:
     text = text_of(built_site, "en", "bands/muse/").text
-    assert "1994–2004" in text and "70 shows" in text and "92.9% matched to the catalog" in text
-    assert "median survival: 154 shows" in text
+    assert "1994–2004" in text and "70 shows" in text and "92.9% of songs played matched to MusicBrainz" in text
+    assert "half of the songs have left the setlist after 154 shows (median survival)" in text
     pt = text_of(built_site, "pt", "bands/muse/").text
-    assert "92,9% reconhecidas no catálogo" in pt and "sobrevivência mediana: 154 shows" in pt
+    assert "92,9% das músicas tocadas reconhecidas no MusicBrainz" in pt and "metade das músicas deixou o setlist após 154 shows (sobrevivência mediana)" in pt
 
 
 def test_album_table_matches_the_marts(built_site: Path) -> None:

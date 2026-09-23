@@ -545,3 +545,31 @@ untrue, and `pytest tests/site/test_findings.py` (real marts) says so before you
    by a test, and the real-data test asserts the overlap facts behind "substantially different" and
    "nearly the same". 308 passed, 14 skipped. Real build: 23 files, policy and link checks pass; all
    22 content pages fit at 375px with the caveats expanded.
+
+### Plain-language pass (2026-09-23)
+
+Wording only; no figure, claim or caveat changed, and every number is still a placeholder.
+1. **The lede says what the data is first:** what the bands played at their concerts night after
+   night across their careers (the setlist), that setlist.fm is filled in by fans and MusicBrainz
+   provides the discography, and only then the three things measured (three sentences; the "how it
+   is built" pointer moved to a small note). Each band page opens with a one-line intro of the same
+   kind and the comparison page's lede does too.
+2. **Each metric is explained in concert terms before its name:** the kickers and section headings read
+   "how old the songs are" / "how much shows change" / "how long songs last" first and the metric name
+   after a colon; the numbers paragraphs start "Repertoire age is how old the songs played on a given
+   night were...", "Rotation is how much the songs change from one concert to the next...",
+   "Survival is how long a song keeps being played at concerts after its live debut..."; the band
+   pages gloss rotation and repertoire age at first mention and the median-survival chip reads
+   "half of the songs have left the setlist after N shows (median survival)".
+3. **Discography vs MusicBrainz:** the band's own songs are the "discography" (EN and PT), the matching
+   metric is "matched to / reconhecidas no MusicBrainz"; the word "catalog"/"catálogo" no longer
+   appears anywhere on the site (guarded by a test).
+4. **"Censored"** carries an inline gloss in the table label ("Censored (still played, or came back)",
+   "Censuradas (ainda tocadas, ou que voltaram)") and in the caveat that uses it; a test rejects the word
+   without a gloss.
+5. **"Performances" / "execuções"** faces the reader only on the methodology page (and its table, with
+   a gloss); elsewhere it is "how often each song was played" / "as músicas tocadas".
+6. **Finding 01's hero label** is now "years off Metallica's setlist in 2023, the year of 72 Seasons"
+   and the before and after values (32.3 to 25.4) moved into the numbers paragraph.
+Tests: 159 in `tests/site` (new: lede order, metrics in concert terms, discography/MusicBrainz
+distinction, censored gloss, performances confined to the methodology page, short hero label).

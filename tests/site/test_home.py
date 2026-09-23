@@ -18,7 +18,7 @@ def test_hero_stats_and_the_three_layers_render(built_site: Path) -> None:
     text = text_of(built_site, "en", "").text
     # The fixture has no 2022/2023 Metallica data and no Morning Glory album, so the figures the findings quote
     # from real data are the stand-in "0"; the structure around them is what is checked.
-    assert "years off Metallica's average repertoire age in 2023" in text
+    assert "years off Metallica's setlist in 2023, the year of 72 Seasons" in text
     assert "eligible songs of (What's the Story) Morning Glory? are still played after 0 shows" in text
     assert "500 shows after a song's live debut" in text  # the Oasis horizon figure is in the numbers
     pt = text_of(built_site, "pt", "").text
