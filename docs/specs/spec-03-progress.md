@@ -220,7 +220,7 @@ to Q1-Q9; the recommended defaults let work start without them.
 - [x] T5 `mart_band_rotation_by_year`
 - [x] T6 survival core + unit tests
 - [x] T7 Kaplan-Meier curves and summary
-- [ ] T8 database I/O and the three marts
+- [x] T8 database I/O and the three marts
 - [ ] T9 dbt sources, tests, forbidden columns
 - [ ] T10 `analyze` task and runner
 - [ ] T11 image with lifelines (arm64 checked)
@@ -516,3 +516,69 @@ Full suite: 135 passed, 10 skipped (the `tests/spec03` DB-level tests, opt-in).
 in-memory `SongSurvival` lists; reading `int_show_song_sets` and the catalog
 from the database, and writing `mart_song_survival` /
 `mart_survival_curves` / `mart_survival_summary`, is T8.
+
+### T8 — database I/O and the three survival marts (done)
+
+`src/encore/analysis/io.py`: `fetch_show_appearances` (from
+`intermediate.int_show_song_sets`), `fetch_performance_counts` (matched,
+dated performances per band/song from `intermediate.int_performances` — the
+same population as the show sets, so eligibility and appearances agree),
+`fetch_catalog` (from `intermediate.int_song_catalog`); `ensure_tables`
+(idempotent `CREATE TABLE IF NOT EXISTS` for all three marts, same style as
+`ops.ensure_tables`); `compute_marts_from_data` (pure: appearances +
+performance counts + catalog -> the three marts' rows, no DB); `compute_all_marts`
+(fetches then delegates to the pure function); `write_survival_marts`
+(ensures tables, computes, then DELETE + INSERT for all three tables inside
+one try block, `conn.rollback()` and re-raise on any failure — design
+decision D4: a failed run leaves the previous content in place, and this is
+what makes a rerun idempotent). `src/encore/analysis/__main__.py`:
+`python -m encore.analysis`, the entry point T10's `analyze` task will call;
+lets any exception propagate for the caller to turn into a failed task.
+`mart_song_survival` uses window N=50 specifically for its own
+`duration_shows_n50`/`event_n50`/`returned_after_abandonment` columns (the
+"headline" single-window view — design choice recorded back in T7); the
+curves/summary marts carry every window in `WINDOWS`. `debut_year`/`last_year`
+are read from the real show dates at the debut/last show index (T7/T8 never
+had year information; added `_show_years_by_index`, reusing
+`band_show_index` so it can't disagree with the indices `compute_survival`
+used) — years only, no dates, per requirement 7.
+**Verified.** 20 unit tests in `tests/test_analysis_io.py`: the three
+`fetch_*` functions and `ensure_tables` against a mocked connection (same
+style as `tests/test_ops.py`); `compute_marts_from_data` covered directly
+(no DB) for: correct shape and window-50 values, debut/last year computed
+from real dates rather than the index (crosses a year boundary at week 55);
+album grouping produces `all` + the real album + `non-album` for a
+recording-only dated song; a band with no eligible songs produces nothing
+for any of the three marts; two bands stay separate; `write_survival_marts`
+deletes-inserts-commits on success, rolls back and re-raises on failure
+(`execute_values` is a real psycopg2 function that chokes on a bare
+`MagicMock` cursor — mocked it directly in these two tests rather than
+fighting that), and skips INSERT entirely when there is nothing to insert.
+**Mutations:** 4 tried, 1 initially uncaught — changing `SONG_MART_WINDOW`
+from 50 to 25 passed every test, because my scenarios happened to give the
+same outcome at both windows. Added
+`test_song_mart_uses_window_50_specifically_not_some_other_window` (a
+40-show history where window 25 is a clean abandonment and window 50 is
+censored — window 50 doesn't even have 50 remaining shows to check); the
+mutation now fails it. The other three (debut/last year swapped, the
+rollback removed, and skipping the "no outcomes" `continue`) were each
+caught immediately. All restored, `io.py` `diff` clean.
+**arm64 check for T11 (done ahead of schedule, per your request):**
+downloaded (not installed) the exact wheels `pip` would resolve for
+`cp312`/`manylinux2014_aarch64` (and the newer `manylinux_2_17`/`_2_24`/
+`_2_26`/`_2_27`/`_2_28` variants pip actually offers) for every package
+`lifelines` pulls in that isn't already part of the base image:
+`lifelines`, `autograd`, `autograd-gamma`, `formulaic`, `interface-meta`
+(all pure-Python `py3-none-any` wheels — architecture is irrelevant) and
+the compiled ones matplotlib needs — `matplotlib`, `pillow`, `contourpy`,
+`fonttools`, `kiwisolver` (`cycler`, `pyparsing`, `python-dateutil`, `six`
+are pure Python too) — every one of them has a real `cp312`-`aarch64`
+manylinux wheel. Also re-confirmed the exact pinned `numpy==2.5.3`,
+`scipy==1.18.1`, `pandas==3.0.5` (from the Airflow 3.3.2 constraints file)
+each have one too. **No source build risk on the aarch64 VM; `lifelines`
+does not need to be replaced with the hand-written estimator.** T11 can
+proceed as planned: add it to `airflow/requirements.txt` (and the root
+`requirements.txt` for the notebook), rebuild `encore-airflow:spec-03`, and
+this check becomes moot once the real build succeeds on the branch image.
+**Still not wired to real data end to end**, and not yet dbt-documented or
+tested (T9), not yet called from the DAG (T10).
