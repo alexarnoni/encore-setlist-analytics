@@ -35,7 +35,14 @@ without it, fully inside the history (`internal gap >= N`, or `total_shows
 - last_index >= N` at the tail). Only the **first** such gap counts as the
 abandonment event; if the song reappears afterward it is flagged
 `returned_after_abandonment`, but the survival duration and event/censoring
-status are not changed. A song with no such gap by the end of the history
+status are not changed. Consequence, seen in the first real run: a song that
+is still played today but was once absent for N shows (a classic dropped for a
+tour and brought back) is an abandonment event, not a censored song, with the
+duration measured up to that first gap. Among debut-album songs played in
+2025 or later, 3 of 3 (Metallica, Kill 'Em All), 5 of 6 (Oasis, Definitely
+Maybe) and 3 of 7 (Linkin Park, Hybrid Theory) are events flagged
+`returned_after_abandonment`. Read `returned_after_abandonment` together with
+the survival curves. A song with no such gap by the end of the history
 is censored, matching the product rule ("censored if fewer than N shows
 remain").
 
@@ -92,4 +99,7 @@ it comes from, only more loosely:
   which is created active, not paused (retention was 14 days in spec-01 and
   was shortened on 2026-09-21);
 - only aggregated results in `analytics` are persisted and published, as
-  before. Song titles never reach the marts.
+  before. Setlist.fm titles never reach the marts. The one mart with a song
+  column, `mart_song_survival`, carries the canonical MusicBrainz title of
+  catalog songs (aggregation by song, allowed by `product.md`), never the raw
+  setlist.fm text.

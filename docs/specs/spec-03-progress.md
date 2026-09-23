@@ -4,7 +4,7 @@ Tracks `docs/specs/spec-03-rotation-survival.md` (rotation and song survival).
 Same discipline as spec 01 and 02a: small tasks, one commit each, results
 recorded here.
 
-> **STATUS: T0-T13 done (2026-09-23). Only T14 (on hold) remains — see section 11
+> **STATUS: T0-T14 done (2026-09-23), merged to master. Nothing on hold — see section 11
 > for exactly where to pick up.** Work happens only on the branch
 > `spec-03`, in the worktree `D:\projetos\encore-spec03`. T14 (merge and
 > real-data run) is explicitly on hold until the user asks for it. The
@@ -226,7 +226,7 @@ to Q1-Q9; the recommended defaults let work start without them.
 - [x] T11 image with lifelines (arm64 checked)
 - [x] T12 notebook
 - [x] T13 documentation
-- [ ] T14 merge gate, full run, real-data sanity checks
+- [x] T14 merge gate, full run, real-data sanity checks (sanity check 2 deviates, explained)
 
 ## 8. Decisions log
 
@@ -794,6 +794,62 @@ one band, no abandonment events), so the curves are flat at 1.0 there; the
 layout, not the numbers, is what this preview validates. The committed file has
 0 outputs and 0 execution counts. The optional executed HTML in `reports/` was
 skipped (it would only show synthetic data); generate it after the real run.
+
+### T14 — merge, full run, acceptance (done 2026-09-23)
+
+- **Budget before the run:** 0 setlist.fm requests logged for 2026-09-23 (UTC),
+  estimate 481, DAG ceiling 1300. Run used **479** requests, 0 MusicBrainz
+  (cached).
+- **Merge:** `master` was an ancestor of `spec-03`, so a fast-forward (no
+  merge commit). Main image rebuilt as `encore-airflow:3.3.2` (id
+  `fd2272134af9`, dbt project commit `5920122`), containers recreated, DAG
+  imported cleanly, `lifelines` 0.30.0 present. DAG paused again after the run.
+- **Run** `manual__2026-09-23T15:17:26`: all tasks success in order
+  (transform 15:29-15:32, analyze 15:32:23-15:32:43, cleanup, log_run);
+  `ops.pipeline_runs` status `success`; `raw_setlistfm` empty (0 setlists) after
+  the run. Per band setlists: Muse 1722, Oasis 958, Metallica 2192, Linkin Park
+  1042, Arctic Monkeys 1095, Avenged Sevenfold 1408, Twenty One Pilots 1083.
+- **Tests:** transform `dbt test` PASS=131 WARN=2 ERROR=0, including
+  `assert_marts_reconcile_with_int_performances` PASS; the 2 warns are the
+  known 457 recordings without a release year. analyze wrote 664 song / 3548
+  curve / 219 summary rows and `dbt test --select tag:survival` PASS=34, including
+  `assert_song_survival_reconciles_with_int_performances` PASS.
+- **Sanity 1 (Metallica rotation above Muse in recent tours): OK.** Metallica
+  M72 World Tour (2023-2026) 0.750; Muse recent tours 0.132-0.287. By year
+  (2023): Metallica 0.871, Muse 0.177.
+- **Sanity 2 (debut-album songs still played are censored with very long
+  durations): DEVIATES, explained.** Durations are long (debut-album median
+  161-334 shows for Metallica, Oasis, Muse, Linkin Park, Arctic Monkeys), but
+  most songs still played today are abandonment events, not censored, because
+  only the *first* 50-show gap counts (decision Q2) and they returned after it
+  (`returned_after_abandonment`). Genuinely censored songs do have very long
+  durations (Metallica 19 censored, mean 830 shows). Avenged Sevenfold and
+  Twenty One Pilots have short debut-album durations (mean 57 and 45): early,
+  little-played albums. Documented in `docs/methodology.md`; changing the rule
+  (for example counting the *last* gap, or treating returns as censoring) is a
+  decision for the owner, not made here.
+- **Sanity 3 (N = 25/50/100 differ but not drastically):** mostly yes (medians
+  for `all`, e.g. Metallica 121/152/196, Muse 133/172/192, Oasis 105/115/122);
+  larger jumps for Avenged Sevenfold (81/87/174) and Twenty One Pilots
+  (102/150/245).
+- **analyze failure path — SIMULATED, not real.** The real run succeeded, so
+  the failure path was checked in isolation instead: the real `encore_pipeline`
+  DAG object run in-process with `dag.test()` in a throwaway container (private
+  sqlite Airflow metadata, `spec03-postgres`, external I/O stubbed, `run_analyze`
+  made to raise). Result: `analyze` failed, `cleanup_raw_setlistfm` ran
+  (`truncate_all` called at start and at cleanup) and `log_run` ran and wrote
+  `status = failed`; the control run without injection wrote `success`. Note the
+  DagRun itself reports `success` because its leaf task `log_run`
+  (`all_done`) succeeds, the same as for a `transform` failure since spec-02a:
+  read `ops.pipeline_runs.status`, not the DagRun state. Script:
+  `failure_path.py` was kept in the session scratchpad only.
+- **Numbers per band** (N = 50, catalog songs, `album = all`): songs /
+  abandoned / censored / median shows: Arctic Monkeys 90/70/20/152, Avenged
+  Sevenfold 71/54/17/87, Linkin Park 98/70/28/141, Metallica 107/88/19/152, Muse
+  125/99/26/172, Oasis 80/72/8/115, Twenty One Pilots 93/62/31/150. Rotation
+  (mean Jaccard rotation weighted by pairs, all years): Arctic Monkeys 0.149,
+  Avenged Sevenfold 0.241, Linkin Park 0.174, Metallica 0.239, Muse 0.239, Oasis
+  0.098, Twenty One Pilots 0.209; 165 scored tours, all in [0, 1].
 
 ## 11. Handoff for the next session (2026-09-23)
 
