@@ -439,3 +439,95 @@ calendar-day reset would allow any time. The run costs about 481 requests.
   and kept the 6-day one; the probe was then removed. Final state:
   `log_cleanup` active, `encore_pipeline` paused. pytest 83 passed.
 
+### Bug found and fixed before today's run (2026-09-22)
+
+`check_api_budget` failed immediately: "Projected setlist.fm requests today
+(1495 = 1012 already logged + 483 estimated) would exceed the daily budget of
+1300." Real usage today was 0 (confirmed via `finished_at::date`). Cause:
+`ops.sum_setlistfm_requests_today()` filters on `started_at`, and for a DAG
+run started with `airflow dags test <date>`, `started_at` is the **logical
+date passed on the command line**, not the real wall clock — a quirk already
+noted after item 22 as "cosmetic". During yesterday's verification I ran
+`airflow dags test encore_pipeline 2026-09-22/2026-09-23/2026-09-24` (picking
+unused future logical dates so as not to collide with real runs), which left
+3 rows in `ops.pipeline_runs` with `started_at` on those future dates —
+today, that placed 1,012 of yesterday's real requests inside "today"'s
+window. **Not cosmetic after all: it can block a legitimate run.**
+Fix applied: `update ops.pipeline_runs set started_at = finished_at where
+started_at::date <> finished_at::date` (4 rows, all mine from yesterday's
+testing) — corrects the date without deleting any row or request count.
+Today's logged total is 0 again. **Follow-up to consider:** `check_api_budget`
+should compare against `finished_at` (or the DAG run's real `logical_date`
+under its normal `@monthly` schedule, not a manually-supplied test date), so
+a test run's logical date can never again collide with a later real day. Not
+fixed now; flagged for the project owner.
+
+### Full 7-band run, 2026-09-22 — checklist completed
+
+Same-day sequence: rebuilt the image at HEAD `9f84a4c` (the running one was
+stale, `commit=262af17-dirty`, from before yesterday's retention change —
+caught before running anything real). First attempt (`airflow dags test
+encore_pipeline 2026-09-26`) failed at `check_api_budget`: "Projected
+requests today (1495 = 1012 already logged + 483 estimated) would exceed
+1300." **Bug found and fixed** (see `spec-02a-followup-progress.md`,
+"Bug found and fixed before today's run"): `sum_setlistfm_requests_today()`
+filters on `started_at`, which for `airflow dags test <date>` is the logical
+date on the command line, not the wall clock; three rows from yesterday's
+testing had future logical dates (`2026-09-22/23/24`) that landed inside
+today's window. Corrected `started_at = finished_at` for the 4 mis-dated rows
+(no request counts changed); today's logged total went back to 0. Re-ran with
+logical date `2026-09-22` (today, for real): **success**, all 14 tasks ok,
+`raw_setlistfm` 0 / 0 / 0, 481 setlist.fm requests, dbt seed 3/3, run 14/14,
+**test 92 pass + 2 warn** (the two by-design NULL-year warnings, both smaller
+than before: 457 songs, down from catalog rows including the fixed song).
+
+**Reconciliation:** `assert_marts_reconcile_with_int_performances` PASS,
+`assert_no_undated_performances_left_out_of_marts` PASS.
+
+**Let There Be Love:** `release_year=2005, album_year=2005,
+recording_year=2001, release_year_fixed=true`. Audit list: 0 rows.
+
+**`aged_performances` share per band** (the real answer to the
+follow-up-3 question, replacing yesterday's upper-bound estimate):
+
+| Band | Performances | Matched | Aged | Matched w/o year |
+|---|---|---|---|---|
+| Muse | 23,334 | 23,094 | 22,931 | 0.70% |
+| Arctic Monkeys | 15,945 | 15,861 | 15,838 | 0.14% |
+| Linkin Park | 16,886 | 16,464 | 16,464 | 0.00% |
+| Metallica | 34,019 | 34,016 | 34,015 | 0.00% |
+| Avenged Sevenfold | 10,756 | 10,628 | 10,628 | 0.00% |
+| Twenty One Pilots | 16,722 | 16,545 | 16,545 | 0.00% |
+| Oasis | 11,969 | 11,968 | 11,968 | 0.00% |
+
+**No band exceeds 2%** (the highest is Muse at 0.70%). This is much lower than
+the 3.1-13.1% upper bounds reported yesterday (`match_rate_by_performance -
+match_rate_by_album`, which conflated "no album" with "no year"): most
+recording-only songs turn out to have a usable release year from their
+earliest MusicBrainz recording. **Decision this answers (R3-3 / follow-up-3):
+recordings without a release date stay in the catalog** — excluding them
+would only affect a handful of songs (all recording-only, undated), well
+under any reasonable threshold, and 6 of 7 bands are unaffected entirely.
+
+**Match rates per band** (`match_rate_by_performance` / `match_rate_by_album`):
+Oasis 0.9999/0.8689, Metallica 0.9999/0.9364, Arctic Monkeys 0.9947/0.9511,
+Muse 0.9897/0.9313 (2 years below 0.90: the known 1994-95 limitation),
+Twenty One Pilots 0.9894/0.9462, Avenged Sevenfold 0.9881/0.9572, Linkin Park
+0.9750/0.9149. No band below 0.90 overall.
+
+**The two lists per band** (task log only; the full run log,
+`run_final2.log`, has been **deleted** after this summary was written, per
+the checklist). Top undated-catalog-song and top-unmatched-title, by band:
+
+- **Arctic Monkeys** — undated: *Sandtrap* (23, recording). Unmatched: *Drawbridge* (59), *Little Illusion Machine (Wirral Riddler)* (13), *Put Me in a Terror Pocket* (10), plus 2 singles.
+- **Avenged Sevenfold** — undated: none. Unmatched: *Band Jam Session* (105), *Drum Solo* (21), 2 singles.
+- **Linkin Park** — undated: none. Unmatched: *Joe Hahn Solo* (170), *Remember the Name* (151 — a real song not yet in the catalog), *Mashup Intro #2* (48), *It's Goin' Down* (40), *Mashup Intro #1* (12), 1 single.
+- **Metallica** — undated: *Are You Gonna Go My Way* (1, recording — a cover, oddly catalogued). Unmatched: 3 one-off covers (*Beat It*, *Seven Nation Army*, *Smells Like Teen Spirit*).
+- **Muse** — undated: *Munich Jam* (163, recording). Unmatched: 20 entries, almost all jams/soundchecks by city name (*Monty Jam* 103, *Houston Jam* 53, *MK Jam* 19, *Osaka Jam* 15, ...) plus a few real-looking titles (*Weakening Walls* 6, *Cut Me Down* 3, *Small Minded* 3) that may be legitimate rarities missing from the catalog.
+- **Oasis** — undated: none. Unmatched: *Chipper S.O.B.* (1, the one known from spec-02a).
+- **Twenty One Pilots** — undated: none. Unmatched: covers dominate — *Home* (40), *I Can See Clearly Now* (40), *My Girl* (39), *Stolen Dance* (21), *Careless Whisper* (5), plus one-offs.
+
+**Follow-up spotted, not fixed:** `check_api_budget` should compare against
+`finished_at` (or a real DAG-run `logical_date` under the `@monthly` schedule)
+rather than a manually supplied test date, so a future test run can't collide
+with a later real day again. Flagged in `spec-02a-followup-progress.md`.
