@@ -34,5 +34,5 @@ def test_median_survival_table_is_in_band_order(built_site: Path) -> None:
 
 def test_portuguese_page_uses_portuguese_words_and_numbers(built_site: Path) -> None:
     text = text_of(built_site, "pt", "comparison/")
-    assert "Sobrevivência mediana por banda" in text.text
+    assert "Quanto tempo as músicas duram: sobrevivência mediana por banda" in text.text
     assert any(r and r[0] == "Ano" for r in text.rows)

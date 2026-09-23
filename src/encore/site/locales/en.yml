@@ -1,6 +1,6 @@
 site:
   name: encore
-  tagline: How bands use their own catalog in live shows
+  tagline: How bands use their own discography in live shows
   description: Repertoire age, rotation and song survival for seven bands, built from aggregated setlist data.
 nav:
   label: Main
@@ -26,7 +26,7 @@ status:
 footer:
   setlistfm: Setlist data from
   setlistfm_note: aggregated; individual setlists are not stored or shown.
-  musicbrainz: Catalog data from
+  musicbrainz: Discography data from
   musicbrainz_license: (CC0).
   source: Source code
 skip:
@@ -34,42 +34,43 @@ skip:
 redirect:
   text: "Choose a language:"
 home:
-  kicker: how bands use their own catalog
-  title: How bands use their own catalog
-  lede: "Encore measures how seven bands use their own catalog on stage: how old their setlists are, how much they change from night to night, and how long a song lasts. Every number comes from aggregated setlist data; how it is built is on the methodology page."
+  kicker: how bands use their own discography
+  title: How bands use their own discography
+  lede: "This site shows what seven bands played at their concerts, night after night, across their whole careers: the songs of each show, known as a setlist. The setlists come from setlist.fm, where fans fill them in, and the discography (albums, singles, release dates) comes from MusicBrainz. From that we measure three things: how old the songs a band plays are, how much its show changes from one night to the next, and how long a song keeps being played."
+  lede_note: "Every number comes from aggregated data; how it is built is on the methodology page."
   f1:
-    kicker: "01 repertoire age"
+    kicker: "01 how old the songs are"
     h: "After each of its last three albums, Metallica's setlist got younger for a while, then aged again."
-    stat_label: "years off Metallica's average repertoire age in 2023, the year of 72 Seasons: from {{ dip_metallica_72_seasons_before }} in 2022 to {{ dip_metallica_72_seasons_low }}"
-    numbers: "Metallica's average repertoire age fell by {{ dip_metallica_death_magnetic_size }} years around Death Magnetic (2008), {{ dip_metallica_hardwired_size }} around Hardwired… to Self-Destruct (2016) and {{ dip_metallica_72_seasons_size }} around 72 Seasons (2023), and climbed again within one to two years each time. Avenged Sevenfold's dipped by {{ dip_avenged_nightmare_size }} (Nightmare, 2010) and {{ dip_avenged_hail_to_the_king_size }} years (Hail to the King, 2013) but rose in 2016, the year of The Stage; Linkin Park's dipped by {{ dip_linkin_minutes_to_midnight_size }} (Minutes to Midnight, 2007) and {{ dip_linkin_a_thousand_suns_size }} years (A Thousand Suns, 2010) but rose in 2012, the year of Living Things. The pattern is clear for one band and only a hint for the other two."
+    stat_label: "years off Metallica's setlist in 2023, the year of 72 Seasons"
+    numbers: "Repertoire age is how old the songs played on a given night were, counted from each song's release. Metallica's average repertoire age fell from {{ dip_metallica_72_seasons_before }} years in 2022 to {{ dip_metallica_72_seasons_low }} in 2023, the year of 72 Seasons ({{ dip_metallica_72_seasons_size }} years less); around Death Magnetic (2008) and Hardwired… to Self-Destruct (2016) the falls were {{ dip_metallica_death_magnetic_size }} and {{ dip_metallica_hardwired_size }} years, and it climbed again within one to two years each time. Avenged Sevenfold's dipped by {{ dip_avenged_nightmare_size }} (Nightmare, 2010) and {{ dip_avenged_hail_to_the_king_size }} years (Hail to the King, 2013) but rose in 2016, the year of The Stage; Linkin Park's dipped by {{ dip_linkin_minutes_to_midnight_size }} (Minutes to Midnight, 2007) and {{ dip_linkin_a_thousand_suns_size }} years (A Thousand Suns, 2010) but rose in 2012, the year of Living Things. The pattern is clear for one band and only a hint for the other two."
     caveats:
       1: "A dip that coincides with an album release does not show that the release caused it: touring and setlist choices also move this number."
       2: "Album release years come from MusicBrainz and were added to this text by hand; the data behind the charts does not carry them."
       3: "Metallica's average repertoire age before, at the low point and after each dip: {{ dip_metallica_death_magnetic_before }} → {{ dip_metallica_death_magnetic_low }} → {{ dip_metallica_death_magnetic_after }} (2007, 2009, 2010), {{ dip_metallica_hardwired_before }} → {{ dip_metallica_hardwired_low }} → {{ dip_metallica_hardwired_after }} (2015, 2018, 2019) and {{ dip_metallica_72_seasons_before }} → {{ dip_metallica_72_seasons_low }} → {{ dip_metallica_72_seasons_after }} (2022, 2023, 2025)."
     title: "Repertoire age by year: Metallica, Avenged Sevenfold and Linkin Park"
     desc: "Line chart of the average repertoire age by year for Metallica, Avenged Sevenfold and Linkin Park. The data table below lists every value."
-    caption: "Average repertoire age of the songs played in each year, weighted by performances."
+    caption: "Average repertoire age of the songs played in each year, weighted by how often each song was played."
   f2:
-    kicker: "02 rotation"
+    kicker: "02 how much shows change"
     h: "Most of these bands settled into playing nearly the same show every night; Metallica went the opposite way."
     lead_more: "On its latest tour Metallica played a substantially different set from one night to the next, where in its early years it played nearly the same songs every night."
-    numbers: "Comparing each band's first three years with enough shows to its last three, rotation fell for Arctic Monkeys ({{ arctic_monkeys_rot_first3 }} → {{ arctic_monkeys_rot_last3 }}), Oasis ({{ oasis_rot_first3 }} → {{ oasis_rot_last3 }}), Twenty One Pilots ({{ twenty_one_pilots_rot_first3 }} → {{ twenty_one_pilots_rot_last3 }}), Muse ({{ muse_rot_first3 }} → {{ muse_rot_last3 }}) and Avenged Sevenfold ({{ avenged_sevenfold_rot_first3 }} → {{ avenged_sevenfold_rot_last3 }}). It did not fall for Linkin Park ({{ linkin_park_rot_first3 }} → {{ linkin_park_rot_last3 }}) and it rose sharply for Metallica ({{ metallica_rot_first3 }} → {{ metallica_rot_last3 }}). Metallica's rotation was between {{ metallica_tour_kill_em_all_for_one_rotation }} (Kill 'Em All for One, 1983) and {{ metallica_tour_damaged_justice_rotation }} (Damaged Justice, 1988–1989) on its 1980s tours, {{ metallica_tour_world_magnetic_rotation }} on World Magnetic (2008–2010) and {{ metallica_tour_m72_world_tour_rotation }} on the M72 World Tour (2023–2026); by year it was {{ metallica_rot_2023 }} in 2023 and {{ metallica_rot_2024 }} in 2024. In song terms, two consecutive shows on the M72 World Tour had on average {{ metallica_tour_m72_world_tour_overlap }} of their combined songs in common, against {{ metallica_tour_damaged_justice_overlap }} to {{ metallica_tour_kill_em_all_for_one_overlap }} on its 1980s tours."
+    numbers: "Rotation is how much the songs change from one concert to the next: 0 means the same songs every night, 1 means none in common. Comparing each band's first three years with enough shows to its last three, rotation fell for Arctic Monkeys ({{ arctic_monkeys_rot_first3 }} → {{ arctic_monkeys_rot_last3 }}), Oasis ({{ oasis_rot_first3 }} → {{ oasis_rot_last3 }}), Twenty One Pilots ({{ twenty_one_pilots_rot_first3 }} → {{ twenty_one_pilots_rot_last3 }}), Muse ({{ muse_rot_first3 }} → {{ muse_rot_last3 }}) and Avenged Sevenfold ({{ avenged_sevenfold_rot_first3 }} → {{ avenged_sevenfold_rot_last3 }}). It did not fall for Linkin Park ({{ linkin_park_rot_first3 }} → {{ linkin_park_rot_last3 }}) and it rose sharply for Metallica ({{ metallica_rot_first3 }} → {{ metallica_rot_last3 }}). Metallica's rotation was between {{ metallica_tour_kill_em_all_for_one_rotation }} (Kill 'Em All for One, 1983) and {{ metallica_tour_damaged_justice_rotation }} (Damaged Justice, 1988–1989) on its 1980s tours, {{ metallica_tour_world_magnetic_rotation }} on World Magnetic (2008–2010) and {{ metallica_tour_m72_world_tour_rotation }} on the M72 World Tour (2023–2026); by year it was {{ metallica_rot_2023 }} in 2023 and {{ metallica_rot_2024 }} in 2024. In song terms, two consecutive shows on the M72 World Tour had on average {{ metallica_tour_m72_world_tour_overlap }} of their combined songs in common, against {{ metallica_tour_damaged_justice_overlap }} to {{ metallica_tour_kill_em_all_for_one_overlap }} on its 1980s tours."
     caveats:
-      1: "Rotation compares consecutive shows of the same tour, so a band that plays one fixed set on tour scores near 0 however large its catalog is."
+      1: "Rotation compares consecutive shows of the same tour, so a band that plays one fixed set on tour scores near 0 however large its discography is."
       2: "The data shows that Metallica changed, not why."
       3: "Linkin Park's last three years ({{ linkin_park_rot_last3_years }}) follow a gap with no shows in the data between {{ linkin_park_gap_from }} and {{ linkin_park_gap_to }}."
       4: "Years with fewer than {{ min_pairs }} pairs of consecutive shows are left out of the averages; the years behind each figure are listed on the band pages."
     cell_title: "{{ band }}: rotation by year"
     cell_desc: "Line chart of the rotation of {{ band }} by year, on a scale from 0 to 1."
   f3:
-    kicker: "03 song survival"
+    kicker: "03 how long songs last"
     h: "Some albums stay in the live set for a long time, while others fade fast."
     stat_label: "of the {{ oasis_album_whats_the_story_morning_glory_songs }} eligible songs of (What's the Story) Morning Glory? are still played after {{ oasis_album_whats_the_story_morning_glory_final_t }} shows"
-    numbers: "500 shows after a song's live debut, the share of a band's songs still in the setlist is {{ metallica_surv_500 }} for Metallica, {{ twenty_one_pilots_surv_500 }} for Twenty One Pilots, {{ avenged_sevenfold_surv_500 }} for Avenged Sevenfold, {{ muse_surv_500 }} for Muse, {{ arctic_monkeys_surv_500 }} for Arctic Monkeys, {{ oasis_surv_500 }} for Oasis and {{ linkin_park_surv_500 }} for Linkin Park. Within Oasis, (What's the Story) Morning Glory? lost {{ oasis_album_whats_the_story_morning_glory_abandoned }} of its {{ oasis_album_whats_the_story_morning_glory_songs }} songs, while Be Here Now lost {{ oasis_album_be_here_now_abandoned }} of {{ oasis_album_be_here_now_songs }}, with a median survival of {{ oasis_album_be_here_now_median }} shows."
+    numbers: "Survival is how long a song keeps being played at concerts after its live debut. 500 shows after a song's live debut, the share of a band's songs still in the setlist is {{ metallica_surv_500 }} for Metallica, {{ twenty_one_pilots_surv_500 }} for Twenty One Pilots, {{ avenged_sevenfold_surv_500 }} for Avenged Sevenfold, {{ muse_surv_500 }} for Muse, {{ arctic_monkeys_surv_500 }} for Arctic Monkeys, {{ oasis_surv_500 }} for Oasis and {{ linkin_park_surv_500 }} for Linkin Park. Within Oasis, (What's the Story) Morning Glory? lost {{ oasis_album_whats_the_story_morning_glory_abandoned }} of its {{ oasis_album_whats_the_story_morning_glory_songs }} songs, while Be Here Now lost {{ oasis_album_be_here_now_abandoned }} of {{ oasis_album_be_here_now_songs }}, with a median survival of {{ oasis_album_be_here_now_median }} shows."
     caveats:
       1: "Bands are compared 500 shows after a song's live debut because every band's curve reaches that point, and each figure there rests on at least {{ linkin_park_atrisk_500 }} songs still being followed. Where each curve ends is a per-band detail, not a ranking, since a longer career ends lower: Arctic Monkeys {{ arctic_monkeys_final }} after {{ arctic_monkeys_final_t }}, Oasis {{ oasis_final }} after {{ oasis_final_t }}, Linkin Park {{ linkin_park_final }} after {{ linkin_park_final_t }}, Twenty One Pilots {{ twenty_one_pilots_final }} after {{ twenty_one_pilots_final_t }}, Muse {{ muse_final }} after {{ muse_final_t }}, Metallica {{ metallica_final }} after {{ metallica_final_t }}, Avenged Sevenfold {{ avenged_sevenfold_final }} after {{ avenged_sevenfold_final_t }}."
       2: "Oasis's curve is nearly flat after 500 shows: {{ oasis_surv_500 }} at 500 shows and {{ oasis_final }} at {{ oasis_final_t }}."
-      3: "Dig Out Your Soul shows {{ oasis_album_dig_out_your_soul_final }} still played, but its curve stops at {{ oasis_album_dig_out_your_soul_final_t }} shows and covers only {{ oasis_album_dig_out_your_soul_songs }} songs: a short, censored curve that cannot settle whether those songs will stay."
+      3: "Dig Out Your Soul shows {{ oasis_album_dig_out_your_soul_final }} still played, but its curve stops at {{ oasis_album_dig_out_your_soul_final_t }} shows and covers only {{ oasis_album_dig_out_your_soul_songs }} songs: a short, censored curve (cut off while its songs are still being played) that cannot settle whether those songs will stay."
       4: "The end of any curve rests on the few songs still being followed, and follow-up is counted in shows, not years (see Methodology)."
     title: "Oasis: song survival by album"
     desc: "Kaplan-Meier curves of the share of Oasis songs still played after t shows, one per album. The data table below gives the share at 25, 50, 100, 200 and 400 shows."
@@ -80,21 +81,21 @@ home:
 comparison:
   kicker: seven bands, one scale
   title: Comparison
-  lede: The same measures for every band, on the same axes.
+  lede: "What seven bands played at their concerts, side by side, from the setlists on setlist.fm: how old the songs were, how much the shows changed from one night to the next and how long songs kept being played. The same measures and the same axes for every band."
   age:
-    h: Repertoire age by year
-    p: "Average number of years between a song's first release and the night it is played. A line that climbs is a band leaning on older material; a line that drops is a new album taking over the set."
+    h: "How old the songs were: repertoire age by year"
+    p: "How old the songs played on each night were, on average, counted from each song's release. A line that climbs is a band leaning on older material; a line that drops is a new album taking over the set."
     title: Repertoire age by year, all bands
     desc: "Line chart of average repertoire age by year for the seven bands. The data table below lists every value."
-    caption: "Average repertoire age of the songs played in each year, weighted by performances."
+    caption: "Average repertoire age of the songs played in each year, weighted by how often each song was played."
   rotation:
-    h: Rotation by year
+    h: "How much shows change: rotation by year"
     p: "How much a band changes its setlist from one show to the next within a tour. 0 is the same setlist every night; 1 is no song in common."
     title: Rotation by year, all bands
     desc: "Line chart of rotation by year for the seven bands. The data table below lists every value."
     caption: "Rotation between consecutive shows of the same tour, by year."
   survival:
-    h: Median survival by band
+    h: "How long songs last: median survival by band"
     p: "How many shows a song lasts in the live repertoire, counted from its live debut to its last appearance. The median is the number of shows after which half of a band's songs have been abandoned; it is not reached when fewer than half ever are."
     note: "Measured in shows, not in time (see Methodology): 50 shows cover a very different span for each band. Abandoned means the song left the setlist for at least 50 shows and did not return; censored means it is still played, or it returned."
 methodology:
@@ -104,21 +105,21 @@ methodology:
   scope:
     h: Scope and sources
     p:
-      1: "Encore follows {{ bands_count }} bands ({{ band_list }}), fixed for this version. Setlists (which songs were played at which shows) come from setlist.fm; the catalog (albums, singles, tracks and release dates) comes from MusicBrainz."
+      1: "Encore follows {{ bands_count }} bands ({{ band_list }}), fixed for this version. Setlists (which songs were played at which shows) come from setlist.fm; the discography (albums, singles, tracks and release dates) comes from MusicBrainz."
       2: "Everything here is computed from {{ shows_total }} shows and published only as aggregates: by band, tour, year and album."
   kpi:
     h: What the numbers mean
     item:
-      1: "<strong>Catalog match.</strong> A performance is matched when its title resolves to a song in the MusicBrainz catalog. The share of matched performances, weighted by how often each song was played, is the main data-quality measure (table below). The share matched to a studio album is shown next to it for information only."
-      2: "<strong>What is left out.</strong> Covers, tape entries and intros are excluded from catalog figures. Medleys (titles joined by ' / ') are split into separate songs."
+      1: "<strong>Match to MusicBrainz.</strong> A performance (one time a song was played at a show) is matched when its title resolves to a song in the MusicBrainz discography. The share of matched performances, weighted by how often each song was played, is the main data-quality measure (table below). The share matched to a studio album is shown next to it for information only."
+      2: "<strong>What is left out.</strong> Covers, tape entries and intros are excluded from the measures. Medleys (titles joined by ' / ') are split into separate songs."
       3: "<strong>Repertoire age.</strong> For each performance, the year of the show minus the song's first official release year (the earlier of its studio album's year and its recording's first release), never below zero. A year's figure is the mean over its performances. On the tour chart each bar is the median of one tour in one year, because a median cannot be rebuilt across several years."
       4: "<strong>Rotation.</strong> For consecutive shows of the same tour, the overlap between the two setlists (Jaccard index) is computed. Rotation is 1 minus the mean overlap: 0 means the same setlist every night, 1 means no song in common. Tours with fewer than 5 shows are not scored, and a pair belongs to the year of its second show. Years with fewer than 5 pairs are drawn as hollow markers and left out of the line."
-      5: "<strong>Album of a song.</strong> The earliest studio album that contains it. Songs matched to the catalog but not to a studio album (singles, B-sides, other recordings) form their own group, non-album, instead of being dropped."
+      5: "<strong>Album of a song.</strong> The earliest studio album that contains it. Songs matched to MusicBrainz but not to a studio album (singles, B-sides, other recordings) form their own group, non-album, instead of being dropped."
   survival:
     h: Song survival and the abandonment rule
     p:
       1: "Survival is measured in shows, not in calendar time, so that a hiatus is not read as abandoning songs. A song's duration runs from its first show to its last, inclusive: a song played at one show only lasts 1."
-      2: "A song is abandoned when it left the setlist and did not come back: its last appearance is at least N shows before the end of the history, with N = 50 by default. Every other song is censored: it is still being played, or it disappeared for a while and returned. Only catalog songs with at least 3 performances, matched to a studio album or to a recording with a known release year, enter the analysis."
+      2: "A song is abandoned when it left the setlist and did not come back: its last appearance is at least N shows before the end of the history, with N = 50 by default. Every other song is censored: it is still being played, or it disappeared for a while and returned. Only discography songs (those found in MusicBrainz) with at least 3 performances, matched to a studio album or to a recording with a known release year, enter the analysis."
       3: "Only the final gap counts. An earlier version treated the first gap as the event and marked classics that were rested for a tour and brought back as abandoned; the final-gap rule fixes that."
       4: "Comparisons between bands are made at a common horizon, 500 shows after a song's live debut, which every band's curve reaches, and not at the end of each curve: how far a curve extends depends on how long the band was followed, so a band with a longer career would end lower for that reason alone. The end of each curve is still given per band, with the number of shows it covers."
   sensitivity:
@@ -130,27 +131,27 @@ methodology:
     h: Data policy
     p:
       1: "Raw setlist.fm data exists only while the pipeline runs and is deleted at the end of every run. Only aggregated results are kept and published, so this site never shows an individual setlist, show date, venue or setlist.fm identifier."
-      2: "Song titles, where they appear, are canonical MusicBrainz titles (CC0). Setlist data is credited to <a href='{{ setlistfm_url }}'>setlist.fm</a> and used for non-commercial purposes only; catalog data comes from <a href='{{ musicbrainz_url }}'>MusicBrainz</a>."
+      2: "Song titles, where they appear, are canonical MusicBrainz titles (CC0). Setlist data is credited to <a href='{{ setlistfm_url }}'>setlist.fm</a> and used for non-commercial purposes only; discography data comes from <a href='{{ musicbrainz_url }}'>MusicBrainz</a>."
   limits:
     h: Known limitations
     item:
       1: "<strong>A window in shows is not a window in time.</strong> Fifty shows pass in months for a band that tours heavily and in more than a year for one that does not. From 2015 on, an average active year has about {{ twenty_one_pilots_pairs_avg }} show pairs for Twenty One Pilots (its busiest year has {{ twenty_one_pilots_pairs_max }}), {{ arctic_monkeys_pairs_avg }} for Arctic Monkeys, {{ muse_pairs_avg }} for Muse, {{ oasis_pairs_avg }} for Oasis, and {{ metallica_pairs_avg }}, {{ avenged_sevenfold_pairs_avg }} and {{ linkin_park_pairs_avg }} for Metallica, Avenged Sevenfold and Linkin Park (pairs slightly undercount shows). Compare bands with this in mind."
-      2: "<strong>Muse, 1994 and 1995.</strong> Catalog match is low in Muse's two earliest years: {{ muse_1994_matched }} of {{ muse_1994_performances }} performances matched in 1994 and {{ muse_1995_matched }} of {{ muse_1995_performances }} in 1995 ({{ muse_1995_rate }}). Together they are {{ muse_weak_share }} of Muse's performances, so the overall match ({{ muse_match }}) barely moves, but Muse figures for those years are thin. Likely cause: early demos and EPs that are not in the catalog kept here."
-      3: "<strong>Jams, solos and generic entries</strong> such as '(jam)' cannot be told apart reliably in the data, so where they match a catalog song they are counted like any other. This can enlarge setlists, lower the overlap between shows and add spurious songs to survival."
-      4: "<strong>Recordings without a release year</strong> cannot be placed on the catalog timeline and are left out of survival. Recording-only songs that do have a year are included under non-album."
+      2: "<strong>Muse, 1994 and 1995.</strong> The match to MusicBrainz is low in Muse's two earliest years: {{ muse_1994_matched }} of {{ muse_1994_performances }} performances matched in 1994 and {{ muse_1995_matched }} of {{ muse_1995_performances }} in 1995 ({{ muse_1995_rate }}). Together they are {{ muse_weak_share }} of Muse's performances, so the overall match ({{ muse_match }}) barely moves, but Muse figures for those years are thin. Likely cause: early demos and EPs that are not in MusicBrainz."
+      3: "<strong>Jams, solos and generic entries</strong> such as '(jam)' cannot be told apart reliably in the data, so where they match a discography song they are counted like any other. This can enlarge setlists, lower the overlap between shows and add spurious songs to survival."
+      4: "<strong>Recordings without a release year</strong> cannot be placed on the discography timeline and are left out of survival. Recording-only songs that do have a year are included under non-album."
       5: "<strong>Release dates come from MusicBrainz</strong> and can be wrong. Suspicious cases are reviewed and corrected through a manual override list in the repository."
   match:
-    h: Match quality by band
+    h: Match to MusicBrainz by band
     p:
-      1: "Share of performances matched to the catalog, weighted by plays (the main measure), and the share matched to a studio album (secondary, informational)."
+      1: "Share of performances matched to MusicBrainz, weighted by plays (the main measure), and the share matched to a studio album (secondary, informational)."
 about:
   kicker: what this is
   title: About
-  lede: Encore is a non-commercial data portfolio project about how bands use their own catalog in live shows.
+  lede: Encore is a non-commercial data portfolio project about how bands use their own discography in live shows.
   purpose:
     h: What it is for
     p:
-      1: "It asks how seven bands treat their catalog on stage: do they live off their past or bet on new material, do shows change from night to night, and how long does a song survive in the live repertoire. Two more questions, show structure and differences by country or venue type, are planned for later versions."
+      1: "It asks how seven bands treat their own discography on stage: do they live off their past or bet on new material, do shows change from night to night, and how long does a song survive in the live repertoire. Two more questions, show structure and differences by country or venue type, are planned for later versions."
       2: "It is also a worked example of a small end-to-end data pipeline, with the method written down next to the charts."
   stack:
     h: How it is built
@@ -188,28 +189,29 @@ labels:
   band: Band
   songs: Songs
   abandoned: Abandoned
-  censored: Censored
+  censored: Censored (still played, or came back)
   median_shows: Median (shows)
   n_col: "N = {{ n }}"
-  performances: Performances
-  matched_rate: Matched to catalog
+  performances: Performances (times a song was played)
+  matched_rate: Matched to MusicBrainz
   album_rate: Matched to a studio album
   years: Years
   not_reached: not reached
 band:
   kicker: band profile
+  intro: "What {{ band }} played at its concerts, night after night, from the setlists on setlist.fm; the discography comes from MusicBrainz."
   chip_years: "{{ first }}–{{ last }}"
   chip_shows: "{{ n }} shows"
-  chip_match: "{{ pct }} matched to the catalog"
-  chip_median: "median survival: {{ n }} shows"
+  chip_match: "{{ pct }} of songs played matched to MusicBrainz"
+  chip_median: "half of the songs have left the setlist after {{ n }} shows (median survival)"
   findings:
     h: What stands out
   age:
-    h: Repertoire age
-    p: "Years between a song's first release and the night it is played, averaged over each year's performances."
+    h: "How old the songs were: repertoire age"
+    p: "Years between a song's first release and the night it is played, averaged over all the songs played that year."
     title: "{{ band }}: repertoire age by year"
     desc: "Line chart of the average repertoire age of {{ band }} by year. The data table below lists every value."
-    caption: "Average repertoire age by year, weighted by performances."
+    caption: "Average repertoire age by year, weighted by how often each song was played."
   tours:
     h: Median age by tour
     p: "Each bar is one tour in one year: a tour that spans several years appears once per year, because a median cannot be combined across years. The diamond marks the mean. Cells with fewer than {{ min_tour_shows }} shows are left out."
@@ -217,61 +219,61 @@ band:
     desc: "Bar chart of the median repertoire age of each tour and year of {{ band }}. The data table below lists every value."
     caption: "Median repertoire age of each tour and year; the diamond is the mean."
   rotation:
-    h: Rotation
+    h: "How much shows change: rotation"
     p: "How much the setlist changes from one show to the next within a tour, by year. 0 is the same setlist every night; 1 is no song in common."
     title: "{{ band }}: rotation by year"
     desc: "Line chart of the rotation of {{ band }} by year. The data table below lists every value."
     caption: "Rotation between consecutive shows of the same tour."
   survival:
-    h: Song survival
-    p: "Share of the band's catalog songs still in the setlist after t shows since their live debut, by studio album. A curve that stays high is an album whose songs became permanent; one that drops fast is an album that passed through."
+    h: "How long songs last: survival"
+    p: "Share of the band's songs still in the setlist after t shows since their live debut, by studio album. A curve that stays high is an album whose songs became permanent; one that drops fast is an album that passed through."
     title: "{{ band }}: song survival by album"
     desc: "Kaplan-Meier curves of the share of songs still played after t shows, one per album, for {{ band }}. The data table below gives the share at 25, 50, 100, 200 and 400 shows."
     caption: "Kaplan-Meier curves, window N = {{ n_window }} shows; the dashed line is all eligible songs."
   albums:
     h: Albums
-    p: "Eligible catalog songs by reference album (the earliest studio album that contains the song). Median survival is in shows."
+    p: "Eligible discography songs by reference album (the earliest studio album that contains the song). Median survival is in shows."
   others:
     h: Other bands
 findings:
   common: "Survival is counted in shows, not years, and years with fewer than {{ min_pairs }} pairs of consecutive shows are left out of rotation (see Methodology)."
   arctic_monkeys:
     lead: "Arctic Monkeys play a steadier show now than in their early years."
-    numbers: "Rotation fell from {{ arctic_monkeys_rot_first3 }} ({{ arctic_monkeys_rot_first3_years }}) to {{ arctic_monkeys_rot_last3 }} ({{ arctic_monkeys_rot_last3_years }}) in its first and last three years with enough shows. AM lost {{ arctic_monkeys_album_am_abandoned }} of its {{ arctic_monkeys_album_am_songs }} eligible songs and {{ arctic_monkeys_album_am_final }} were still in the setlist after {{ arctic_monkeys_album_am_final_t }} shows, while Suck It and See stands at {{ arctic_monkeys_album_suck_it_and_see_final }} after {{ arctic_monkeys_album_suck_it_and_see_final_t }}. Overall {{ arctic_monkeys_final }} of its eligible songs were still played after {{ arctic_monkeys_final_t }} shows, and the median survival is {{ arctic_monkeys_median }} shows."
+    numbers: "Rotation, how much the songs change from one concert to the next, fell from {{ arctic_monkeys_rot_first3 }} ({{ arctic_monkeys_rot_first3_years }}) to {{ arctic_monkeys_rot_last3 }} ({{ arctic_monkeys_rot_last3_years }}) in its first and last three years with enough shows. AM lost {{ arctic_monkeys_album_am_abandoned }} of its {{ arctic_monkeys_album_am_songs }} eligible songs and {{ arctic_monkeys_album_am_final }} were still in the setlist after {{ arctic_monkeys_album_am_final_t }} shows, while Suck It and See stands at {{ arctic_monkeys_album_suck_it_and_see_final }} after {{ arctic_monkeys_album_suck_it_and_see_final_t }}. Overall {{ arctic_monkeys_final }} of its eligible songs were still played after {{ arctic_monkeys_final_t }} shows, and the median survival is {{ arctic_monkeys_median }} shows."
     caveats:
       1: "The Car ({{ arctic_monkeys_album_the_car_final }} after {{ arctic_monkeys_album_the_car_final_t }} shows) is too recent to judge."
   oasis:
     lead: "Oasis played an almost fixed show, and (What's the Story) Morning Glory? is the album whose songs stayed in it the most."
-    numbers: "Rotation fell from {{ oasis_rot_first3 }} ({{ oasis_rot_first3_years }}) to {{ oasis_rot_last3 }} ({{ oasis_rot_last3_years }}) in its first and last three years with enough shows, and was {{ oasis_rot_2025 }} on the 2025 shows. (What's the Story) Morning Glory? lost {{ oasis_album_whats_the_story_morning_glory_abandoned }} of {{ oasis_album_whats_the_story_morning_glory_songs }} eligible songs and {{ oasis_album_whats_the_story_morning_glory_final }} were still played after {{ oasis_album_whats_the_story_morning_glory_final_t }} shows, while Be Here Now lost {{ oasis_album_be_here_now_abandoned }} of {{ oasis_album_be_here_now_songs }} (median {{ oasis_album_be_here_now_median }} shows). Overall {{ oasis_final }} of its eligible songs were still in the setlist after {{ oasis_final_t }} shows, and the median survival is {{ oasis_median }} shows."
+    numbers: "Rotation, how much the songs change from one concert to the next, fell from {{ oasis_rot_first3 }} ({{ oasis_rot_first3_years }}) to {{ oasis_rot_last3 }} ({{ oasis_rot_last3_years }}) in its first and last three years with enough shows, and was {{ oasis_rot_2025 }} on the 2025 shows. (What's the Story) Morning Glory? lost {{ oasis_album_whats_the_story_morning_glory_abandoned }} of {{ oasis_album_whats_the_story_morning_glory_songs }} eligible songs and {{ oasis_album_whats_the_story_morning_glory_final }} were still played after {{ oasis_album_whats_the_story_morning_glory_final_t }} shows, while Be Here Now lost {{ oasis_album_be_here_now_abandoned }} of {{ oasis_album_be_here_now_songs }} (median {{ oasis_album_be_here_now_median }} shows). Overall {{ oasis_final }} of its eligible songs were still in the setlist after {{ oasis_final_t }} shows, and the median survival is {{ oasis_median }} shows."
     caveats:
       1: "The last three years with enough shows include 2025, after a gap with no shows in the data between {{ oasis_gap_from }} and {{ oasis_gap_to }}."
       2: "Dig Out Your Soul ({{ oasis_album_dig_out_your_soul_final }} after {{ oasis_album_dig_out_your_soul_final_t }} shows, {{ oasis_album_dig_out_your_soul_songs }} songs) is too short a curve to judge."
       3: "The median survival is {{ oasis_median }} shows against {{ metallica_median }} for Metallica, but 50 shows cover very different stretches of calendar time for the two bands (see Methodology)."
   linkin_park:
     lead: "Linkin Park's setlist did not become steadier over time, and its early albums kept more songs in the set than most of its later ones."
-    numbers: "Rotation went from {{ linkin_park_rot_first3 }} ({{ linkin_park_rot_first3_years }}) to {{ linkin_park_rot_last3 }} ({{ linkin_park_rot_last3_years }}) in its first and last three years with enough shows. Hybrid Theory still had {{ linkin_park_album_hybrid_theory_final }} of its songs after {{ linkin_park_album_hybrid_theory_final_t }} shows and Meteora {{ linkin_park_album_meteora_final }} after {{ linkin_park_album_meteora_final_t }}, while The Hunting Party lost {{ linkin_park_album_the_hunting_party_abandoned }} of {{ linkin_park_album_the_hunting_party_songs }} (median {{ linkin_park_album_the_hunting_party_median }} shows) and One More Light {{ linkin_park_album_one_more_light_abandoned }} of {{ linkin_park_album_one_more_light_songs }} (median {{ linkin_park_album_one_more_light_median }}). Overall the median survival is {{ linkin_park_median }} shows."
+    numbers: "Rotation, how much the songs change from one concert to the next, went from {{ linkin_park_rot_first3 }} ({{ linkin_park_rot_first3_years }}) to {{ linkin_park_rot_last3 }} ({{ linkin_park_rot_last3_years }}) in its first and last three years with enough shows. Hybrid Theory still had {{ linkin_park_album_hybrid_theory_final }} of its songs after {{ linkin_park_album_hybrid_theory_final_t }} shows and Meteora {{ linkin_park_album_meteora_final }} after {{ linkin_park_album_meteora_final_t }}, while The Hunting Party lost {{ linkin_park_album_the_hunting_party_abandoned }} of {{ linkin_park_album_the_hunting_party_songs }} (median {{ linkin_park_album_the_hunting_party_median }} shows) and One More Light {{ linkin_park_album_one_more_light_abandoned }} of {{ linkin_park_album_one_more_light_songs }} (median {{ linkin_park_album_one_more_light_median }}). Overall the median survival is {{ linkin_park_median }} shows."
     caveats:
       1: "Its last three years with enough shows follow a gap with no shows in the data between {{ linkin_park_gap_from }} and {{ linkin_park_gap_to }}."
       2: "From Zero has lost {{ linkin_park_album_from_zero_abandoned }} of its {{ linkin_park_album_from_zero_songs }} songs so far, but its curve covers only {{ linkin_park_album_from_zero_final_t }} shows, too short to say how long they will stay."
   twenty_one_pilots:
     lead: "Twenty One Pilots turned into an almost fixed show, and Blurryface is the album that stayed."
-    numbers: "Rotation fell from {{ twenty_one_pilots_rot_first3 }} ({{ twenty_one_pilots_rot_first3_years }}) to {{ twenty_one_pilots_rot_last3 }} ({{ twenty_one_pilots_rot_last3_years }}) in its first and last three years with enough shows. Blurryface lost {{ twenty_one_pilots_album_blurryface_abandoned }} of {{ twenty_one_pilots_album_blurryface_songs }} songs and {{ twenty_one_pilots_album_blurryface_final }} were still played after {{ twenty_one_pilots_album_blurryface_final_t }} shows, while {{ twenty_one_pilots_album_twenty_one_pilots_abandoned }} of {{ twenty_one_pilots_album_twenty_one_pilots_songs }} songs of Twenty One Pilots (median {{ twenty_one_pilots_album_twenty_one_pilots_median }} shows) and {{ twenty_one_pilots_album_vessel_abandoned }} of {{ twenty_one_pilots_album_vessel_songs }} of Vessel (median {{ twenty_one_pilots_album_vessel_median }}) were abandoned. Overall the median survival is {{ twenty_one_pilots_median }} shows."
+    numbers: "Rotation, how much the songs change from one concert to the next, fell from {{ twenty_one_pilots_rot_first3 }} ({{ twenty_one_pilots_rot_first3_years }}) to {{ twenty_one_pilots_rot_last3 }} ({{ twenty_one_pilots_rot_last3_years }}) in its first and last three years with enough shows. Blurryface lost {{ twenty_one_pilots_album_blurryface_abandoned }} of {{ twenty_one_pilots_album_blurryface_songs }} songs and {{ twenty_one_pilots_album_blurryface_final }} were still played after {{ twenty_one_pilots_album_blurryface_final_t }} shows, while {{ twenty_one_pilots_album_twenty_one_pilots_abandoned }} of {{ twenty_one_pilots_album_twenty_one_pilots_songs }} songs of Twenty One Pilots (median {{ twenty_one_pilots_album_twenty_one_pilots_median }} shows) and {{ twenty_one_pilots_album_vessel_abandoned }} of {{ twenty_one_pilots_album_vessel_songs }} of Vessel (median {{ twenty_one_pilots_album_vessel_median }}) were abandoned. Overall the median survival is {{ twenty_one_pilots_median }} shows."
     caveats:
       1: "Scaled and Icy lost {{ twenty_one_pilots_album_scaled_and_icy_abandoned }} of {{ twenty_one_pilots_album_scaled_and_icy_songs }} songs with a median of {{ twenty_one_pilots_album_scaled_and_icy_median }} shows, but its curve covers only {{ twenty_one_pilots_album_scaled_and_icy_final_t }} shows."
   muse:
     lead: "Muse changes its setlist less than it used to, and its debut album has largely left the set."
-    numbers: "Rotation fell from {{ muse_rot_first3 }} ({{ muse_rot_first3_years }}) to {{ muse_rot_last3 }} ({{ muse_rot_last3_years }}) in its first and last three years with enough shows, with a spike of {{ muse_rot_2018 }} in 2018 in between. {{ muse_album_showbiz_abandoned }} of {{ muse_album_showbiz_songs }} eligible songs from Showbiz were abandoned (median {{ muse_album_showbiz_median }} shows), while Absolution still had {{ muse_album_absolution_final }} after {{ muse_album_absolution_final_t }} shows. {{ muse_surv_500 }} of its eligible songs were still in the setlist 500 shows after their live debut, and {{ muse_final }} after {{ muse_final_t }} shows, where its data ends."
+    numbers: "Rotation, how much the songs change from one concert to the next, fell from {{ muse_rot_first3 }} ({{ muse_rot_first3_years }}) to {{ muse_rot_last3 }} ({{ muse_rot_last3_years }}) in its first and last three years with enough shows, with a spike of {{ muse_rot_2018 }} in 2018 in between. {{ muse_album_showbiz_abandoned }} of {{ muse_album_showbiz_songs }} eligible songs from Showbiz were abandoned (median {{ muse_album_showbiz_median }} shows), while Absolution still had {{ muse_album_absolution_final }} after {{ muse_album_absolution_final_t }} shows. {{ muse_surv_500 }} of its eligible songs were still in the setlist 500 shows after their live debut, and {{ muse_final }} after {{ muse_final_t }} shows, where its data ends."
     caveats:
-      1: "Its earliest years are thin: only {{ muse_1995_rate }} of 1995 performances matched the catalog (see Methodology)."
+      1: "Its earliest years are thin: only {{ muse_1995_rate }} of the songs played in 1995 matched MusicBrainz (see Methodology)."
   metallica:
     lead: "Metallica went from a nearly fixed show in the 1980s to one that changes a lot, and its setlist got younger after each of its last three albums."
-    numbers: "Rotation rose from {{ metallica_rot_first3 }} in its first three years with enough shows ({{ metallica_rot_first3_years }}) to {{ metallica_rot_last3 }} in its last three. By tour it was {{ metallica_tour_world_magnetic_rotation }} on World Magnetic (2008–2010) and {{ metallica_tour_m72_world_tour_rotation }} on the M72 World Tour (2023–2026), and by year {{ metallica_rot_2023 }} in 2023 and {{ metallica_rot_2024 }} in 2024. Its average repertoire age fell by {{ dip_metallica_death_magnetic_size }}, {{ dip_metallica_hardwired_size }} and {{ dip_metallica_72_seasons_size }} years around Death Magnetic (2008), Hardwired… to Self-Destruct (2016) and 72 Seasons (2023). Ride the Lightning lost {{ metallica_album_ride_the_lightning_abandoned }} of {{ metallica_album_ride_the_lightning_songs }} eligible songs and {{ metallica_album_ride_the_lightning_final }} were still played after {{ metallica_album_ride_the_lightning_final_t }} shows, while Kill 'Em All lost {{ metallica_album_kill_em_all_abandoned }} of {{ metallica_album_kill_em_all_songs }} but only after a median of {{ metallica_album_kill_em_all_median }} shows."
+    numbers: "Rotation, how much the songs change from one concert to the next, rose from {{ metallica_rot_first3 }} in its first three years with enough shows ({{ metallica_rot_first3_years }}) to {{ metallica_rot_last3 }} in its last three. By tour it was {{ metallica_tour_world_magnetic_rotation }} on World Magnetic (2008–2010) and {{ metallica_tour_m72_world_tour_rotation }} on the M72 World Tour (2023–2026), and by year {{ metallica_rot_2023 }} in 2023 and {{ metallica_rot_2024 }} in 2024. Its average repertoire age (how old the songs played were) fell by {{ dip_metallica_death_magnetic_size }}, {{ dip_metallica_hardwired_size }} and {{ dip_metallica_72_seasons_size }} years around Death Magnetic (2008), Hardwired… to Self-Destruct (2016) and 72 Seasons (2023). Ride the Lightning lost {{ metallica_album_ride_the_lightning_abandoned }} of {{ metallica_album_ride_the_lightning_songs }} eligible songs and {{ metallica_album_ride_the_lightning_final }} were still played after {{ metallica_album_ride_the_lightning_final_t }} shows, while Kill 'Em All lost {{ metallica_album_kill_em_all_abandoned }} of {{ metallica_album_kill_em_all_songs }} but only after a median of {{ metallica_album_kill_em_all_median }} shows."
     caveats:
       1: "The overall median is {{ metallica_median }} shows; 50 shows cover a longer stretch of time for Metallica than for the busiest-touring bands, so compare with care (see Methodology)."
       2: "The data shows that Metallica's rotation rose, not why, and a dip in repertoire age around an album release does not show that the release caused it (see the home page)."
   avenged_sevenfold:
     lead: "Avenged Sevenfold changes its setlist much less than in its early years, and two of its 2010s albums, Hail to the King and The Stage, left the set quickly."
-    numbers: "Rotation fell from {{ avenged_sevenfold_rot_first3 }} ({{ avenged_sevenfold_rot_first3_years }}) to {{ avenged_sevenfold_rot_last3 }} ({{ avenged_sevenfold_rot_last3_years }}), with most of the drop between {{ avenged_sevenfold_rot_2007 }} in 2007 and {{ avenged_sevenfold_rot_2010 }} in 2010. The Stage lost {{ avenged_sevenfold_album_the_stage_abandoned }} of {{ avenged_sevenfold_album_the_stage_songs }} songs (median {{ avenged_sevenfold_album_the_stage_median }} shows) and Hail to the King {{ avenged_sevenfold_album_hail_to_the_king_abandoned }} of {{ avenged_sevenfold_album_hail_to_the_king_songs }} (median {{ avenged_sevenfold_album_hail_to_the_king_median }}). Overall {{ avenged_sevenfold_abandoned }} of its {{ avenged_sevenfold_songs }} eligible songs were abandoned and the median survival is {{ avenged_sevenfold_median }} shows."
+    numbers: "Rotation, how much the songs change from one concert to the next, fell from {{ avenged_sevenfold_rot_first3 }} ({{ avenged_sevenfold_rot_first3_years }}) to {{ avenged_sevenfold_rot_last3 }} ({{ avenged_sevenfold_rot_last3_years }}), with most of the drop between {{ avenged_sevenfold_rot_2007 }} in 2007 and {{ avenged_sevenfold_rot_2010 }} in 2010. The Stage lost {{ avenged_sevenfold_album_the_stage_abandoned }} of {{ avenged_sevenfold_album_the_stage_songs }} songs (median {{ avenged_sevenfold_album_the_stage_median }} shows) and Hail to the King {{ avenged_sevenfold_album_hail_to_the_king_abandoned }} of {{ avenged_sevenfold_album_hail_to_the_king_songs }} (median {{ avenged_sevenfold_album_hail_to_the_king_median }}). Overall {{ avenged_sevenfold_abandoned }} of its {{ avenged_sevenfold_songs }} eligible songs were abandoned and the median survival is {{ avenged_sevenfold_median }} shows."
     caveats:
       1: "The Stage's curve covers only {{ avenged_sevenfold_album_the_stage_final_t }} shows."
       2: "The newest album, Life Is But a Dream…, has lost {{ avenged_sevenfold_album_life_is_but_a_dream_abandoned }} of {{ avenged_sevenfold_album_life_is_but_a_dream_songs }}, but its curve covers only {{ avenged_sevenfold_album_life_is_but_a_dream_final_t }} shows."

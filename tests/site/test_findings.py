@@ -183,3 +183,81 @@ def test_the_claims_in_the_text_hold_on_the_real_data(real) -> None:
     doys = shape.final_survival(curves, "Oasis", "Dig Out Your Soul")
     songs = shape.album_table(summary, "Oasis").set_index("album").loc["Dig Out Your Soul", "songs"]
     assert doys[0] < 200 and songs <= 6
+
+
+# ---- plain language: what a first-time reader meets (docs: the site must not assume concert or statistics jargon)
+READER_FACING = ("home.", "comparison.", "band.", "findings.", "read.", "caveats.", "chart.", "labels.", "footer.", "site.")
+METHODOLOGY_ONLY_TERMS = re.compile(r"performance|execuç|execuc", re.I)
+
+
+def test_the_home_lede_says_what_the_data_is_before_what_is_measured() -> None:
+    for locale, strings in i18n.load_locales().items():
+        lede = strings["home.lede"]
+        order = ["setlist.fm", "MusicBrainz"]
+        assert all(word in lede for word in order), locale
+        assert lede.index("setlist.fm") < lede.index("MusicBrainz") < lede.index(
+            "três coisas" if locale == "pt-BR" else "three things"), locale
+        assert 2 <= len(SENTENCE_END.findall(lede)) <= 3, locale  # two or three sentences
+    en = i18n.load_locales()["en"]["home.lede"]
+    assert "concerts" in en and "fans fill them in" in en and en.index("setlist") < en.index("three things")
+    pt = i18n.load_locales()["pt-BR"]["home.lede"]
+    assert "shows" in pt and "preenchido por fãs" in pt
+
+
+def test_each_metric_is_explained_in_concert_terms_before_its_name_on_the_home_page() -> None:
+    en, pt = i18n.load_locales()["en"], i18n.load_locales()["pt-BR"]
+    assert en["home.f1.numbers"].startswith("Repertoire age is how old the songs played")
+    assert en["home.f2.numbers"].startswith("Rotation is how much the songs change from one concert to the next")
+    assert en["home.f3.numbers"].startswith("Survival is how long a song keeps being played at concerts")
+    assert pt["home.f1.numbers"].startswith("A idade do repertório é quão antigas eram as músicas tocadas")
+    assert pt["home.f2.numbers"].startswith("A rotação é o quanto as músicas mudam de um show para o seguinte")
+    assert pt["home.f3.numbers"].startswith("A sobrevivência é quanto tempo uma música continua sendo tocada")
+    # The labels above the findings speak in concert terms; the metric names come after the plain phrase.
+    for strings in (en, pt):
+        for kicker in ("home.f1.kicker", "home.f2.kicker", "home.f3.kicker"):
+            assert not re.search(r"repertoire age|rotation|survival|idade do repertório|rotação|sobrevivência", strings[kicker], re.I)
+        for key in ("comparison.age.h", "comparison.rotation.h", "comparison.survival.h", "band.age.h", "band.rotation.h", "band.survival.h"):
+            assert ":" in strings[key], key  # "plain phrase: metric name"
+
+
+def test_band_pages_and_the_comparison_page_open_with_what_the_data_is() -> None:
+    for locale, strings in i18n.load_locales().items():
+        assert "setlist.fm" in strings["band.intro"] and "MusicBrainz" in strings["band.intro"], locale
+        assert "setlist.fm" in strings["comparison.lede"], locale
+        assert "median" in strings["band.chip_median"].lower() or "mediana" in strings["band.chip_median"].lower()
+        assert strings["band.chip_median"].index("{{ n }}") < strings["band.chip_median"].lower().index("median")  # plain phrase first
+
+
+def test_the_discography_and_the_musicbrainz_match_are_never_both_called_the_catalog() -> None:
+    loaded = i18n.load_locales()
+    assert not [k for k, v in loaded["en"].items() if re.search(r"catalog", v, re.I)]
+    assert not [k for k, v in loaded["pt-BR"].items() if re.search(r"catálogo|catalogo", v, re.I)]
+    en, pt = loaded["en"], loaded["pt-BR"]
+    assert "MusicBrainz" in en["labels.matched_rate"] and "MusicBrainz" in pt["labels.matched_rate"]
+    assert "MusicBrainz" in en["band.chip_match"] and "MusicBrainz" in pt["band.chip_match"]
+    assert "discography" in en["home.title"] and "discografia" in pt["home.title"]
+
+
+def test_censored_never_appears_without_a_plain_gloss() -> None:
+    gloss = re.compile(r"still (?:being )?played|came back|returned|ainda (?:são )?tocadas?|voltaram|voltou", re.I)
+    for locale, strings in i18n.load_locales().items():
+        for key, text in strings.items():
+            if re.search(r"censor", text, re.I):
+                assert gloss.search(text), (locale, key)
+
+
+def test_performances_is_kept_for_the_methodology_page_only() -> None:
+    allowed = ("methodology.", "labels.performances", "about.stack")
+    for locale, strings in i18n.load_locales().items():
+        for key, text in strings.items():
+            if key.startswith(allowed):
+                continue
+            assert not METHODOLOGY_ONLY_TERMS.search(text), (locale, key, text[:80])
+
+
+def test_the_hero_number_of_finding_one_has_a_short_label() -> None:
+    for locale, strings in i18n.load_locales().items():
+        assert len(strings["home.f1.stat_label"]) <= 75, (locale, strings["home.f1.stat_label"])
+        assert "{{" not in strings["home.f1.stat_label"]  # the before and after values moved into the numbers paragraph
+    for locale, strings in i18n.load_locales().items():
+        assert "dip_metallica_72_seasons_before" in strings["home.f1.numbers"] and "dip_metallica_72_seasons_low" in strings["home.f1.numbers"]
