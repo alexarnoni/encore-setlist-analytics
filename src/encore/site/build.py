@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 from encore.site import bands as bands_mod
-from encore.site import i18n, marts as marts_mod, pages, policy, shape, theme, values
+from encore.site import i18n, linkcheck, marts as marts_mod, pages, policy, shape, theme, values
 
 logger = logging.getLogger(__name__)
 
@@ -120,8 +120,9 @@ def build_site(
     _copy_assets(out)
     try:
         policy.enforce(out)
-    except policy.PolicyError:
-        _clear(out)  # never leave a page that breaks the policy where `make site-serve` or a deploy would find it
+        linkcheck.enforce(out, origin)
+    except (policy.PolicyError, linkcheck.LinkError):
+        _clear(out)  # never leave a page that breaks the policy or has a broken link where a deploy would find it
         raise
     logger.info("Built %d pages (%d locales) into %s", len(written), len(i18n.LOCALES), out)
     return written

@@ -433,3 +433,41 @@ seven overall curves, Morning Glory above 85%, Dig Out Your Soul under 200 shows
 and 6 songs), so new data that breaks a sentence fails the build's tests before it
 ships. Release years named in the text were checked against
 `raw_musicbrainz.albums` (read-only, by me, not by the generator).
+
+### T12 revision (2026-09-23, after review)
+
+1. **Years are listed, not ranged**: "0.01 (2008, 2009 and 2025)" / "0,01 (2008, 2009 e
+   2025)" (`<band>_rot_first3_years`, `_rot_last3_years`, locale-aware "and"/"e").
+2. **Finding 03 compares bands at a common horizon.** At 500 shows after live debut (every
+   band's curve reaches it; at least 24 songs are still followed for each) the share still
+   in the setlist is Metallica 67%, Twenty One Pilots 64%, Avenged Sevenfold 50%, Muse
+   49%, Arctic Monkeys 41%, Oasis 40%, Linkin Park 39%. That reverses the earlier picture:
+   **Oasis is near the bottom at the common horizon**, its 36% at the end of its history
+   was the artefact of a shorter follow-up (880 shows against Muse's 1,530). The heading is
+   now "500 shows after their live debut, between 39% (Linkin Park) and 67% (Metallica) ...";
+   the hero stat is Oasis at the horizon (40%, 27 songs followed); the end-of-history
+   values are a separate per-band paragraph ("a per-band detail, not a ranking") with the
+   shows each covers; Oasis's near-flat curve (40% at 500, 36% at 880), the album split
+   and the Dig Out Your Soul caveat follow. The Muse band sentence no longer compares its
+   end value with Oasis's. `shape.COMMON_HORIZON`, `shape.survival_at`, placeholders
+   `<band>_surv_500` and `<band>_atrisk_500`.
+3. **Methodology** gained the sentence explaining the common horizon
+   (`methodology.survival.p.4`, both locales).
+4. The real-data claims test now asserts the horizon values and their ordering, that every
+   curve reaches the horizon, that Linkin Park and Arctic Monkeys have the fewest songs
+   followed (the "at least N" figure quoted), and that Oasis ends lower than Muse because
+   its follow-up is shorter.
+
+### T13 — link check (done)
+
+`linkcheck.py`, run by the build after the policy check (a failure empties the output and
+raises `LinkError`). It resolves every `<a>`, `<link>` (stylesheet, canonical, hreflang
+alternates), `<script>`, `<img>` and the redirect's `meta refresh` that is internal
+(root-relative, relative to the page, or absolute under the site's origin) to a file in
+the output using the static host's rules (`/x/` serves `x/index.html`), and checks that a
+`#fragment` names an id that exists on the target page. External and `mailto:` links are
+not fetched. **Verified.** 9 tests: the generated site passes and the guard shows it visits
+23 pages; a broken link, a missing anchor (and its fix), a removed stylesheet, a deleted
+page that the language switcher and hreflang alternates point at, relative and
+fragment-only links, ignored external links, the redirect target, and a build that fails
+and leaves no pages when the nav points at a page that is never written.

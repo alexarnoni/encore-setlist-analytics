@@ -16,12 +16,12 @@ def test_home_has_three_findings_and_the_band_index(built_site: Path) -> None:
 
 def test_hero_stats_come_from_the_marts(built_site: Path) -> None:
     text = text_of(built_site, "en", "").text
-    # The fixture has no 2022/2023 Metallica data, so the dip figures are the stand-in "0"; the Oasis
-    # figure is real fixture data: its all-songs curve ends at t = 50 shows with S = 1 - 5 x 0.15 = 25%.
-    assert "25% of Oasis's eligible songs are still in the setlist after 0 shows" not in text
-    assert "25% of Oasis" not in text or "25% of Oasis's eligible songs are still in the setlist after 50 shows" in text
+    # The fixture has no 2022/2023 Metallica data and its curves stop at 50 shows, so the figures the
+    # findings quote from real data are the stand-in "0"; the structure around them is what is checked.
+    assert "of Oasis's eligible songs are still in the setlist 500 shows after their live debut" in text
+    assert "years off Metallica's average repertoire age in 2023" in text
     pt = text_of(built_site, "pt", "").text
-    assert "das músicas elegíveis do Oasis ainda estão no setlist após 50 shows" in pt
+    assert "das músicas elegíveis do Oasis ainda estão no setlist 500 shows após a estreia ao vivo" in pt
 
 
 def test_finding_two_uses_seven_small_multiples_not_a_hero_stat(built_site: Path) -> None:

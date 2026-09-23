@@ -47,7 +47,11 @@ def test_partial_findings_say_so() -> None:
     en = i18n.load_locales()["en"]
     assert "weakly" in en["home.f1.h"] and "did not settle either" in en["home.f2.h"]
     assert "Linkin Park" in en["home.f2.p.1"] and "It did not fall for Linkin Park" in en["home.f2.p.1"]
-    assert "short, censored curve" in en["home.f3.p.3"] and "Dig Out Your Soul" in en["home.f3.p.3"]
+    assert "short, censored curve" in en["home.f3.p.4"] and "Dig Out Your Soul" in en["home.f3.p.4"]
+    # Cross-band comparison is at a common horizon; the end-of-history values are a per-band detail.
+    assert "same horizon" in en["home.f3.p.1"] and "not a ranking" in en["home.f3.p.2"]
+    assert "500 shows" in en["methodology.survival.p.4"] and "longer career" in en["methodology.survival.p.4"]
+    assert "the high end" not in " ".join(en.values())
     assert "does not show that the release caused it" in en["home.f1.p.3"]
     assert "2000s" not in " ".join(en.values())  # the "2000s albums below 30%" claim was dropped
 
@@ -107,12 +111,18 @@ def test_the_claims_in_the_text_hold_on_the_real_data(real) -> None:
     assert 0.74 < tours[("Metallica", "M72 World Tour")] < 0.76
     assert 0.84 < float(shape.rotation_by_year(rot, "Metallica").set_index("show_year").rotation[2024]) < 0.87
 
-    # 03: only a minority stays; Oasis is the top, Muse the bottom; Morning Glory stays; Dig Out Your Soul is a short curve.
-    final = {b: shape.final_survival(curves, b)[1] for b in bands.band_names()}
-    assert max(final, key=final.get) == "Oasis" and min(final, key=final.get) == "Muse"
-    assert list(final.values()) != sorted(final.values()) and 0.35 < final["Oasis"] < 0.37
-    assert list(sorted(final, key=final.get, reverse=True)) == [
-        "Oasis", "Linkin Park", "Metallica", "Arctic Monkeys", "Twenty One Pilots", "Avenged Sevenfold", "Muse"]
+    # 03: at the common horizon every curve is compared at the same point; the ranking is read there.
+    horizon = shape.COMMON_HORIZON
+    at = {b: shape.survival_at(curves, b, "all", horizon) for b in bands.band_names()}
+    assert all(v is not None for v in at.values()), "every band's curve must reach the common horizon"
+    assert min(v[1] for v in at.values()) == min(at["Linkin Park"][1], at["Arctic Monkeys"][1]) >= 20  # songs still followed
+    assert sorted(at, key=lambda b: at[b][0], reverse=True) == [
+        "Metallica", "Twenty One Pilots", "Avenged Sevenfold", "Muse", "Arctic Monkeys", "Oasis", "Linkin Park"]
+    assert at["Linkin Park"][1] == min(v[1] for v in at.values())  # the "at least N songs" figure quoted in the text
+    assert 0.38 < at["Linkin Park"][0] < 0.40 and 0.66 < at["Metallica"][0] < 0.68
+    # The end-of-history values are quoted per band only; a longer follow-up ends lower (Oasis vs Muse).
+    ends = {b: shape.final_survival(curves, b) for b in bands.band_names()}
+    assert ends["Oasis"][0] < ends["Muse"][0] and 0.35 < ends["Oasis"][1] < 0.37 and ends["Oasis"][1] < at["Oasis"][0]
     mg = shape.final_survival(curves, "Oasis", "(What’s the Story) Morning Glory?")
     assert mg[1] > 0.85
     doys = shape.final_survival(curves, "Oasis", "Dig Out Your Soul")

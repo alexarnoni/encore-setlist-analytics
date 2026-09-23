@@ -19,6 +19,8 @@ MIN_TOUR_CELL_SHOWS = 15
 UNKNOWN_TOUR = "Unknown tour"
 BAND_TOTAL = "all"
 NON_ALBUM = "non-album"
+# Cross-band survival comparisons use one horizon (shows since live debut) that every band's curve reaches.
+COMMON_HORIZON = 500
 
 
 def age_by_year(age: pd.DataFrame, band: str) -> pd.DataFrame:
@@ -154,3 +156,14 @@ def final_survival(curves: pd.DataFrame, band: str, album: str = BAND_TOTAL, n: 
         return None
     last = c.iloc[-1]
     return int(last["t_shows"]), float(last["survival_probability"])
+
+
+def survival_at(curves: pd.DataFrame, band: str, album: str, t: int, n: int = MAIN_WINDOW) -> tuple[float, int] | None:
+    """Share still in the setlist at `t` shows and the songs still followed there, or None if the curve stops earlier."""
+    c = curves[(curves["band"] == band) & (curves["album"] == album) & (curves["n_window"] == n)].sort_values("t_shows")
+    if c.empty or t > c["t_shows"].max():
+        return None
+    row = c[c["t_shows"] <= t].iloc[-1] if (c["t_shows"] <= t).any() else None
+    if row is None:
+        return 1.0, int(c["at_risk"].iloc[0])
+    return float(row["survival_probability"]), int(row["at_risk"])
