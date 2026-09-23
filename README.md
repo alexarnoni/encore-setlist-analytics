@@ -27,10 +27,12 @@ flowchart LR
 
     RAWSF --> VALIDATE["validate_raw"]
     VALIDATE --> TRANSFORM["transform\n(dbt seed / run / test)"]
-    TRANSFORM --> CLEANUP["cleanup_raw_setlistfm\n(truncate, always runs)"]
+    TRANSFORM --> ANALYZE["analyze\n(survival: Python + lifelines,\nthen dbt test tag:survival)"]
+    ANALYZE --> CLEANUP["cleanup_raw_setlistfm\n(truncate, always runs)"]
     CLEANUP -.->|empties| RAWSF
 
     TRANSFORM --> ANALYTICS[("analytics\npersistent marts")]
+    ANALYZE --> ANALYTICS
     ANALYTICS -.-> API["FastAPI — spec 04"]
     API -.-> FRONTEND["Cloudflare Pages — spec 04"]
 
@@ -39,13 +41,19 @@ flowchart LR
     style ANALYTICS fill:#dfd,stroke:#090
 ```
 
-Solid arrows are built (specs 01 and 02a); dashed arrows are later specs. The
-`encore_pipeline` DAG (`airflow/dags/encore_pipeline.py`) runs monthly:
-`truncate_raw_setlistfm_start → check_api_budget → extract_musicbrainz →
-extract_setlistfm → validate_raw → transform → cleanup_raw_setlistfm →
-log_run`, with `cleanup_raw_setlistfm` and `log_run` set to
-`trigger_rule=all_done` so raw setlist.fm data is deleted (and the run
-is logged) even when an earlier task fails. A separate daily DAG,
+Solid arrows are built (specs 01, 02a and 03); dashed arrows are later
+specs. The `encore_pipeline` DAG (`airflow/dags/encore_pipeline.py`) runs
+monthly: `truncate_raw_setlistfm_start → check_api_budget →
+extract_musicbrainz → extract_setlistfm → validate_raw → transform →
+analyze → cleanup_raw_setlistfm → log_run`, with `cleanup_raw_setlistfm`
+and `log_run` set to `trigger_rule=all_done` so raw setlist.fm data is
+deleted (and the run is logged) even when an earlier task fails. `transform`
+builds the dbt marts (rotation between shows, repertoire age, match
+quality) and excludes dbt tests tagged `survival`; `analyze` runs the
+survival analysis in plain Python (`src/encore/analysis`, no dbt — see
+[dbt/README.md](dbt/README.md)) to write `mart_song_survival`,
+`mart_survival_curves` and `mart_survival_summary`, then runs the
+`survival`-tagged dbt tests against them. A separate daily DAG,
 `airflow/dags/log_cleanup.py`, removes Airflow's own log files older
 than 7 days. It is the one DAG created active rather than paused: task logs
 can contain setlist.fm titles (the transform's diagnostic report, see

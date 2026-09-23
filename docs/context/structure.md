@@ -26,6 +26,7 @@ encore-setlist-analytics/
 │   └── encore/
 │       ├── clients/          # setlist.fm and MusicBrainz clients
 │       ├── ingestion/        # Extraction and loading logic
+│       ├── analysis/         # Survival analysis (rotation/abandonment, lifelines), not a dbt model
 │       └── db.py             # Database connection helpers
 ├── tests/
 ├── CLAUDE.md                 # Claude Code instructions
