@@ -792,8 +792,11 @@ Verified by executing a copy (in the scratchpad, never in the repo) against
 table rendered and were inspected. The synthetic data is thin (one year for
 one band, no abandonment events), so the curves are flat at 1.0 there; the
 layout, not the numbers, is what this preview validates. The committed file has
-0 outputs and 0 execution counts. The optional executed HTML in `reports/` was
-skipped (it would only show synthetic data); generate it after the real run.
+0 outputs and 0 execution counts. The executed HTML was first skipped (it would
+only have shown synthetic data) and generated after the real run of 2026-09-23:
+`reports/02_rotation_survival.html` in the main checkout (gitignored, aggregated
+marts only). It was regenerated the same day after the confidence bands were
+made fainter and a `HIDE_CI` flag was added.
 
 ### T14 — merge, full run, acceptance (done 2026-09-23)
 
