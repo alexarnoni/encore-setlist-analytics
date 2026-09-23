@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ t('site.name') }}</title>
+<meta http-equiv="refresh" content="0; url={{ target }}">
+<link rel="canonical" href="{{ canonical }}">
+{% for hreflang, url in alternates %}
+<link rel="alternate" hreflang="{{ hreflang }}" href="{{ url }}">
+{% endfor %}
+</head>
+<body>
+<p>{{ t('redirect.text') }}
+{% for locale, url, name in languages %}
+<a href="{{ url }}" hreflang="{{ locale }}" lang="{{ locale }}">{{ name }}</a>{% if not loop.last %} · {% endif %}
+{% endfor %}
+</p>
+</body>
+</html>

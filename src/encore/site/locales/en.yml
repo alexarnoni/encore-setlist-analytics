@@ -29,3 +29,15 @@ footer:
   musicbrainz: Catalog data from
   musicbrainz_license: (CC0).
   source: Source code
+skip:
+  link: Skip to content
+redirect:
+  text: "Choose a language:"
+home:
+  title: How bands use their own catalog
+comparison:
+  title: Comparison
+methodology:
+  title: Methodology
+about:
+  title: About
