@@ -218,7 +218,7 @@ to Q1-Q9; the recommended defaults let work start without them.
 - [x] T3 `int_show_pairs` + Jaccard test
 - [x] T4 `mart_tour_rotation`
 - [x] T5 `mart_band_rotation_by_year`
-- [ ] T6 survival core + unit tests
+- [x] T6 survival core + unit tests
 - [ ] T7 Kaplan-Meier curves and summary
 - [ ] T8 database I/O and the three marts
 - [ ] T9 dbt sources, tests, forbidden columns
@@ -421,3 +421,49 @@ tests pass at this size. Data removed afterwards, back to 542 synthetic rows.
 **Part A (rotation) of spec 03 is complete: T2-T5 done.** Part B (survival,
 T6-T9) is next.
 
+### T6 — survival core in Python + unit tests (done)
+
+`src/encore/analysis/__init__.py`, `src/encore/analysis/survival.py` (pure
+Python, no database access): `band_show_index` (1-based position of each
+distinct dated show, tie-broken by show_key per Q8), `song_appearance_indices`
+(distinct show indices per song, deduplicating repeats within one show),
+`is_eligible`/`eligible_songs` (>= 3 performances AND matched to an album or
+a dated recording — Q4/Q5/Q9), `outcome_for_window` (the abandonment rule for
+one song at one window N: the first in-history gap of N consecutive silent
+shows after some appearance is the event, inclusive duration
+`last_index - debut_index + 1`, else censored to the end of history —
+decisions Q1/Q2), `compute_survival` (wires it all together for one band and
+a tuple of windows, returning one `SongSurvival` per eligible, dated-and-
+played song). `tests/test_survival.py` (requirement 12): hand-built
+histories for a song abandoned exactly at the window (including the boundary
+`appearance + window == total_shows`, off by one on each side), a song one
+show short of it, a censored song, a song returning after its first
+abandonment, only the first qualifying gap counting even when a later one
+also qualifies, and a band with a 20-calendar-year hiatus played straight
+through the boundary (no false abandonment from calendar time — the show
+index has no gap there at all).
+**Slips of mine, corrected while writing the integration test:** the first
+"Exact" scenario accidentally included a later appearance that made it
+"return"; the first "Short" scenario's internal gap of 4 turned out to still
+end in a real abandonment later in the history (my hand count missed the tail
+gap after its last appearance) — redesigned to sit near the end of history
+where the tail is genuinely too short; the first "Hiatus" scenario (3
+appearances, none afterwards) was in fact correctly abandoned by the rule,
+not a bug — redesigned to play continuously across the hiatus boundary to
+test what the scenario actually intends. In each case the code was right and
+the hand-derived expectation was wrong.
+**Mutations:** 9 tried, 1 initially uncaught — changing the gap's in-history
+boundary from `<=` to `<` (missing an abandonment when the gap reaches
+exactly the last show) passed all 16 tests unchanged. Added
+`test_gap_exactly_reaching_the_end_of_history_still_counts` (boundary case
+both ways); the mutation now fails it. All 10 mutations then caught: duration
+off-by-one (debut side and censored side), the gap-length off-by-one, the
+boundary just fixed, "returned" using `>=` instead of `>`, eligibility
+ignoring the performance threshold, eligibility requiring both album AND year
+instead of either, the show-index tie-break, and continuing past the first
+qualifying gap instead of stopping. Restored, file `diff` clean. Full suite:
+125 passed, 10 skipped (the skipped ones are `tests/spec03`'s DB-level tests,
+opt-in with `SPEC03_DB_TESTS=1`).
+**Not yet wired to real data:** this module does not yet read
+`int_show_song_sets` or the catalog from the database (T8), and it does not
+fit Kaplan-Meier curves (T7) — both come next.
