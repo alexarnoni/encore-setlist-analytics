@@ -219,7 +219,7 @@ to Q1-Q9; the recommended defaults let work start without them.
 - [x] T4 `mart_tour_rotation`
 - [x] T5 `mart_band_rotation_by_year`
 - [x] T6 survival core + unit tests
-- [ ] T7 Kaplan-Meier curves and summary
+- [x] T7 Kaplan-Meier curves and summary
 - [ ] T8 database I/O and the three marts
 - [ ] T9 dbt sources, tests, forbidden columns
 - [ ] T10 `analyze` task and runner
@@ -467,3 +467,52 @@ opt-in with `SPEC03_DB_TESTS=1`).
 **Not yet wired to real data:** this module does not yet read
 `int_show_song_sets` or the catalog from the database (T8), and it does not
 fit Kaplan-Meier curves (T7) — both come next.
+
+### T7 — Kaplan-Meier curves and summary with lifelines (done)
+
+Extended `src/encore/analysis/survival.py`: `SongSurvival` gained
+`album_label` (the song's `reference_album`, or `NON_ALBUM` — set in
+`compute_survival` from the same catalog info used for eligibility, so T6's
+core and T7's grouping agree on what "the song's album" means).
+`group_by_album` groups one band's outcomes into `ALL_ALBUMS` (every eligible
+song) plus one group per album label including `NON_ALBUM` (requirement 6:
+"per band, and per band and reference album"). `fit_curve` wraps
+`lifelines.KaplanMeierFitter` for one (band, album, window) group: returns a
+`CurvePoint` per distinct time on the KM timeline (at_risk, events,
+probability, 95% CI) and a `CurveSummary` (songs, events, censored, median —
+`None` when the curve never drops below 0.5, per Q6/spec wording). Verified
+first, in an interactive session, that lifelines' `survival_function_` and
+`event_table` share the exact same time index including `t = 0` at
+probability 1.0 with everyone at risk — so Q7's time grid ("the KM timeline
+plus t=0") needs no extra code, t=0 is already the first row.
+`tests/test_survival_km.py`: a **hand-written product-limit estimator**
+(Kaplan & Meier's own formula, not lifelines' algorithm) checked first
+against a textbook no-censoring case (plain empirical survival), then
+`fit_curve`'s probabilities compared against it on a 10-song dataset with
+ties on both events and censoring — matches to 1e-9. Also: the curve starts
+at t=0/probability 1/everyone at risk; non-increasing and each point's CI
+brackets its probability; `events + censored == songs`; median `None` when
+all-censored, set correctly when the curve does cross 0.5; an empty group
+returns an empty curve and a `None` summary, not an error;
+`group_by_album`'s grouping (all/per-album/non-album) on 4 songs, and on the
+empty case.
+**Mutations, all caught:** event flags inverted (fails the product-limit
+comparison and both median tests); the `inf`-to-`None` conversion removed
+(fails the "never drops below 0.5" test); `group_by_album` silently dropping
+the non-album group (fails the grouping test); the two CI columns swapped
+(fails the "CI brackets the probability" bound, since one bound ends up on
+the wrong side). File restored, `diff` clean against the pre-mutation copy.
+**A slip of mine, fixed before running anything:** the first draft of
+`test_fit_curve_of_an_empty_group_is_a_flat_none` had a leftover, meaningless
+`assert summary == pytest.approx if False else summary.songs == 0` line from
+editing — removed; the real assertions were already there right after it.
+**Dependency note (formalized properly in T11):** `lifelines` is not yet in
+any `requirements.txt` or in the Airflow image. For now I installed it into
+the shared host dev `.venv` only, so these unit tests can run today; T11
+adds it to `airflow/requirements.txt` (and the root `requirements.txt` for
+the notebook), rebuilds `encore-airflow:spec-03`, and checks arm64 wheels.
+Full suite: 135 passed, 10 skipped (the `tests/spec03` DB-level tests, opt-in).
+**Still not wired to real data:** `fit_curve`/`group_by_album` take
+in-memory `SongSurvival` lists; reading `int_show_song_sets` and the catalog
+from the database, and writing `mart_song_survival` /
+`mart_survival_curves` / `mart_survival_summary`, is T8.

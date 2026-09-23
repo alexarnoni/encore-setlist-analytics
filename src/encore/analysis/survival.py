@@ -36,8 +36,17 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import date
 
+from lifelines import KaplanMeierFitter
+
 MIN_PERFORMANCES = 3
 WINDOWS: tuple[int, ...] = (25, 50, 100)
+
+# Kaplan-Meier grouping labels (requirement 6: "per band, and per band and
+# reference album"). ALL_ALBUMS is every eligible song of the band regardless
+# of album; NON_ALBUM is the label for eligible recording-only songs (no
+# reference album, matched through a dated recording — Q4/Q5).
+ALL_ALBUMS = "all"
+NON_ALBUM = "non-album"
 
 
 @dataclass(frozen=True)
@@ -66,6 +75,7 @@ class SongSurvival:
 
     band: str
     song_key: str
+    album_label: str  # the song's reference_album, or NON_ALBUM
     debut_index: int
     last_index: int
     total_shows: int
@@ -168,6 +178,7 @@ def compute_survival(
             SongSurvival(
                 band=band,
                 song_key=song,
+                album_label=catalog[song].reference_album or NON_ALBUM,
                 debut_index=indices[0],
                 last_index=indices[-1],
                 total_shows=total_shows,
@@ -177,3 +188,84 @@ def compute_survival(
             )
         )
     return results
+
+
+# --- Kaplan-Meier curves (spec-03 T7) ---------------------------------------
+
+
+@dataclass(frozen=True)
+class CurvePoint:
+    """One row of a survival curve at one time step."""
+
+    t_shows: int
+    at_risk: int
+    events: int
+    survival_probability: float
+    ci_lower: float
+    ci_upper: float
+
+
+@dataclass(frozen=True)
+class CurveSummary:
+    """One (band, album, window) group's headline numbers."""
+
+    songs: int
+    events: int
+    censored: int
+    median_survival_shows: float | None  # None when the curve never drops below 0.5
+
+
+def group_by_album(outcomes: Iterable[SongSurvival]) -> dict[str, list[SongSurvival]]:
+    """One band's outcomes, grouped for Kaplan-Meier fitting: `ALL_ALBUMS`
+    (every eligible song) plus one group per album label (`NON_ALBUM`
+    included). A studio album that happened to be named "all" would collide
+    with the `ALL_ALBUMS` key — not handled; no real album is named that."""
+    outcomes = list(outcomes)
+    groups: dict[str, list[SongSurvival]] = {ALL_ALBUMS: outcomes}
+    for outcome in outcomes:
+        groups.setdefault(outcome.album_label, []).append(outcome)
+    return groups
+
+
+def fit_curve(outcomes: list[SongSurvival], window: int) -> tuple[list[CurvePoint], CurveSummary]:
+    """Fit one Kaplan-Meier curve from `outcomes` (already the (band, album)
+    group wanted) at window N.
+
+    The time grid (decision Q7) is exactly the KM timeline lifelines produces
+    — the distinct event and censoring times, which always starts at t=0 with
+    probability 1 and every song still at risk — so no extra grid handling is
+    needed here.
+    """
+    if not outcomes:
+        return [], CurveSummary(songs=0, events=0, censored=0, median_survival_shows=None)
+
+    durations = [o.duration_shows[window] for o in outcomes]
+    event_flags = [o.event[window] for o in outcomes]
+
+    fitter = KaplanMeierFitter()
+    fitter.fit(durations, event_observed=event_flags)
+
+    survival = fitter.survival_function_.iloc[:, 0]
+    confidence = fitter.confidence_interval_
+    at_risk = fitter.event_table["at_risk"]
+    observed = fitter.event_table["observed"]
+
+    points = [
+        CurvePoint(
+            t_shows=int(t),
+            at_risk=int(at_risk.loc[t]),
+            events=int(observed.loc[t]),
+            survival_probability=float(survival.loc[t]),
+            ci_lower=float(confidence.iloc[:, 0].loc[t]),
+            ci_upper=float(confidence.iloc[:, 1].loc[t]),
+        )
+        for t in survival.index
+    ]
+
+    total_events = sum(event_flags)
+    songs = len(outcomes)
+    median = fitter.median_survival_time_
+    median_shows = None if median != median or median == float("inf") else float(median)  # median != median: NaN
+    summary = CurveSummary(songs=songs, events=total_events, censored=songs - total_events,
+                            median_survival_shows=median_shows)
+    return points, summary
