@@ -34,7 +34,34 @@ skip:
 redirect:
   text: "Choose a language:"
 home:
+  kicker: how bands use their own catalog
   title: How bands use their own catalog
+  lede: "Encore measures how seven bands use their own catalog on stage: how old their setlists are, how much they change from night to night, and how long a song lasts. Every number comes from aggregated setlist data; how it is built is on the methodology page."
+  f1:
+    kicker: 01 repertoire age
+    h: A new album makes a band younger on stage, but only for a while
+    stat_label: "years off Metallica's average repertoire age between {{ f1_year_prev }} and {{ f1_year }}, from {{ f1_from }} to {{ f1_to }}"
+    p: "Repertoire age is the number of years between a song's release and the night it is played. The chart follows Metallica, Avenged Sevenfold and Linkin Park by year."
+    title: "Repertoire age by year: Metallica, Avenged Sevenfold and Linkin Park"
+    desc: "Line chart of the average repertoire age by year for Metallica, Avenged Sevenfold and Linkin Park. The data table below lists every value."
+    caption: "Average repertoire age of the songs played in each year, weighted by performances."
+  f2:
+    kicker: 02 rotation
+    h: Bands settle into a fixed show as they grow, and Metallica is the exception
+    p: "Rotation by year for each band, on the same 0 to 1 scale: 0 is the same setlist every night, 1 is no song in common."
+    cell_title: "{{ band }}: rotation by year"
+    cell_desc: "Line chart of the rotation of {{ band }} by year, on a scale from 0 to 1."
+  f3:
+    kicker: 03 song survival
+    h: About a third of a catalog becomes permanent and the rest passes through
+    stat_label: "of Oasis's eligible songs are still in the setlist after {{ f3_t }} shows"
+    p: "Each curve is one Oasis studio album: the share of its songs still played after t shows. The dashed line is all songs."
+    title: "Oasis: song survival by album"
+    desc: "Kaplan-Meier curves of the share of Oasis songs still played after t shows, one per album. The data table below gives the share at 25, 50, 100, 200 and 400 shows."
+    caption: "Kaplan-Meier curves, window N = {{ n_window }} shows."
+  bands:
+    h: The bands
+    p: "One page per band, with its own charts and findings."
 comparison:
   kicker: seven bands, one scale
   title: Comparison

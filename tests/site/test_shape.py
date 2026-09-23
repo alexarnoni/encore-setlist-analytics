@@ -140,3 +140,27 @@ def test_methodology_placeholders_from_the_marts(marts) -> None:
     assert "oasis_weak_share" not in en  # no weak year, so a text that uses it fails the build
     assert en["muse_pairs_avg"] == "34" and en["muse_pairs_max"] == "34"  # 30 + band index 4, in 2015-2016
     assert en["band_list"].startswith("Arctic Monkeys, Oasis")
+
+
+def test_largest_age_drop_uses_consecutive_years_only() -> None:
+    age = pd.DataFrame({
+        "band": ["X"] * 5, "tour_name": ["A"] * 5, "show_year": [2000, 2001, 2003, 2004, 2005],
+        "aged_performances": [10] * 5, "avg_repertoire_age": [10.0, 12.0, 5.0, 9.0, 6.0],
+    })
+    drop = shape.largest_age_drop(age, "X")
+    # 2001 -> 2003 skips a year and does not count; 2004 -> 2005 falls by 3.0.
+    assert drop == {"year_prev": 2004, "year": 2005, "age_from": 9.0, "age_to": 6.0, "drop": 3.0}
+    rising = age.assign(avg_repertoire_age=[1.0, 2.0, 3.0, 4.0, 5.0])
+    assert shape.largest_age_drop(rising, "X") is None
+
+
+def test_final_survival_and_hero_drop_is_consistent_with_rounded_ends(marts) -> None:
+    assert shape.final_survival(marts["mart_survival_curves"], "Oasis") == (50, pytest.approx(0.25))
+    assert shape.final_survival(marts["mart_survival_curves"], "Nobody") is None
+    m = fake_marts()
+    m["mart_repertoire_age"] = m["mart_repertoire_age"].assign(
+        avg_repertoire_age=lambda d: d["avg_repertoire_age"] + (d["show_year"] == 2002) * 0.04
+        + (d["show_year"] == 2003) * 0.06)
+    en = values.placeholder_values(m, tuple(BANDS), "en")
+    # 12.04 -> 10.06 is a 1.98 fall, but the page prints "12.0" and "10.1", so it must print 1.9, not 2.0.
+    assert (en["f1_from"], en["f1_to"], en["f1_drop"]) == ("12.0", "10.1", "1.9")
