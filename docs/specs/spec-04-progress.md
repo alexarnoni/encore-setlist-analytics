@@ -329,3 +329,33 @@ data and fixed: Metallica has 12 albums against 7 palette colours, so albums
 after the seventh get a dotted line style, and confidence bands are drawn only
 for 6 curves or fewer (the caption drops its confidence-interval note when they
 are absent); spacing under headings and above figures.
+
+### T10 — home page (done)
+
+`home.html`, `pages.home_context`, `values` headline numbers, `shape.largest_age_drop`
+and `shape.final_survival`. Kicker, title and lede, then the three approved
+headlines: **01** hero stat (Metallica's biggest one-year fall in repertoire
+age) with the Metallica / Avenged Sevenfold / Linkin Park age chart; **02** seven
+small multiples (one compact rotation chart per band, same 0-1 scale, each
+linked to its band page) with one combined data table as their text
+alternative, no hero stat; **03** hero stat (where Oasis's all-songs survival
+curve ends) with the Oasis Kaplan-Meier chart; then the band index table (years,
+shows, catalog match, median survival). The hero numbers and the finding
+headlines are placeholders-driven; the finding **bodies are interim, factual
+sentences** replaced in T12. **Verified.** 88 site tests: three findings and the
+index in both locales, hero numbers from the marts in both number formats,
+finding 02 has seven SVGs and no hero stat while 01 and 03 do, one combined
+alternative table, index rows in band order with the right numbers, links to all
+seven bands. The hero fall is computed from the rounded ends so the printed
+difference matches the printed numbers (a real case: 32.34 to 25.36 would have
+read "-7.0" next to "32.3 to 25.4"). Real-data page checked at 800px.
+
+**Real-data check of the three headline claims** (done while building T10, to
+be written up in T12): claim 1 holds for Metallica (Death Magnetic 2008-2009,
+Hardwired 2016-2018, 72 Seasons 2023) and only weakly for Avenged Sevenfold and
+Linkin Park; claim 2 holds for Arctic Monkeys, Oasis, Twenty One Pilots, Muse
+and Avenged Sevenfold, **not for Linkin Park**, and the M72 figure in the marts is
+0.75 for the tour and 0.85-0.87 for its years, not 0.86 for the tour; claim 3
+holds for Oasis overall (35.6%), Morning Glory (88.9%), Heathen Chemistry,
+Don't Believe the Truth and Standing on the Shoulder of Giants, **but Dig Out
+Your Soul ends at 83%** (a short, censored curve). Details in T12.

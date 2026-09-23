@@ -44,11 +44,17 @@ def placeholder_values(marts: dict[str, pd.DataFrame], bands: tuple[str, ...], l
             values[f"{k}_last_year"] = str(int(match.loc[band, "last_year"]))
 
     _add_touring_and_weak_cells(values, marts, bands, locale)
+    _add_headline_values(values, marts, locale)
     values["bands_count"] = str(len(bands))
     values["band_list"] = ", ".join(bands)
     values["shows_total"] = fmt_number(float(shows.sum()), 0, locale)
     return values
 
+
+# Bands behind the home page's featured charts and hero stats.
+FEATURED_AGE_BANDS = ("Metallica", "Avenged Sevenfold", "Linkin Park")
+HERO_AGE_BAND = "Metallica"
+HERO_SURVIVAL_BAND = "Oasis"
 
 WEAK_MATCH_RATE = 0.90
 TOURING_SINCE = 2015
@@ -77,3 +83,22 @@ def _add_touring_and_weak_cells(values: dict[str, str], marts: dict[str, pd.Data
         if len(weak) and rows["performances"].sum() > 0:
             share = float(weak["performances"].sum() / rows["performances"].sum())
             values[f"{k}_weak_share"] = fmt_percent(share, 2, locale)
+
+
+def _add_headline_values(values: dict[str, str], marts: dict[str, pd.DataFrame], locale: str) -> None:
+    """Numbers behind the home page's hero stats.
+
+    f1_*: the biggest one-year fall in the hero band's repertoire age (f1_year_prev, f1_year,
+    f1_from, f1_to, f1_drop). f3_*: where the hero band's all-songs survival curve ends
+    (f3_t shows, f3_stat share still played). Left out when the data has no such figure.
+    """
+    drop = shape.largest_age_drop(marts["mart_repertoire_age"], HERO_AGE_BAND)
+    if drop:
+        values.update(
+            f1_year_prev=str(int(drop["year_prev"])), f1_year=str(int(drop["year"])),
+            f1_from=fmt_number(drop["age_from"], 1, locale), f1_to=fmt_number(drop["age_to"], 1, locale),
+            # From the rounded ends, so the printed difference matches the printed numbers.
+            f1_drop=fmt_number(round(drop["age_from"], 1) - round(drop["age_to"], 1), 1, locale))
+    end = shape.final_survival(marts["mart_survival_curves"], HERO_SURVIVAL_BAND)
+    if end:
+        values.update(f3_t=fmt_number(end[0], 0, locale), f3_stat=fmt_percent(end[1], 0, locale))

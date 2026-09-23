@@ -34,7 +34,34 @@ skip:
 redirect:
   text: "Escolha um idioma:"
 home:
+  kicker: como as bandas usam o próprio catálogo
   title: Como as bandas usam o próprio catálogo
+  lede: "O Encore mede como sete bandas usam o próprio catálogo no palco: quão velhos são os setlists, o quanto mudam de uma noite para outra e quanto tempo uma música dura. Todo número vem de dados agregados de setlists; como ele é construído está na página de metodologia."
+  f1:
+    kicker: 01 idade do repertório
+    h: Um álbum novo rejuvenesce a banda no palco, mas só por um tempo
+    stat_label: "anos a menos na idade média do repertório do Metallica entre {{ f1_year_prev }} e {{ f1_year }}, de {{ f1_from }} para {{ f1_to }}"
+    p: "A idade do repertório é o número de anos entre o lançamento de uma música e a noite em que ela é tocada. O gráfico acompanha Metallica, Avenged Sevenfold e Linkin Park, ano a ano."
+    title: "Idade do repertório por ano: Metallica, Avenged Sevenfold e Linkin Park"
+    desc: "Gráfico de linhas da idade média do repertório por ano para Metallica, Avenged Sevenfold e Linkin Park. A tabela de dados abaixo lista todos os valores."
+    caption: "Idade média do repertório das músicas tocadas em cada ano, ponderada por execuções."
+  f2:
+    kicker: 02 rotação
+    h: As bandas se fixam em um show conforme crescem, e o Metallica é a exceção
+    p: "Rotação por ano de cada banda, na mesma escala de 0 a 1: 0 é o mesmo setlist toda noite, 1 é nenhuma música em comum."
+    cell_title: "{{ band }}: rotação por ano"
+    cell_desc: "Gráfico de linhas da rotação de {{ band }} por ano, em escala de 0 a 1."
+  f3:
+    kicker: 03 sobrevivência das músicas
+    h: Cerca de um terço do catálogo se torna permanente e o resto só passa
+    stat_label: "das músicas elegíveis do Oasis ainda estão no setlist após {{ f3_t }} shows"
+    p: "Cada curva é um álbum de estúdio do Oasis: a parcela de suas músicas ainda tocadas após t shows. A linha tracejada é o conjunto de todas as músicas."
+    title: "Oasis: sobrevivência das músicas por álbum"
+    desc: "Curvas de Kaplan-Meier da parcela de músicas do Oasis ainda tocadas após t shows, uma por álbum. A tabela de dados abaixo dá a parcela em 25, 50, 100, 200 e 400 shows."
+    caption: "Curvas de Kaplan-Meier, janela N = {{ n_window }} shows."
+  bands:
+    h: As bandas
+    p: "Uma página por banda, com seus próprios gráficos e achados."
 comparison:
   kicker: sete bandas, uma escala
   title: Comparação

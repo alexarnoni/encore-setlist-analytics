@@ -15,7 +15,7 @@ import pandas as pd
 from markupsafe import Markup, escape
 
 from encore.site import bands as bands_mod
-from encore.site import i18n, sections, shape, theme
+from encore.site import i18n, sections, shape, theme, values
 
 
 @dataclass(frozen=True)
@@ -135,6 +135,36 @@ def band_context(band: str, *, locale: str, t: i18n.Translator, marts: dict[str,
     }
 
 
+def home_context(*, locale: str, t: i18n.Translator, marts: dict[str, pd.DataFrame],
+                 bands: tuple[str, ...]) -> dict[str, Any]:
+    """Home page: three findings (two hero stats and a set of small multiples) and the band index."""
+    featured = tuple(b for b in values.FEATURED_AGE_BANDS if b in bands)
+    f1 = sections.age_chart(marts, featured, t, prefix="home-age", title=t.plain("home.f1.title"),
+                            desc=t.plain("home.f1.desc"))
+    panels = []
+    for band in bands:
+        slug = bands_mod.slug(band)
+        chart = sections.rotation_chart(
+            marts, (band,), t, prefix=f"home-rot-{slug}", compact=True,
+            title=t.plain("home.f2.cell_title", band=band), desc=t.plain("home.f2.cell_desc", band=band))
+        panels.append({"band": band, "href": href(locale, f"bands/{slug}/"), "token": theme.band_token(band),
+                       "chart": chart})
+    # One combined table is the text alternative for all the panels (the SVG of this chart is not shown).
+    rotation_table = sections.rotation_chart(marts, bands, t, prefix="home-rot-all", title="", desc="")
+    f3 = sections.survival_chart(marts, values.HERO_SURVIVAL_BAND, t, prefix="home-km",
+                                 title=t.plain("home.f3.title"), desc=t.plain("home.f3.desc"))
+    facts = {b: sections.band_facts(marts, b) for b in bands}
+    headers = [t("labels.band"), t("labels.years"), t("chart.shows"), t("labels.matched_rate"), t("labels.median_shows")]
+    rows = []
+    for band in bands:
+        f = facts[band]
+        median = t("labels.not_reached") if pd.isna(f["median"]) else t.number(f["median"])
+        rows.append([band_cell(band, locale), f"{f['first_year']}–{f['last_year']}", t.number(f["shows"]),
+                     t.percent(f["match"], 1), median])
+    return {"charts": {"f1": f1, "f3": f3}, "rotation_panels": panels, "rotation_table": rotation_table,
+            "index": {"headers": headers, "rows": rows}}
+
+
 def context(page: Page, *, locale: str, t: i18n.Translator, marts: dict[str, pd.DataFrame],
             bands: tuple[str, ...]) -> dict[str, Any]:
     """Page-specific template variables (grows as page content is added)."""
@@ -144,6 +174,8 @@ def context(page: Page, *, locale: str, t: i18n.Translator, marts: dict[str, pd.
     ctx["min_tour_shows"], ctx["n_window"] = shape.MIN_TOUR_CELL_SHOWS, shape.MAIN_WINDOW
     if page.band:
         ctx.update(band_context(page.band, locale=locale, t=t, marts=marts, bands=bands))
+    if page.key == "home":
+        ctx.update(home_context(locale=locale, t=t, marts=marts, bands=bands))
     if page.key == "comparison":
         ctx["charts"] = {
             "age": sections.age_chart(marts, bands, t, prefix="cmp-age", title=t.plain("comparison.age.title"),

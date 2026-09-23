@@ -35,7 +35,7 @@ def fake_marts() -> dict[str, pd.DataFrame]:
                 age.append(dict(
                     band=band, tour_name=tour_name, show_year=y, shows=10 + b, performances=200 + b,
                     matched_performances=190 + b, aged_performances=180 + b, match_rate=0.95,
-                    avg_repertoire_age=5.0 + b + (y - 2000), median_repertoire_age=4.0 + b + (y - 2000),
+                    avg_repertoire_age=5.0 + b + (y - 2000) - (3.0 if y == 2003 else 0.0), median_repertoire_age=4.0 + b + (y - 2000),
                     oldest_song_year=1990, newest_song_year=y, computed_at=COMPUTED_AT))
             tour.append(dict(
                 band=band, tour_name=tour_name, first_year=years[0], last_year=years[-1],
