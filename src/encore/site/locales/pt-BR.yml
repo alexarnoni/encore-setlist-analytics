@@ -153,3 +153,69 @@ labels:
   album_rate: Ligadas a álbum de estúdio
   years: Anos
   not_reached: não atingida
+band:
+  kicker: perfil da banda
+  chip_years: "{{ first }}–{{ last }}"
+  chip_shows: "{{ n }} shows"
+  chip_match: "{{ pct }} reconhecidas no catálogo"
+  chip_median: "sobrevivência mediana: {{ n }} shows"
+  findings:
+    h: O que se destaca
+  age:
+    h: Idade do repertório
+    p: "Anos entre o primeiro lançamento de uma música e a noite em que ela é tocada, em média sobre as execuções de cada ano."
+    title: "{{ band }}: idade do repertório por ano"
+    desc: "Gráfico de linhas da idade média do repertório de {{ band }} por ano. A tabela de dados abaixo lista todos os valores."
+    caption: "Idade média do repertório por ano, ponderada por execuções."
+  tours:
+    h: Idade mediana por turnê
+    p: "Cada barra é uma turnê em um ano: uma turnê que atravessa vários anos aparece uma vez por ano, porque a mediana não pode ser combinada entre anos. O losango marca a média. Células com menos de {{ min_tour_shows }} shows ficam de fora."
+    title: "{{ band }}: idade mediana do repertório por turnê"
+    desc: "Gráfico de barras da idade mediana do repertório de cada turnê e ano de {{ band }}. A tabela de dados abaixo lista todos os valores."
+    caption: "Idade mediana do repertório de cada turnê e ano; o losango é a média."
+  rotation:
+    h: Rotação
+    p: "O quanto o setlist muda de um show para o seguinte dentro de uma turnê, por ano. 0 é o mesmo setlist toda noite; 1 é nenhuma música em comum."
+    title: "{{ band }}: rotação por ano"
+    desc: "Gráfico de linhas da rotação de {{ band }} por ano. A tabela de dados abaixo lista todos os valores."
+    caption: "Rotação entre shows consecutivos da mesma turnê."
+  survival:
+    h: Sobrevivência das músicas
+    p: "Parcela das músicas do catálogo da banda ainda no setlist após t shows desde a estreia ao vivo, por álbum de estúdio. Uma curva que fica alta é um álbum cujas músicas se tornaram permanentes; uma que cai rápido é um álbum que passou."
+    title: "{{ band }}: sobrevivência das músicas por álbum"
+    desc: "Curvas de Kaplan-Meier da parcela de músicas ainda tocadas após t shows, uma por álbum, para {{ band }}. A tabela de dados abaixo dá a parcela em 25, 50, 100, 200 e 400 shows."
+    caption: "Curvas de Kaplan-Meier, janela N = {{ n_window }} shows; a linha tracejada é o conjunto de músicas elegíveis."
+  albums:
+    h: Álbuns
+    p: "Músicas elegíveis do catálogo por álbum de referência (o álbum de estúdio mais antigo que contém a música). A sobrevivência mediana é em shows."
+  others:
+    h: Outras bandas
+findings:
+  arctic_monkeys:
+    p:
+      1: "{{ arctic_monkeys_songs }} músicas do catálogo da banda Arctic Monkeys são elegíveis para a análise de sobrevivência; {{ arctic_monkeys_abandoned }} foram abandonadas e {{ arctic_monkeys_censored }} ainda são tocadas ou voltaram."
+      2: "A sobrevivência mediana é de {{ arctic_monkeys_median }} shows."
+  oasis:
+    p:
+      1: "{{ oasis_songs }} músicas do catálogo da banda Oasis são elegíveis para a análise de sobrevivência; {{ oasis_abandoned }} foram abandonadas e {{ oasis_censored }} ainda são tocadas ou voltaram."
+      2: "A sobrevivência mediana é de {{ oasis_median }} shows."
+  linkin_park:
+    p:
+      1: "{{ linkin_park_songs }} músicas do catálogo da banda Linkin Park são elegíveis para a análise de sobrevivência; {{ linkin_park_abandoned }} foram abandonadas e {{ linkin_park_censored }} ainda são tocadas ou voltaram."
+      2: "A sobrevivência mediana é de {{ linkin_park_median }} shows."
+  twenty_one_pilots:
+    p:
+      1: "{{ twenty_one_pilots_songs }} músicas do catálogo da banda Twenty One Pilots são elegíveis para a análise de sobrevivência; {{ twenty_one_pilots_abandoned }} foram abandonadas e {{ twenty_one_pilots_censored }} ainda são tocadas ou voltaram."
+      2: "A sobrevivência mediana é de {{ twenty_one_pilots_median }} shows."
+  muse:
+    p:
+      1: "{{ muse_songs }} músicas do catálogo da banda Muse são elegíveis para a análise de sobrevivência; {{ muse_abandoned }} foram abandonadas e {{ muse_censored }} ainda são tocadas ou voltaram."
+      2: "A sobrevivência mediana é de {{ muse_median }} shows."
+  metallica:
+    p:
+      1: "{{ metallica_songs }} músicas do catálogo da banda Metallica são elegíveis para a análise de sobrevivência; {{ metallica_abandoned }} foram abandonadas e {{ metallica_censored }} ainda são tocadas ou voltaram."
+      2: "A sobrevivência mediana é de {{ metallica_median }} shows."
+  avenged_sevenfold:
+    p:
+      1: "{{ avenged_sevenfold_songs }} músicas do catálogo da banda Avenged Sevenfold são elegíveis para a análise de sobrevivência; {{ avenged_sevenfold_abandoned }} foram abandonadas e {{ avenged_sevenfold_censored }} ainda são tocadas ou voltaram."
+      2: "A sobrevivência mediana é de {{ avenged_sevenfold_median }} shows."

@@ -18,6 +18,9 @@ h1 { font-size: clamp(1.7rem, 4vw + 1rem, 2.6rem); font-weight: 700; }
 h2 { font-size: 1.4rem; font-weight: 700; }
 h3 { font-size: 1.1rem; font-weight: 600; }
 p { margin: 0 0 1em; max-width: 68ch; }
+h2 + p, h3 + p { margin-top: 0.5rem; }
+section > h3 { margin-top: 2.25rem; }
+p + figure, p + .card { margin-top: 1rem; }
 
 .wrap { max-width: 68rem; margin: 0 auto; padding: 0 16px; }
 .skip { position: absolute; left: -999px; top: 0; background: var(--ink); color: var(--card); padding: 0.5rem 1rem; z-index: 10; }
@@ -80,6 +83,9 @@ th:first-child, td:first-child { text-align: left; }
 thead th { font-weight: 500; color: var(--muted); border-bottom-color: var(--ink); }
 tbody tr:hover { background: color-mix(in srgb, var(--line) 35%, transparent); }
 .swatch { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 2px; margin-right: 0.5rem; vertical-align: -0.05rem; }
+h1 .swatch-lg { width: 0.9rem; height: 0.9rem; margin-right: 0.75rem; vertical-align: 0.1em; border-radius: 3px; }
+li .pill .swatch { width: 0.6rem; height: 0.6rem; margin-right: 0.4rem; }
+ul.chips { list-style: none; } ul.chips > li { display: inline-flex; }
 td.dim, .dim { color: var(--muted); }
 @media (max-width: 640px) {
   table.stackable thead { position: absolute; left: -999px; }
