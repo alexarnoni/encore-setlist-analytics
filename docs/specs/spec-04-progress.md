@@ -4,7 +4,7 @@ Tracks `docs/specs/spec-04-site.md` (public bilingual static site). Same
 discipline as specs 01 to 03: small tasks, one commit each, results recorded
 here.
 
-> **STATUS: T0-T2 done. Visual identity approved (below); T3 next. T12 stops for review of the findings text.**
+> **STATUS: T0-T11 done (2026-09-23). STOPPED before T12 (findings text) as requested: decisions needed, see the T11 section. T12 stops for review of the findings text.**
 > Work happens only on branch `spec-04`, in the worktree
 > `D:\projetos\encore-spec04` (main directory stays on `master`).
 
@@ -359,3 +359,36 @@ and Avenged Sevenfold, **not for Linkin Park**, and the M72 figure in the marts 
 holds for Oasis overall (35.6%), Morning Glory (88.9%), Heathen Chemistry,
 Don't Believe the Truth and Standing on the Shoulder of Giants, **but Dig Out
 Your Soul ends at 83%** (a short, censored curve). Details in T12.
+
+### T11 — content policy check at build time (done)
+
+`policy.py`, wired into `build_site` after all pages and assets are written; on
+any violation the output directory is emptied (so nothing bad can be served or
+deployed) and the build raises `PolicyError` listing every violation. Rules per
+page: none of the dbt forbidden field names (`setlist_id`, `show_date`,
+`song_name_raw`, `show_key`, `show_id`, `show_index`, `setlist_url`) anywhere in the HTML;
+`venue`, a normal word in prose, only as an attribute, id/class or table header;
+no date more precise than a year (ISO with or without time, numeric, "1 May
+2019", "1 de maio de 2019", month-and-year), except inside the one
+`data-build-stamp` element, which must exist and hold exactly the two ISO dates
+(R1.4); every link to setlist.fm points at the root, never at a setlist or show;
+each page has a followable setlist.fm link (no `nofollow`) and the MusicBrainz
+credit with CC0. SVG geometry attributes are not read as dates. The root
+redirect gets the content rules only. **Verified.** 38 policy tests, including
+the ones that first failed and exposed three gaps in my own checker (a `1st of
+May` form, ISO timestamps, `data-venue` attributes), all fixed; a build whose
+marts carry `show_id` in an album name, or a full date, fails and leaves the
+output directory empty. **Real data:** `python -m encore.site.build` passes the
+policy check on all 23 pages. Full suite: 282 passed, 14 skipped.
+
+**Where this stops (before T12).** Decisions that need you, in order:
+
+1. **Band colours (T5).** Three approved colours miss 3:1 contrast on one
+   theme; proposed fixes in the T5 section. Approve, adjust or keep.
+2. **Font download (T6).** Permission to download IBM Plex Mono (latin subset,
+   400 and 500, ~30 KB, SIL OFL) from github.com/IBM/plex and install
+   `fonttools` + `brotli` from PyPI to subset it. Until then the system mono stack
+   is used.
+3. **Headline claims vs the marts (T12).** Three points where the numbers do not
+   say exactly what the brief says (see the T10 note); I will not write text that
+   overstates them, so I need to know how you want them worded.
