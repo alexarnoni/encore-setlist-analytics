@@ -164,6 +164,13 @@ Casar nomes de músicas entre setlist.fm e MusicBrainz:
 
 ## 9. Fases
 
+> **Nota de escopo (2026-09-22):** depois do spec 03 (rotação e sobrevivência),
+> paramos de adicionar KPIs. Dos KPIs listados na seção 3, "peso do álbum mais
+> recente", "peso da era inicial", "posições-chave" e "variação geográfica"
+> ficam adiados, assim como a Fase 5 (automação) abaixo. O próximo spec depois
+> do 03 é a Fase 4 (API e frontend) — é quando o projeto passa a ser visível
+> publicamente.
+
 ### Fase 0: validação (notebook, antes do Kiro)
 - Puxar setlists das bandas candidatas
 - Medir shows por ano e % com setlist preenchido
@@ -189,7 +196,7 @@ Casar nomes de músicas entre setlist.fm e MusicBrainz:
 - Páginas por banda com os principais gráficos
 - Página de metodologia (definições e cobertura dos dados)
 
-### Fase 5: automação
+### Fase 5: automação (adiada, ver nota de escopo acima)
 - Coleta periódica para turnês em andamento
 - Orquestração
 
