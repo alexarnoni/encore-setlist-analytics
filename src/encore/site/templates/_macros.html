@@ -9,10 +9,20 @@
 </table>
 {% endmacro %}
 
-{% macro figure(chart, caption) %}
+{% macro read(text) %}<p class="read"><strong>{{ t('read.label') }}:</strong> {{ text }}</p>{% endmacro %}
+
+{% macro caveats(items) %}
+<details class="caveats">
+  <summary>{{ t('caveats.summary') }}</summary>
+  <ul>{% for item in items %}<li>{{ item }}</li>{% endfor %}</ul>
+</details>
+{% endmacro %}
+
+{% macro figure(chart, caption, how_to_read) %}
 <figure class="card chart">
   {{ chart.svg|safe }}
   <figcaption>{{ caption }}</figcaption>
+  {{ read(how_to_read) }}
   <details>
     <summary>{{ t('chart.table') }}</summary>
     {{ table(chart.headers, chart.rows) }}

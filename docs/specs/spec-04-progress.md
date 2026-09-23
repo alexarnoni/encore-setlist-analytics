@@ -517,3 +517,31 @@ not pushed). What is left is yours: `make site` on a machine that reaches the da
 Cloudflare Pages and add the DNS record (README, "Public site (spec 04)"). After each pipeline run,
 rebuild by hand with `make site`; a run that changes the data can make a sentence in the findings
 untrue, and `pytest tests/site/test_findings.py` (real marts) says so before you publish.
+
+### Follow-up after the public review (2026-09-23)
+
+1. **Path fix.** `pyproject.toml` (setuptools, `src` layout, package data for the site) so
+   `pip install -e .` makes `encore` importable from anywhere; `make site` still sets
+   `PYTHONPATH=src`. README: one-time setup, both make targets and the plain commands. `make` was
+   **not** installed (decision: one less dependency); the two recipes were run as plain commands.
+2. **Three-layer findings** (home and all seven band pages). Layer 1: a plain sentence with no
+   numbers (the heading on the home page, a lede on the band pages); layer 2: one paragraph of two to
+   four sentences with the key numbers; layer 3: caveats and limits in a collapsed, smaller-type
+   `<details>` block, with a common caveat line on every band page. Under every chart one "How to
+   read" line (age lines, rotation lines, rotation panels, tour bars, survival curves). The factual
+   standard is unchanged: the same figures, moved, not softened; the weak cases (Avenged Sevenfold,
+   Linkin Park) stay in layer 2 because they are findings.
+3. **Finding 03 hero is Morning Glory** (89% of its 9 songs after 735 shows); the Oasis 500-show
+   figure stays in the numbers paragraph.
+4. **Finding 02 concrete sentence.** The framing "two shows in the same city without repeating songs"
+   is not supported: the marts carry no city or per-show data, and consecutive shows on the M72
+   tour overlap by about a quarter of their combined songs (mean Jaccard 0.25), so songs are repeated.
+   The text says Metallica "played a substantially different set from one night to the next, where
+   in its early years it played nearly the same songs every night", and the numbers add the overlap
+   (25% on M72 against 83% to 92% on its 1980s tours; `<tour>_overlap`).
+5. **Tests.** Layer 1 has no numbers (decades allowed) and no placeholders; every finding has its
+   three layers in both locales; each band's numbers run 2 to 4 sentences; all five reading lines
+   exist; every `<figure>` (and the home panels) carries one; the unsupported framing is rejected
+   by a test, and the real-data test asserts the overlap facts behind "substantially different" and
+   "nearly the same". 308 passed, 14 skipped. Real build: 23 files, policy and link checks pass; all
+   22 content pages fit at 375px with the caveats expanded.

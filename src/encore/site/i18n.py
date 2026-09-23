@@ -125,6 +125,10 @@ class Translator:
         except TemplateSyntaxError as exc:
             raise LocaleError(f"[{self.locale}] {key}: bad placeholder syntax ({exc.message})") from None
 
+    def has(self, key: str) -> bool:
+        """Whether a locale key exists (for optional pieces of a page)."""
+        return key in self.strings
+
     def value(self, name: str) -> str:
         """The formatted figure behind a placeholder, for templates that print it outside a string."""
         if name in self.values:

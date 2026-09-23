@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import table, figure, kicker with context %}
+{% from "_macros.html" import table, figure, kicker, caveats with context %}
 {% block main %}
 {{ kicker(t('band.kicker')) }}
 <h1><span class="swatch swatch-lg" style="background: var({{ band_token }})"></span>{{ band }}</h1>
@@ -9,31 +9,33 @@
 
 <section id="findings">
   <h2>{{ t('band.findings.h') }}</h2>
-  {% for p in findings %}<p>{{ p }}</p>{% endfor %}
+  <p class="lede claim">{{ findings.lead }}</p>
+  <p>{{ findings.numbers }}</p>
+  {{ caveats(findings.caveats) }}
 </section>
 
 <section id="age">
   <h2>{{ t('band.age.h') }}</h2>
   <p>{{ t('band.age.p') }}</p>
-  {{ figure(charts.age, t('band.age.caption')) }}
+  {{ figure(charts.age, t('band.age.caption'), t('read.age')) }}
   {% if charts.tours %}
   <h3>{{ t('band.tours.h') }}</h3>
   <p>{{ t('band.tours.p', min_tour_shows=min_tour_shows) }}</p>
-  {{ figure(charts.tours, t('band.tours.caption')) }}
+  {{ figure(charts.tours, t('band.tours.caption'), t('read.tours')) }}
   {% endif %}
 </section>
 
 <section id="rotation">
   <h2>{{ t('band.rotation.h') }}</h2>
   <p>{{ t('band.rotation.p') }}</p>
-  {{ figure(charts.rotation, t('band.rotation.caption') ~ ' ' ~ t('chart.thin_note', min_pairs=min_pairs)) }}
+  {{ figure(charts.rotation, t('band.rotation.caption') ~ ' ' ~ t('chart.thin_note', min_pairs=min_pairs), t('read.rotation')) }}
 </section>
 
 <section id="survival">
   <h2>{{ t('band.survival.h') }}</h2>
   <p>{{ t('band.survival.p') }}</p>
   {% if charts.survival %}
-  {{ figure(charts.survival, t('band.survival.caption', n_window=n_window) ~ (' ' ~ t('chart.ci_note') if ci_shown else '')) }}
+  {{ figure(charts.survival, t('band.survival.caption', n_window=n_window) ~ (' ' ~ t('chart.ci_note') if ci_shown else ''), t('read.survival')) }}
   {% endif %}
 </section>
 

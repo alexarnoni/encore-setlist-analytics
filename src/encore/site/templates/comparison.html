@@ -8,13 +8,13 @@
 <section id="age">
   <h2>{{ t('comparison.age.h') }}</h2>
   <p>{{ t('comparison.age.p') }}</p>
-  {{ figure(charts.age, t('comparison.age.caption')) }}
+  {{ figure(charts.age, t('comparison.age.caption'), t('read.age')) }}
 </section>
 
 <section id="rotation">
   <h2>{{ t('comparison.rotation.h') }}</h2>
   <p>{{ t('comparison.rotation.p') }}</p>
-  {{ figure(charts.rotation, t('comparison.rotation.caption') ~ ' ' ~ t('chart.thin_note', min_pairs=min_pairs)) }}
+  {{ figure(charts.rotation, t('comparison.rotation.caption') ~ ' ' ~ t('chart.thin_note', min_pairs=min_pairs), t('read.rotation')) }}
 </section>
 
 <section id="survival">
