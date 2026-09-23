@@ -305,3 +305,27 @@ words). Real-data page checked in the browser pane at 1000px: charts legible,
 band colours consistent with the notebooks (amber darkened), table numbers equal
 the sensitivity table's N = 50 column. Fixed on the way: `.wrap`'s padding
 overrode `main`'s top padding (now `main.wrap`).
+
+### T9 — band pages (done)
+
+`band.html` and `pages.band_context`: per band a kicker, name with its colour
+swatch, header chips (years covered, shows, catalog match, median survival),
+"What stands out" (findings), repertoire age by year (weighted mean), median
+age by tour (bars for tour-and-year cells, mean as a diamond; block omitted when
+no cell reaches 15 shows), rotation by year (hollow thin years), Kaplan-Meier
+curves by album, the album table (band total first, small albums starred,
+`non-album` last, "not reached" where the curve never drops below 50%), and links
+to the other six bands. All labels in both locales. **Interim findings:** each
+band has two factual placeholder sentences (eligible songs, abandoned and
+censored, median survival) so the slot renders and the placeholder mechanism is
+exercised; they are replaced by the hand-written findings in T12.
+**Verified.** 80 site tests: every band page in both locales has its sections,
+the right number of charts (3 or 4 depending on whether a tour cell qualifies),
+header chips computed from the marts in both languages, album table equal to the
+marts, survival data table checkpoints, no self-link in "other bands". Real-data
+pages viewed in the browser pane (Oasis, Metallica at 800px; Muse at 375px:
+no element wider than the viewport, tables stacked). Issues found on the real
+data and fixed: Metallica has 12 albums against 7 palette colours, so albums
+after the seventh get a dotted line style, and confidence bands are drawn only
+for 6 curves or fewer (the caption drops its confidence-interval note when they
+are absent); spacing under headings and above figures.

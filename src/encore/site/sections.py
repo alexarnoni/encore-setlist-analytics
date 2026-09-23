@@ -13,6 +13,8 @@ from encore.site import bands as bands_mod
 from encore.site import charts, i18n, shape, theme
 from encore.site.charts import Chart, Curve, Series
 
+MAX_CI_CURVES = 6
+
 
 def _band_series(names: tuple[str, ...], frame_for, y_column: str, thin: bool = False) -> list[Series]:
     """One `Series` per band that has data; `frame_for(band)` returns its yearly frame."""
@@ -65,7 +67,8 @@ def survival_chart(marts: dict[str, pd.DataFrame], band: str, t: i18n.Translator
     if not albums:
         return None
     sizes = summary[(summary["band"] == band) & (summary["n_window"] == n)].set_index("album")["songs"]
-    drawn = [Curve(f"{a} ({t.plain('chart.songs_n', n=int(sizes[a]))})", charts.album_color(i, a), shape.km_curve(curves, band, a, n))
+    drawn = [Curve(f"{a} ({t.plain('chart.songs_n', n=int(sizes[a]))})", charts.album_color(i, a),
+                   shape.km_curve(curves, band, a, n), linestyle=charts.album_linestyle(i))
              for i, a in enumerate(albums)]
     total = shape.km_curve(curves, band, shape.BAND_TOTAL, n)
     if len(total):
@@ -74,7 +77,12 @@ def survival_chart(marts: dict[str, pd.DataFrame], band: str, t: i18n.Translator
     return charts.km_chart(
         drawn, title=title, desc=desc, xlabel=t.plain("chart.survival_xlabel"), ylabel=t.plain("chart.survival_ylabel"),
         median_label=t.plain("chart.median"), nf=t.number, prefix=prefix, first_header=t.plain("chart.album"),
-        t_header=t.plain("chart.t_header"))
+        t_header=t.plain("chart.t_header"), show_ci=show_ci(len(albums)))
+
+
+def show_ci(album_curves: int) -> bool:
+    """Confidence bands are drawn only when few curves overlap; with many they turn into a smear."""
+    return album_curves <= MAX_CI_CURVES
 
 
 def survival_totals_rows(marts: dict[str, pd.DataFrame], names: tuple[str, ...], t: i18n.Translator, locale: str,

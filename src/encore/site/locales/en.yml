@@ -153,3 +153,69 @@ labels:
   album_rate: Matched to a studio album
   years: Years
   not_reached: not reached
+band:
+  kicker: band profile
+  chip_years: "{{ first }}–{{ last }}"
+  chip_shows: "{{ n }} shows"
+  chip_match: "{{ pct }} matched to the catalog"
+  chip_median: "median survival: {{ n }} shows"
+  findings:
+    h: What stands out
+  age:
+    h: Repertoire age
+    p: "Years between a song's first release and the night it is played, averaged over each year's performances."
+    title: "{{ band }}: repertoire age by year"
+    desc: "Line chart of the average repertoire age of {{ band }} by year. The data table below lists every value."
+    caption: "Average repertoire age by year, weighted by performances."
+  tours:
+    h: Median age by tour
+    p: "Each bar is one tour in one year: a tour that spans several years appears once per year, because a median cannot be combined across years. The diamond marks the mean. Cells with fewer than {{ min_tour_shows }} shows are left out."
+    title: "{{ band }}: median repertoire age by tour"
+    desc: "Bar chart of the median repertoire age of each tour and year of {{ band }}. The data table below lists every value."
+    caption: "Median repertoire age of each tour and year; the diamond is the mean."
+  rotation:
+    h: Rotation
+    p: "How much the setlist changes from one show to the next within a tour, by year. 0 is the same setlist every night; 1 is no song in common."
+    title: "{{ band }}: rotation by year"
+    desc: "Line chart of the rotation of {{ band }} by year. The data table below lists every value."
+    caption: "Rotation between consecutive shows of the same tour."
+  survival:
+    h: Song survival
+    p: "Share of the band's catalog songs still in the setlist after t shows since their live debut, by studio album. A curve that stays high is an album whose songs became permanent; one that drops fast is an album that passed through."
+    title: "{{ band }}: song survival by album"
+    desc: "Kaplan-Meier curves of the share of songs still played after t shows, one per album, for {{ band }}. The data table below gives the share at 25, 50, 100, 200 and 400 shows."
+    caption: "Kaplan-Meier curves, window N = {{ n_window }} shows; the dashed line is all eligible songs."
+  albums:
+    h: Albums
+    p: "Eligible catalog songs by reference album (the earliest studio album that contains the song). Median survival is in shows."
+  others:
+    h: Other bands
+findings:
+  arctic_monkeys:
+    p:
+      1: "{{ arctic_monkeys_songs }} catalog songs of Arctic Monkeys are eligible for survival analysis; {{ arctic_monkeys_abandoned }} were abandoned and {{ arctic_monkeys_censored }} are still played or came back."
+      2: "The median survival is {{ arctic_monkeys_median }} shows."
+  oasis:
+    p:
+      1: "{{ oasis_songs }} catalog songs of Oasis are eligible for survival analysis; {{ oasis_abandoned }} were abandoned and {{ oasis_censored }} are still played or came back."
+      2: "The median survival is {{ oasis_median }} shows."
+  linkin_park:
+    p:
+      1: "{{ linkin_park_songs }} catalog songs of Linkin Park are eligible for survival analysis; {{ linkin_park_abandoned }} were abandoned and {{ linkin_park_censored }} are still played or came back."
+      2: "The median survival is {{ linkin_park_median }} shows."
+  twenty_one_pilots:
+    p:
+      1: "{{ twenty_one_pilots_songs }} catalog songs of Twenty One Pilots are eligible for survival analysis; {{ twenty_one_pilots_abandoned }} were abandoned and {{ twenty_one_pilots_censored }} are still played or came back."
+      2: "The median survival is {{ twenty_one_pilots_median }} shows."
+  muse:
+    p:
+      1: "{{ muse_songs }} catalog songs of Muse are eligible for survival analysis; {{ muse_abandoned }} were abandoned and {{ muse_censored }} are still played or came back."
+      2: "The median survival is {{ muse_median }} shows."
+  metallica:
+    p:
+      1: "{{ metallica_songs }} catalog songs of Metallica are eligible for survival analysis; {{ metallica_abandoned }} were abandoned and {{ metallica_censored }} are still played or came back."
+      2: "The median survival is {{ metallica_median }} shows."
+  avenged_sevenfold:
+    p:
+      1: "{{ avenged_sevenfold_songs }} catalog songs of Avenged Sevenfold are eligible for survival analysis; {{ avenged_sevenfold_abandoned }} were abandoned and {{ avenged_sevenfold_censored }} are still played or came back."
+      2: "The median survival is {{ avenged_sevenfold_median }} shows."

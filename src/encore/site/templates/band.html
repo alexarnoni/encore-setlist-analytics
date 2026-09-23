@@ -1,4 +1,53 @@
 {% extends "base.html" %}
+{% from "_macros.html" import table, figure, kicker with context %}
 {% block main %}
-<h1>{{ band }}</h1>
+{{ kicker(t('band.kicker')) }}
+<h1><span class="swatch swatch-lg" style="background: var({{ band_token }})"></span>{{ band }}</h1>
+<ul class="chips">
+  {% for chip in chips %}<li class="chip">{{ chip }}</li>{% endfor %}
+</ul>
+
+<section id="findings">
+  <h2>{{ t('band.findings.h') }}</h2>
+  {% for p in findings %}<p>{{ p }}</p>{% endfor %}
+</section>
+
+<section id="age">
+  <h2>{{ t('band.age.h') }}</h2>
+  <p>{{ t('band.age.p') }}</p>
+  {{ figure(charts.age, t('band.age.caption')) }}
+  {% if charts.tours %}
+  <h3>{{ t('band.tours.h') }}</h3>
+  <p>{{ t('band.tours.p', min_tour_shows=min_tour_shows) }}</p>
+  {{ figure(charts.tours, t('band.tours.caption')) }}
+  {% endif %}
+</section>
+
+<section id="rotation">
+  <h2>{{ t('band.rotation.h') }}</h2>
+  <p>{{ t('band.rotation.p') }}</p>
+  {{ figure(charts.rotation, t('band.rotation.caption') ~ ' ' ~ t('chart.thin_note', min_pairs=min_pairs)) }}
+</section>
+
+<section id="survival">
+  <h2>{{ t('band.survival.h') }}</h2>
+  <p>{{ t('band.survival.p') }}</p>
+  {% if charts.survival %}
+  {{ figure(charts.survival, t('band.survival.caption', n_window=n_window) ~ (' ' ~ t('chart.ci_note') if ci_shown else '')) }}
+  {% endif %}
+</section>
+
+<section id="albums">
+  <h2>{{ t('band.albums.h') }}</h2>
+  <p>{{ t('band.albums.p') }}</p>
+  <div class="card">{{ table(albums.headers, albums.rows) }}</div>
+  {% if has_small_albums %}<p class="note">{{ t('chart.small_album_note', min_songs=min_songs) }}</p>{% endif %}
+</section>
+
+<section id="others">
+  <h2>{{ t('band.others.h') }}</h2>
+  <ul class="chips">
+    {% for other in others %}<li><a class="pill" href="{{ other.href }}"><span class="swatch" style="background: var({{ other.token }})"></span>{{ other.name }}</a></li>{% endfor %}
+  </ul>
+</section>
 {% endblock %}

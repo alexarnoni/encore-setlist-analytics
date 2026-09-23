@@ -100,12 +100,50 @@ def match_table(marts: dict[str, pd.DataFrame], bands: tuple[str, ...], locale: 
     return {"headers": headers, "rows": rows}
 
 
+def band_context(band: str, *, locale: str, t: i18n.Translator, marts: dict[str, pd.DataFrame],
+                 bands: tuple[str, ...]) -> dict[str, Any]:
+    """Everything a band page shows: header chips, findings, four charts, album table, other bands."""
+    facts = sections.band_facts(marts, band)
+    chips = [t("band.chip_years", first=facts["first_year"], last=facts["last_year"]),
+             t("band.chip_shows", n=t.number(facts["shows"])),
+             t("band.chip_match", pct=t.percent(facts["match"], 1))]
+    if pd.notna(facts["median"]):
+        chips.append(t("band.chip_median", n=t.number(facts["median"])))
+    slug = bands_mod.slug(band)
+    kw = {"band": band}
+
+    def chart_text(section: str) -> dict[str, str]:
+        return {"title": t.plain(f"band.{section}.title", **kw), "desc": t.plain(f"band.{section}.desc", **kw)}
+
+    albums = sections.album_rows(marts, band, t)
+    album_table = shape.album_table(marts["mart_survival_summary"], band)
+    return {
+        "band_token": theme.band_token(band),
+        "chips": chips,
+        "findings": t.section(f"findings.{bands_mod.key(band)}.p"),
+        "charts": {
+            "age": sections.age_chart(marts, (band,), t, prefix=f"{slug}-age", **chart_text("age")),
+            "tours": sections.tour_chart(marts, band, t, prefix=f"{slug}-tours", **chart_text("tours")),
+            "rotation": sections.rotation_chart(marts, (band,), t, prefix=f"{slug}-rot", **chart_text("rotation")),
+            "survival": sections.survival_chart(marts, band, t, prefix=f"{slug}-km", **chart_text("survival")),
+        },
+        "albums": albums,
+        "has_small_albums": bool(album_table["small"].any()),
+        "ci_shown": sections.show_ci(len(shape.survival_albums(marts["mart_survival_summary"], band))),
+        "others": [{"name": b, "href": href(locale, f"bands/{bands_mod.slug(b)}/"), "token": theme.band_token(b)}
+                   for b in bands if b != band],
+    }
+
+
 def context(page: Page, *, locale: str, t: i18n.Translator, marts: dict[str, pd.DataFrame],
             bands: tuple[str, ...]) -> dict[str, Any]:
     """Page-specific template variables (grows as page content is added)."""
     ctx: dict[str, Any] = {"t": t, "locale": locale, "lang": locale, "page": page, "band": page.band,
                            "bands": bands, "band_slug": bands_mod.slug(page.band) if page.band else None}
     ctx["min_pairs"], ctx["min_songs"] = shape.MIN_PAIRS, shape.MIN_SONGS
+    ctx["min_tour_shows"], ctx["n_window"] = shape.MIN_TOUR_CELL_SHOWS, shape.MAIN_WINDOW
+    if page.band:
+        ctx.update(band_context(page.band, locale=locale, t=t, marts=marts, bands=bands))
     if page.key == "comparison":
         ctx["charts"] = {
             "age": sections.age_chart(marts, bands, t, prefix="cmp-age", title=t.plain("comparison.age.title"),

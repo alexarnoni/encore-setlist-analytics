@@ -77,6 +77,7 @@ class Curve:
     color: str
     data: pd.DataFrame
     dashed: bool = False
+    linestyle: str | tuple = "-"
 
 
 _HEX = re.compile(r"#[0-9a-fA-F]{6}\b")
@@ -233,7 +234,7 @@ def km_chart(
                 ax.fill_between(d["t_shows"], d["ci_lower"], d["ci_upper"], step="post", color=c.color,
                                 alpha=0.05, linewidth=0)
             ax.step(d["t_shows"], d["survival_probability"], where="post", color=c.color,
-                    linewidth=1.8, linestyle="--" if c.dashed else "-", label=c.label)
+                    linewidth=1.8, linestyle="--" if c.dashed else c.linestyle, label=c.label)
         ax.axhline(0.5, color=NEUTRAL, linewidth=0.8)
         ax.text(1.0, 0.5, f"{median_label} ", transform=ax.get_yaxis_transform(), ha="right", va="bottom",
                 fontsize=7, color=MUTED)
@@ -257,3 +258,11 @@ def km_chart(
 def album_color(index: int, album: str, non_album: str = "non-album") -> str:
     """Colour of an album curve: the fixed palette in order, grey for `non-album`."""
     return NEUTRAL if album == non_album else ALBUM_PALETTE[index % len(ALBUM_PALETTE)]
+
+
+def album_linestyle(index: int) -> str | tuple:
+    """Line style of an album curve: solid for the first palette round, dotted for the next.
+
+    A band with more albums than palette colours (Metallica has 12) would otherwise repeat colours.
+    """
+    return "-" if index < len(ALBUM_PALETTE) else (0, (1, 1.5))
