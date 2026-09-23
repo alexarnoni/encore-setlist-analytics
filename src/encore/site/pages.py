@@ -12,9 +12,10 @@ from dataclasses import dataclass
 from typing import Any
 
 import pandas as pd
+from markupsafe import Markup, escape
 
 from encore.site import bands as bands_mod
-from encore.site import i18n
+from encore.site import i18n, shape, theme
 
 
 @dataclass(frozen=True)
@@ -66,8 +67,45 @@ def layout(page: Page, locale: str, pages: list[Page], t: i18n.Translator, origi
     }
 
 
+def band_cell(band: str, locale: str, link: bool = True) -> Markup:
+    """Table cell content for a band: its colour swatch and its name, linked to its page."""
+    swatch = Markup('<span class="swatch" style="background: var({})"></span>').format(theme.band_token(band))
+    name = escape(band)
+    if link:
+        name = Markup('<a href="{}">{}</a>').format(href(locale, f"bands/{bands_mod.slug(band)}/"), band)
+    return swatch + name
+
+
+def _median_text(value: float, t: i18n.Translator) -> str:
+    return t("labels.not_reached") if pd.isna(value) else t.number(value)
+
+
+def sensitivity_table(marts: dict[str, pd.DataFrame], bands: tuple[str, ...], locale: str, t: i18n.Translator) -> dict:
+    """Median survival by band at each window (N sensitivity table)."""
+    wide = shape.sensitivity_table(marts["mart_survival_summary"], bands)
+    headers = [t("labels.band"), *[t("labels.n_col", n=n) for n in shape.WINDOWS]]
+    rows = [[band_cell(r["band"], locale), *[_median_text(r[n], t) for n in shape.WINDOWS]]
+            for _, r in wide.iterrows()]
+    return {"headers": headers, "rows": rows}
+
+
+def match_table(marts: dict[str, pd.DataFrame], bands: tuple[str, ...], locale: str, t: i18n.Translator) -> dict:
+    """Catalog match quality by band: main measure (performances) and secondary (album)."""
+    m = shape.match_by_band(marts["mart_match_quality"], bands)
+    headers = [t("labels.band"), t("labels.performances"), t("labels.matched_rate"),
+               t("labels.album_rate"), t("labels.years")]
+    rows = [[band_cell(r["band"], locale), t.number(r["performances"]), t.percent(r["rate"], 1),
+             t.percent(r["rate_album"], 1), f"{int(r['first_year'])}–{int(r['last_year'])}"]
+            for _, r in m.iterrows()]
+    return {"headers": headers, "rows": rows}
+
+
 def context(page: Page, *, locale: str, t: i18n.Translator, marts: dict[str, pd.DataFrame],
             bands: tuple[str, ...]) -> dict[str, Any]:
     """Page-specific template variables (grows as page content is added)."""
-    return {"t": t, "locale": locale, "lang": locale, "page": page, "band": page.band,
-            "bands": bands, "band_slug": bands_mod.slug(page.band) if page.band else None}
+    ctx: dict[str, Any] = {"t": t, "locale": locale, "lang": locale, "page": page, "band": page.band,
+                           "bands": bands, "band_slug": bands_mod.slug(page.band) if page.band else None}
+    if page.key == "methodology":
+        ctx["sensitivity"] = sensitivity_table(marts, bands, locale, t)
+        ctx["match"] = match_table(marts, bands, locale, t)
+    return ctx

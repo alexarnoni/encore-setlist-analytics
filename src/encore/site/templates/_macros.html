@@ -1,0 +1,25 @@
+{% macro table(headers, rows, cls="stackable") %}
+<table class="{{ cls }}">
+  <thead><tr>{% for h in headers %}<th scope="col">{{ h }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for row in rows %}
+  <tr>{% for cell in row %}<td data-label="{{ headers[loop.index0] }}">{{ cell }}</td>{% endfor %}</tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endmacro %}
+
+{% macro figure(chart, caption) %}
+<figure class="card chart">
+  {{ chart.svg|safe }}
+  <figcaption>{{ caption }}</figcaption>
+  <details>
+    <summary>{{ t('chart.table') }}</summary>
+    {{ table(chart.headers, chart.rows) }}
+  </details>
+</figure>
+{% endmacro %}
+
+{% macro kicker(text) %}<p class="kicker">{{ text }}</p>{% endmacro %}
+
+{% macro list(items) %}<ul class="plain">{% for item in items %}<li>{{ item }}</li>{% endfor %}</ul>{% endmacro %}
