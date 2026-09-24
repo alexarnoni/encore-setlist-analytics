@@ -48,3 +48,6 @@ reports/
 
 # spec-04 generated static site (deploy is a separate, manual step)
 /site/
+
+# Wrangler local cache (auth token, deploy logs)
+.wrangler/
