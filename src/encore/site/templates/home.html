@@ -10,7 +10,7 @@
   <article class="finding" id="finding-1">
     {{ kicker(t('home.f1.kicker')) }}
     <h2 class="claim">{{ t('home.f1.h') }}</h2>
-    <div class="hero-stat">−{{ t.value("dip_metallica_72_seasons_size") }} <small>{{ t('home.f1.stat_label') }}</small></div>
+    <div class="hero-stat">{{ t.value("dip_metallica_72_seasons_size") }} <small>{{ t('home.f1.stat_label') }}</small></div>
     <p>{{ t('home.f1.numbers') }}</p>
     {{ figure(charts.f1, t('home.f1.caption'), t('read.age')) }}
     {{ caveats(t.section('home.f1.caveats', min_pairs=min_pairs)) }}
