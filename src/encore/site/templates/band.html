@@ -12,31 +12,32 @@
   <h2>{{ t('band.findings.h') }}</h2>
   <p class="lede claim">{{ findings.lead }}</p>
   <p>{{ findings.numbers }}</p>
+  <p class="context"><strong>{{ t('band.context_label') }}</strong> {{ findings.context }}</p>
   {{ caveats(findings.caveats) }}
 </section>
 
 <section id="age">
   <h2>{{ t('band.age.h') }}</h2>
-  <p>{{ t('band.age.p') }}</p>
-  {{ figure(charts.age, t('band.age.caption'), t('read.age')) }}
+  <p>{{ texts.age }}</p>
+  {{ figure(charts.age, t('band.age.caption')) }}
   {% if charts.tours %}
   <h3>{{ t('band.tours.h') }}</h3>
   <p>{{ t('band.tours.p', min_tour_shows=min_tour_shows) }}</p>
-  {{ figure(charts.tours, t('band.tours.caption'), t('read.tours')) }}
+  {{ figure(charts.tours, t('band.tours.caption')) }}
   {% endif %}
 </section>
 
 <section id="rotation">
   <h2>{{ t('band.rotation.h') }}</h2>
-  <p>{{ t('band.rotation.p') }}</p>
-  {{ figure(charts.rotation, t('band.rotation.caption') ~ ' ' ~ t('chart.thin_note', min_pairs=min_pairs), t('read.rotation')) }}
+  <p>{{ texts.rotation }}</p>
+  {{ figure(charts.rotation, t('band.rotation.caption') ~ ' ' ~ t('chart.thin_note', min_pairs=min_pairs)) }}
 </section>
 
 <section id="survival">
   <h2>{{ t('band.survival.h') }}</h2>
-  <p>{{ t('band.survival.p') }}</p>
+  <p>{{ texts.survival }}</p>
   {% if charts.survival %}
-  {{ figure(charts.survival, t('band.survival.caption', n_window=n_window) ~ (' ' ~ t('chart.ci_note') if ci_shown else ''), t('read.survival')) }}
+  {{ figure(charts.survival, t('band.survival.caption', n_window=n_window) ~ (' ' ~ t('chart.ci_note') if ci_shown else '')) }}
   {% endif %}
 </section>
 

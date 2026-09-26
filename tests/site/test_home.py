@@ -29,16 +29,18 @@ def test_hero_stats_and_the_three_layers_render(built_site: Path) -> None:
         block = block[: block.index("</article>")]
         assert block.index("claim") < block.index("<p>") < block.index('class="caveats"'), n  # lead, numbers, caveats
         assert '<details class="caveats">' in block and "Caveats and limits" in block
-    assert "On its latest tour Metallica played a substantially different set" in text
+    assert "On its latest tour Metallica played substantially different sets" in text
 
 
-def test_every_chart_on_every_page_has_a_reading_line(built_site: Path) -> None:
+def test_no_page_repeats_its_explanation_in_a_separate_reading_line(built_site: Path) -> None:
     for page in built_site.rglob("index.html"):
         html = page.read_text(encoding="utf8")
-        figures = html.count("<figure")
-        assert html.count('class="read"') >= figures, page
+        assert 'class="read"' not in html and "Como ler" not in html and "How to read" not in html, page
     home = (built_site / "pt" / "index.html").read_text(encoding="utf8")
-    assert home.count('class="read"') == 3 and "Como ler:" in home  # age line, rotation panels, survival curves
+    for n in (1, 2, 3):
+        block = home[home.index(f'id="finding-{n}"'):]
+        block = block[: block.index("</article>")]
+        assert block.index("claim") < block.index("<p>") < block.index("<figure" if n != 2 else "multiples"), n
 
 
 def test_finding_two_uses_seven_small_multiples_not_a_hero_stat(built_site: Path) -> None:

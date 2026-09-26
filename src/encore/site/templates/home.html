@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import table, figure, kicker, read, caveats with context %}
+{% from "_macros.html" import table, figure, kicker, caveats with context %}
 {% block main %}
 {{ kicker(t('home.kicker')) }}
 <h1>{{ t('home.title') }}</h1>
@@ -11,8 +11,9 @@
     {{ kicker(t('home.f1.kicker')) }}
     <h2 class="claim">{{ t('home.f1.h') }}</h2>
     <div class="hero-stat">{{ t.value("dip_metallica_72_seasons_size") }} <small>{{ t('home.f1.stat_label') }}</small></div>
+    <p>{{ t('home.f1.explain') }}</p>
     <p>{{ t('home.f1.numbers') }}</p>
-    {{ figure(charts.f1, t('home.f1.caption'), t('read.age')) }}
+    {{ figure(charts.f1, t('home.f1.caption')) }}
     {{ caveats(t.section('home.f1.caveats', min_pairs=min_pairs)) }}
   </article>
 
@@ -20,6 +21,7 @@
     {{ kicker(t('home.f2.kicker')) }}
     <h2 class="claim">{{ t('home.f2.h') }}</h2>
     {% if t.has('home.f2.lead_more') %}<p class="lede">{{ t('home.f2.lead_more') }}</p>{% endif %}
+    <p>{{ t('home.f2.explain') }}</p>
     <p>{{ t('home.f2.numbers') }}</p>
     <div class="multiples">
       {% for cell in rotation_panels %}
@@ -29,7 +31,6 @@
       </div>
       {% endfor %}
     </div>
-    {{ read(t('read.rotation_small')) }}
     <p class="note">{{ t('chart.thin_note', min_pairs=min_pairs) }}</p>
     <details>
       <summary>{{ t('chart.table') }}</summary>
@@ -42,8 +43,9 @@
     {{ kicker(t('home.f3.kicker')) }}
     <h2 class="claim">{{ t('home.f3.h') }}</h2>
     <div class="hero-stat">{{ t.value("oasis_album_whats_the_story_morning_glory_final") }} <small>{{ t('home.f3.stat_label') }}</small></div>
+    <p>{{ t('home.f3.explain') }}</p>
     <p>{{ t('home.f3.numbers') }}</p>
-    {{ figure(charts.f3, t('home.f3.caption', n_window=n_window), t('read.survival')) }}
+    {{ figure(charts.f3, t('home.f3.caption', n_window=n_window)) }}
     {{ caveats(t.section('home.f3.caveats', min_pairs=min_pairs)) }}
   </article>
 </section>

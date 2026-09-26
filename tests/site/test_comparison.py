@@ -1,5 +1,6 @@
 """T8: the comparison page shows every band on shared axes, plus the median survival table."""
 
+import re
 from pathlib import Path
 
 from tests.site.conftest import parse
@@ -26,9 +27,10 @@ def test_every_chart_has_a_text_alternative_with_all_bands(built_site: Path) -> 
 
 def test_median_survival_table_is_in_band_order(built_site: Path) -> None:
     rows = text_of(built_site, "en", "comparison/").rows
-    table = [r for r in rows if len(r) == 5 and r[0] in BANDS]
+    table = [r for r in rows if len(r) == 6 and r[0] in BANDS]
     assert [r[0] for r in table] == BANDS
-    assert table[0][1:] == ["30", "15", "15", "150"]  # fixture: songs, abandoned, censored, median at N = 50
+    assert table[0][1:5] == ["30", "15", "15", "150"]  # fixture: songs, abandoned, censored, median at N = 50
+    assert all(re.fullmatch(r"about \d+ (years|months?)", r[5]) for r in table)  # the approximate calendar equivalent
     assert table[5][4] == "155"  # Metallica is band 5
 
 

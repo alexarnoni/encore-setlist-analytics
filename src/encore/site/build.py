@@ -101,6 +101,7 @@ def build_site(
             ctx = pages.context(page, locale=locale, t=t, marts=marts, bands=bands)
             ctx.update(
                 origin=origin, as_of=as_of.isoformat(), built_on=built_on.isoformat(), shows_total=shows_total,
+                as_of_text=i18n.fmt_date(as_of, locale), built_on_text=i18n.fmt_date(built_on, locale),
                 bands_total=len(bands), repo_url=REPO_URL, setlistfm_url=SETLISTFM_URL,
                 musicbrainz_url=MUSICBRAINZ_URL, author_url=AUTHOR_URL, layout=pages.layout(page, locale, page_list, t, origin),
             )

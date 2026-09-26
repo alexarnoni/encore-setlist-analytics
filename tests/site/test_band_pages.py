@@ -1,5 +1,6 @@
 """T9: one page per band with findings, four charts (or their fallbacks), the album table and links."""
 
+import re
 from pathlib import Path
 
 import pytest
@@ -26,9 +27,9 @@ def test_every_band_page_has_its_sections_and_charts(built_site: Path, index: in
 def test_band_header_chips_come_from_the_marts(built_site: Path) -> None:
     text = text_of(built_site, "en", "bands/muse/").text
     assert "1994–2004" in text and "70 shows" in text and "92.9% of songs played matched to MusicBrainz" in text
-    assert "half of the songs have left the setlist after 154 shows (median survival)" in text
+    assert re.search(r"half of the songs have left the setlist after 154 shows, about \d+ (years|months) of touring \(median survival\)", text)
     pt = text_of(built_site, "pt", "bands/muse/").text
-    assert "92,9% das músicas tocadas reconhecidas no MusicBrainz" in pt and "metade das músicas deixou o setlist após 154 shows (sobrevivência mediana)" in pt
+    assert "92,9% das músicas tocadas reconhecidas no MusicBrainz" in pt and re.search(r"metade das músicas deixou o setlist após 154 shows, cerca de \d+ (anos|meses) de turnê \(sobrevivência mediana\)", pt)
 
 
 def test_album_table_matches_the_marts(built_site: Path) -> None:
@@ -49,7 +50,7 @@ def test_survival_alternative_gives_share_at_checkpoints(built_site: Path) -> No
 
 def test_tour_chart_and_thin_year_note_are_present(built_site: Path) -> None:
     text = text_of(built_site, "en", "bands/metallica/")
-    assert "Cells with fewer than 15 shows are left out." in text.text
+    assert "Tours with fewer than 15 shows in a year are left out." in text.text
     assert "Hollow markers: years with fewer than 5 show pairs" in text.text
     assert "Tour A 2000" in text.text  # Metallica's fixture cells have exactly 15 shows: at the floor, kept
     fewer = text_of(built_site, "en", "bands/muse/").text

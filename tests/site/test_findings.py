@@ -11,7 +11,8 @@ from tests.site.fixtures import BANDS, fake_marts
 
 # Placeholders a template fills at call time (the caller passes them), not from the marts.
 CALL_TIME = {"min_pairs", "min_songs", "min_tour_shows", "n_window", "n", "band", "first", "last", "pct",
-             "setlistfm_url", "musicbrainz_url", "repo_url", "author_url"}
+             "setlistfm_url", "musicbrainz_url", "repo_url", "author_url",
+             "cal", "cal_100", "median", "median_cal", "per_year"}
 
 
 def placeholders(strings: dict[str, str]) -> set[str]:
@@ -70,11 +71,78 @@ def test_every_finding_has_its_three_layers_in_both_locales() -> None:
         assert strings["findings.common"] and strings["caveats.summary"]
 
 
-def test_every_chart_kind_has_a_reading_line_in_both_locales() -> None:
+def test_each_chart_has_one_explanation_and_no_separate_reading_line() -> None:
+    """The paragraph before a chart is the only explanation: mechanics plus what counts as low and high."""
     for locale, strings in i18n.load_locales().items():
-        for kind in ("age", "rotation", "rotation_small", "tours", "survival"):
-            assert len(strings[f"read.{kind}"]) > 60, (locale, kind)
-        assert strings["read.label"]
+        assert not [k for k in strings if k.startswith("read.")], locale
+        explanations = [f"home.f{n}.explain" for n in (1, 2, 3)] + [
+            f"{page}.{kind}.p" for page in ("comparison", "band") for kind in ("age", "rotation", "survival")]
+        for key in explanations:
+            assert len(strings[key]) > 120, (locale, key)
+        scale_0_5 = "0,5" if locale == "pt-BR" else "0.5"
+        for key in ("home.f2.explain", "comparison.rotation.p", "band.rotation.p"):
+            assert "0" in strings[key] and scale_0_5 in strings[key], (locale, key)  # near 0 = same show, above 0.5 = half change
+        assert "{{ oasis_surv_median_cal }}" in strings["home.f3.explain"]  # the median is anchored in calendar terms
+        assert "{{ median_cal }}" in strings["band.survival.median"] and "{{ cal_100 }}" in strings["band.survival.p"]
+
+
+def test_each_chart_kind_says_whose_line_it_is_on_its_own_page() -> None:
+    """Band pages plot one band, so they never say "each line is one band" (the comparison and home pages may)."""
+    for locale, strings in i18n.load_locales().items():
+        for key in ("band.age.p", "band.rotation.p", "band.survival.p"):
+            assert not re.search(r"cada linha é uma banda|each line is one band|cada quadro|each panel", strings[key], re.I), (locale, key)
+        assert "{{ band }}" in strings["band.age.p"] and "{{ band }}" in strings["band.rotation.p"]
+
+
+FIGURE_BUDGET = 4  # a "numbers" paragraph carries at most this many figures; charts and tables hold the rest
+NOT_A_FIGURE = re.compile(r"(_years|_cal)$")
+
+
+def figures(text: str) -> set[str]:
+    """Figures a paragraph quotes: placeholders except year lists, calendar equivalents and the size of a fraction."""
+    names = {n for n in re.findall(r"\{\{\s*([A-Za-z0-9_]+)\s*\}\}", text) if not NOT_A_FIGURE.search(n)}
+    return {n for n in names if not n.endswith("_songs")}  # "9 de 11" is one figure
+
+
+def test_numbers_paragraphs_carry_few_figures() -> None:
+    for locale, strings in i18n.load_locales().items():
+        keys = ["home.f1.numbers", "home.f2.numbers", "home.f3.numbers"] + [
+            f"findings.{bands.key(b)}.numbers" for b in BANDS]
+        for key in keys:
+            assert len(figures(strings[key])) <= FIGURE_BUDGET, (locale, key, sorted(figures(strings[key])))
+
+
+def test_every_band_has_a_context_line_marked_as_not_proven_by_the_data() -> None:
+    for locale, strings in i18n.load_locales().items():
+        label = strings["band.context_label"].lower()
+        assert ("não algo que os dados provam" if locale == "pt-BR" else "not something the data proves") in label
+        for band in BANDS:
+            context = strings[f"findings.{bands.key(band)}.context"]
+            assert context and "{{" not in context, (locale, band)
+    en = i18n.load_locales()["en"]
+    # The Rev's death and the change of sound are stated side by side, without a causal link to the rotation drop.
+    context = en["findings.avenged_sevenfold.context"]
+    assert "The Rev died" in context and "sound changed" in context
+    assert not re.search(r"because|caused|led to|explains|therefore", context, re.I)
+
+
+def test_calendar_equivalents_are_marked_approximate_and_rounded() -> None:
+    assert i18n.fmt_span(674, 54.9, "pt-BR") == "cerca de 12 anos" and i18n.fmt_span(674, 54.9, "en") == "about 12 years"
+    assert i18n.fmt_span(100, 55, "en") == "about 2 years"  # 1.8 years: whole years from 1.5 up
+    assert i18n.fmt_span(45, 55, "en") == "about 10 months" and i18n.fmt_span(45, 55, "pt-BR") == "cerca de 10 meses"
+    assert i18n.fmt_span(5, 55, "en") == "about 1 month" and i18n.fmt_span(5, 55, "pt-BR") == "cerca de 1 mês"
+    from datetime import date
+    assert i18n.fmt_date(date(2026, 9, 23), "pt-BR") == "23/09/2026" and i18n.fmt_date(date(2026, 9, 3), "en") == "3 Sep 2026"
+    en = values.placeholder_values(fake_marts(), tuple(BANDS), "en")
+    assert re.fullmatch(r"about \d+ (years|months?)", en["muse_surv_median_cal"]) and int(en["muse_surv_per_year"]) > 0
+
+
+def test_albums_named_like_their_band_are_disambiguated_for_the_reader() -> None:
+    loaded = i18n.load_locales()
+    assert loaded["pt-BR"]["album_labels.twenty_one_pilots.twenty_one_pilots"] == "Twenty One Pilots (álbum de estreia)"
+    assert loaded["en"]["album_labels.twenty_one_pilots.twenty_one_pilots"] == "Twenty One Pilots (debut album)"
+    assert "estreia" not in loaded["pt-BR"]["album_labels.metallica.metallica"]  # Metallica's self-titled album is not a debut
+    assert "álbum de estreia Twenty One Pilots" in loaded["pt-BR"]["findings.twenty_one_pilots.numbers"]
 
 
 def test_partial_findings_say_so() -> None:
@@ -83,28 +151,38 @@ def test_partial_findings_say_so() -> None:
     assert "only a hint for the other two" in en["home.f1.numbers"]
     assert "does not show that the release caused it" in " ".join(v for k, v in en.items() if k.startswith("home.f1.caveats"))
     assert en["home.f2.h"].startswith("Most of these bands") and "all bands" not in en["home.f2.h"]
-    assert "It did not fall for Linkin Park" in en["home.f2.numbers"]
-    assert "short, censored curve" in en["home.f3.caveats.3"] and "Dig Out Your Soul" in en["home.f3.caveats.3"]
-    assert "not a ranking" in en["home.f3.caveats.1"] and "same horizon" not in en["home.f3.h"]
+    assert "fell for five of the seven bands" in en["home.f2.numbers"]
+    assert "It did not fall for Linkin Park" in en["home.f2.caveats.4"]
+    assert "censored curve" in en["home.f3.caveats.4"] and "Dig Out Your Soul" in en["home.f3.caveats.4"]
+    assert "not a ranking" in en["home.f3.caveats.2"] and "same horizon" not in en["home.f3.h"]
     assert "500 shows" in en["methodology.survival.p.4"] and "longer career" in en["methodology.survival.p.4"]
-    assert "the high end" not in " ".join(en.values()) and "2000s" not in " ".join(en.values())
+    # The context lines are outside the data's claims (approved wording: "since the 2000s"); everything else stays clear of it.
+    claims = " ".join(v for k, v in en.items() if not (k.startswith("findings.") and k.endswith(".context")))
+    assert "the high end" not in claims and "2000s" not in claims
 
 
-def test_the_concrete_sentence_for_finding_two_only_claims_what_the_data_supports() -> None:
-    """The marts have no city or per-show data and consecutive M72 shows overlap by about a quarter, so the text
-    must say "a substantially different set", never "no repeated songs" or "two shows in the same city"."""
+def test_the_no_repeat_weekend_format_is_presented_as_context_the_data_cannot_confirm() -> None:
+    """The marts have no city or per-show data. The lead sentence claims only "substantially different sets, partly by
+    design"; the format itself appears in the caveats, labelled as public context, next to the World Magnetic limit."""
     for locale, strings in i18n.load_locales().items():
         sentence = strings["home.f2.lead_more"].lower()
         assert "same city" not in sentence and "mesma cidade" not in sentence, locale
         assert "without repeating" not in sentence and "sem repetir" not in sentence, locale
-    en = i18n.load_locales()["en"]["home.f2.lead_more"]
-    assert "substantially different set" in en and "nearly the same songs" in en
+    en, pt = i18n.load_locales()["en"], i18n.load_locales()["pt-BR"]
+    assert "substantially different sets" in en["home.f2.lead_more"] and "nearly the same songs" in en["home.f2.lead_more"]
+    for strings, words in ((en, ("No Repeat Weekend", "public context", "neither confirms nor rules out", "does not explain everything")),
+                           (pt, ("No Repeat Weekend", "contexto público", "não confirmam nem descartam", "não explica tudo"))):
+        caveats = " ".join(v for k, v in strings.items() if k.startswith("home.f2.caveats."))
+        assert all(w in caveats for w in words)
+        band_caveats = " ".join(v for k, v in strings.items() if k.startswith("findings.metallica.caveats."))
+        assert all(w in band_caveats for w in words)
+        assert "No Repeat Weekend" in strings["findings.metallica.context"]
 
 
-def test_the_hero_of_finding_three_is_morning_glory_and_the_oasis_horizon_figure_is_in_the_numbers() -> None:
+def test_the_hero_of_finding_three_is_morning_glory_and_the_horizon_figures_are_in_the_caveats() -> None:
     en = i18n.load_locales()["en"]
     assert "Morning Glory" in en["home.f3.stat_label"]
-    assert "{{ oasis_surv_500 }} for Oasis" in en["home.f3.numbers"]
+    assert "Oasis {{ oasis_surv_500 }}" in en["home.f3.caveats.7"]
 
 
 def _real_marts():
@@ -163,6 +241,12 @@ def test_the_claims_in_the_text_hold_on_the_real_data(real) -> None:
     assert overlap[("Metallica", "Damaged Justice")] > 0.8 and overlap[("Metallica", "Kill 'Em All for One")] > 0.9
     assert overlap[("Metallica", "M72 World Tour")] > 0.1  # consecutive M72 shows do overlap, so "no repeated songs" would be false
     tours = real["mart_tour_rotation"].set_index(["band", "tour_name"])["rotation"]
+    # The M72 framing: the highest rotation of any Metallica tour, no song in 9 of 10 shows, and World Magnetic already high.
+    metallica_tours = real["mart_tour_rotation"][real["mart_tour_rotation"]["band"] == "Metallica"]
+    assert metallica_tours.set_index("tour_name")["rotation"].idxmax() == "M72 World Tour"
+    assert int(metallica_tours.set_index("tour_name").loc["M72 World Tour", "core_songs"]) == 0
+    assert tours[("Metallica", "World Magnetic")] > 0.5
+    assert max(tours[("Metallica", t)] for t in ("Damaged Justice", "Damage Inc.", "Ride the Lightning")) < 0.18  # "no 1980s tour above 0.17"
     assert 0.74 < tours[("Metallica", "M72 World Tour")] < 0.76
     assert 0.84 < float(shape.rotation_by_year(rot, "Metallica").set_index("show_year").rotation[2024]) < 0.87
 
@@ -206,12 +290,12 @@ def test_the_home_lede_says_what_the_data_is_before_what_is_measured() -> None:
 
 def test_each_metric_is_explained_in_concert_terms_before_its_name_on_the_home_page() -> None:
     en, pt = i18n.load_locales()["en"], i18n.load_locales()["pt-BR"]
-    assert en["home.f1.numbers"].startswith("Repertoire age is how old the songs played")
-    assert en["home.f2.numbers"].startswith("Rotation is how much the songs change from one concert to the next")
-    assert en["home.f3.numbers"].startswith("Survival is how long a song keeps being played at concerts")
-    assert pt["home.f1.numbers"].startswith("A idade do repertório é quão antigas eram as músicas tocadas")
-    assert pt["home.f2.numbers"].startswith("A rotação é o quanto as músicas mudam de um show para o seguinte")
-    assert pt["home.f3.numbers"].startswith("A sobrevivência é quanto tempo uma música continua sendo tocada")
+    assert en["home.f1.explain"].startswith("Repertoire age is how old the songs played")
+    assert en["home.f2.explain"].startswith("Rotation measures how much the setlist changes from one show to the next")
+    assert en["home.f3.explain"].startswith("Survival is how long a song keeps being played at concerts")
+    assert pt["home.f1.explain"].startswith("A idade do repertório é quão antigas eram as músicas tocadas")
+    assert pt["home.f2.explain"].startswith("Rotação mede o quanto o setlist muda de um show para o seguinte")
+    assert pt["home.f3.explain"].startswith("A sobrevivência é quanto tempo uma música continua sendo tocada")
     # The labels above the findings speak in concert terms; the metric names come after the plain phrase.
     for strings in (en, pt):
         for kicker in ("home.f1.kicker", "home.f2.kicker", "home.f3.kicker"):
@@ -286,7 +370,7 @@ def test_the_home_hero_label_of_finding_three_stands_on_its_own() -> None:
     en, pt = i18n.load_locales()["en"], i18n.load_locales()["pt-BR"]
     assert en["home.f3.stat_label"].startswith("of the songs on (What's the Story) Morning Glory?")
     assert pt["home.f3.stat_label"].startswith("das músicas de (What's the Story) Morning Glory?")
-    assert "3 times" in en["home.f3.caveats.5"] and "3 vezes" in pt["home.f3.caveats.5"]  # the counting rule stays visible
+    assert "3 times" in en["home.f3.caveats.6"] and "3 vezes" in pt["home.f3.caveats.6"]  # the counting rule stays visible
 
 
 def test_the_abandonment_definition_uses_plain_wording() -> None:

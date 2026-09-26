@@ -12,7 +12,7 @@ import pandas as pd
 
 from encore.site import bands as bands_mod
 from encore.site import shape
-from encore.site.i18n import fmt_number, fmt_percent
+from encore.site.i18n import fmt_number, fmt_percent, fmt_span, fmt_span
 
 
 def placeholder_values(marts: dict[str, pd.DataFrame], bands: tuple[str, ...], locale: str) -> dict[str, str]:
@@ -20,7 +20,9 @@ def placeholder_values(marts: dict[str, pd.DataFrame], bands: tuple[str, ...], l
 
     Per band (key prefix from `bands.key`): `_median`, `_songs`, `_abandoned`,
     `_censored` (band total at N = 50), `_shows`, `_first_year`, `_last_year`
-    and `_match` (share of performances matched to the catalog). Global:
+    and `_match` (share of performances matched to the catalog), plus `<k>_surv_per_year` (shows per active
+    year), `<k>_surv_100_cal` and `<k>_surv_median_cal` (approximate calendar length of 100 shows and of the
+    median). Global:
     `bands_count`, `shows_total`, `band_list`. Also per band `_pairs_avg` and
     `_pairs_max` (show pairs per year), per band-and-year `<band>_<year>_performances`,
     `_matched`, `_rate`, and `<band>_weak_share` (share of performances in years
@@ -44,6 +46,24 @@ def placeholder_values(marts: dict[str, pd.DataFrame], bands: tuple[str, ...], l
             values[f"{k}_match"] = fmt_percent(float(match.loc[band, "rate"]), 1, locale)
             values[f"{k}_first_year"] = str(int(match.loc[band, "first_year"]))
             values[f"{k}_last_year"] = str(int(match.loc[band, "last_year"]))
+
+    per_year = shape.shows_per_active_year(marts["mart_repertoire_age"])
+    for band in bands:
+        k = bands_mod.key(band)
+        if per_year.get(band, 0) > 0:
+            values[f"{k}_surv_per_year"] = fmt_number(round(float(per_year[band])), 0, locale)
+            values[f"{k}_surv_100_cal"] = fmt_span(100, float(per_year[band]), locale)
+            if f"{k}_median" in values:
+                values[f"{k}_surv_median_cal"] = fmt_span(float(totals.loc[band, "median"]), float(per_year[band]), locale)
+
+    per_year = shape.shows_per_active_year(marts["mart_repertoire_age"])
+    for band in bands:
+        k = bands_mod.key(band)
+        if per_year.get(band, 0) > 0:
+            values[f"{k}_surv_per_year"] = fmt_number(round(float(per_year[band])), 0, locale)
+            values[f"{k}_surv_100_cal"] = fmt_span(100, float(per_year[band]), locale)
+            if f"{k}_median" in values:
+                values[f"{k}_surv_median_cal"] = fmt_span(float(totals.loc[band, "median"]), float(per_year[band]), locale)
 
     _add_touring_and_weak_cells(values, marts, bands, locale)
     add_findings_values(values, marts, bands, locale)
@@ -124,7 +144,8 @@ def add_findings_values(values: dict[str, str], marts: dict[str, pd.DataFrame], 
     `<k>_rot_<year>` (rotation of years with 5+ show pairs), `<k>_rot_first3/_rot_last3` and
     `<k>_rot_first3_years`, `<k>_rot_last3_years` (the years behind those two means, listed), `<k>_tour_<tour>_rotation`, `_shows` and `_overlap`, `<k>_final/_final_t` (where the all-songs
     survival curve ends), `<k>_album_<album>_songs/_abandoned/_censored/_median/_final/_final_t`
-    (albums with 5+ songs), and `dip_<id>_before/_low/_after/_size` for `DIPS`.
+    (albums with 5+ songs), the calendar equivalents `<k>_final_t_cal`, `<k>_album_<album>_final_t_cal` and
+    `_median_cal` (shows converted to years at the band's own shows per active year), and `dip_<id>_before/_low/_after/_size` for `DIPS`.
     """
     age, rot = marts["mart_repertoire_age"], marts["mart_band_rotation_by_year"]
     tours, curves, summary = marts["mart_tour_rotation"], marts["mart_survival_curves"], marts["mart_survival_summary"]
@@ -171,8 +192,14 @@ def add_findings_values(values: dict[str, str], marts: dict[str, pd.DataFrame], 
             values[f"{k}_surv_{shape.COMMON_HORIZON}"] = fmt_percent(at[0], 0, locale)
             values[f"{k}_atrisk_{shape.COMMON_HORIZON}"] = fmt_number(at[1], 0, locale)
         end = shape.final_survival(curves, band)
+        per_year = shape.shows_per_active_year(age).get(band)
+        per_year = shape.shows_per_active_year(age).get(band)
         if end:
             values[f"{k}_final_t"], values[f"{k}_final"] = fmt_number(end[0], 0, locale), fmt_percent(end[1], 0, locale)
+            if per_year:
+                values[f"{k}_final_t_cal"] = fmt_span(end[0], float(per_year), locale)
+            if per_year:
+                values[f"{k}_final_t_cal"] = fmt_span(end[0], float(per_year), locale)
         table = shape.album_table(summary, band).set_index("album")
         for album in shape.survival_albums(summary, band):
             row = table.loc[album]
@@ -182,9 +209,17 @@ def add_findings_values(values: dict[str, str], marts: dict[str, pd.DataFrame], 
                            f"{ak}_censored": fmt_number(float(row["censored"]), 0, locale)})
             if pd.notna(row["median"]):
                 values[f"{ak}_median"] = fmt_number(float(row["median"]), 0, locale)
+                if per_year:
+                    values[f"{ak}_median_cal"] = fmt_span(float(row["median"]), float(per_year), locale)
+                if per_year:
+                    values[f"{ak}_median_cal"] = fmt_span(float(row["median"]), float(per_year), locale)
             album_end = shape.final_survival(curves, band, album)
             if album_end:
                 values[f"{ak}_final_t"] = fmt_number(album_end[0], 0, locale)
+                if per_year:
+                    values[f"{ak}_final_t_cal"] = fmt_span(album_end[0], float(per_year), locale)
+                if per_year:
+                    values[f"{ak}_final_t_cal"] = fmt_span(album_end[0], float(per_year), locale)
                 values[f"{ak}_final"] = fmt_percent(album_end[1], 0, locale)
 
     for dip_id, (band, before, low, after) in DIPS.items():

@@ -67,7 +67,7 @@ def survival_chart(marts: dict[str, pd.DataFrame], band: str, t: i18n.Translator
     if not albums:
         return None
     sizes = summary[(summary["band"] == band) & (summary["n_window"] == n)].set_index("album")["songs"]
-    drawn = [Curve(f"{a} ({t.plain('chart.songs_n', n=int(sizes[a]))})", charts.album_color(i, a),
+    drawn = [Curve(f"{album_label(t, band, a)} ({t.plain('chart.songs_n', n=int(sizes[a]))})", charts.album_color(i, a),
                    shape.km_curve(curves, band, a, n), linestyle=charts.album_linestyle(i))
              for i, a in enumerate(albums)]
     total = shape.km_curve(curves, band, shape.BAND_TOTAL, n)
@@ -80,6 +80,12 @@ def survival_chart(marts: dict[str, pd.DataFrame], band: str, t: i18n.Translator
         t_header=t.plain("chart.t_header"), show_ci=show_ci(len(albums)))
 
 
+def album_label(t: i18n.Translator, band: str, album: str) -> str:
+    """The album name as shown to readers: an album named like its band gets a tag (`album_labels.*` in the locales)."""
+    key = f"album_labels.{bands_mod.key(band)}.{bands_mod.key(album)}"
+    return t.plain(key) if t.has(key) else album
+
+
 def show_ci(album_curves: int) -> bool:
     """Confidence bands are drawn only when few curves overlap; with many they turn into a smear."""
     return album_curves <= MAX_CI_CURVES
@@ -87,15 +93,18 @@ def show_ci(album_curves: int) -> bool:
 
 def survival_totals_rows(marts: dict[str, pd.DataFrame], names: tuple[str, ...], t: i18n.Translator, locale: str,
                          band_cell, n: int = shape.MAIN_WINDOW) -> dict:
-    """Band totals at window N: songs, abandoned, censored and median survival, in band order."""
+    """Band totals at window N: songs, abandoned, censored and median survival (in shows and, approximately, in years)."""
     table = shape.median_table(marts["mart_survival_summary"], names, n)
+    per_year = shape.shows_per_active_year(marts["mart_repertoire_age"])
     headers = [t.plain("labels.band"), t.plain("labels.songs"), t.plain("labels.abandoned"), t.plain("labels.censored"),
-               t.plain("labels.median_shows")]
+               t.plain("labels.median_shows"), t.plain("labels.median_cal")]
     rows = []
     for _, r in table.iterrows():
-        median = t.plain("labels.not_reached") if pd.isna(r["median"]) else t.number(r["median"])
+        reached = not pd.isna(r["median"])
+        median = t.number(r["median"]) if reached else t.plain("labels.not_reached")
+        calendar = i18n.fmt_span(r["median"], float(per_year[r["band"]]), locale) if reached else "–"
         rows.append([band_cell(r["band"], locale), t.number(r["songs"]), t.number(r["abandoned"]),
-                     t.number(r["censored"]), median])
+                     t.number(r["censored"]), median, calendar])
     return {"headers": headers, "rows": rows}
 
 
@@ -106,7 +115,7 @@ def album_rows(marts: dict[str, pd.DataFrame], band: str, t: i18n.Translator, n:
                t.plain("labels.median_shows")]
     rows = []
     for _, r in table.iterrows():
-        name = t.plain("chart.all_songs") if r["is_total"] else r["album"] + (" *" if r["small"] else "")
+        name = t.plain("chart.all_songs") if r["is_total"] else album_label(t, band, r["album"]) + (" *" if r["small"] else "")
         median = t.plain("labels.not_reached") if pd.isna(r["median"]) else t.number(r["median"])
         rows.append([name, t.number(r["songs"]), t.number(r["abandoned"]), t.number(r["censored"]), median])
     return {"headers": headers, "rows": rows}

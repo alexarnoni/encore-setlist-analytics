@@ -100,12 +100,17 @@ def match_table(marts: dict[str, pd.DataFrame], bands: tuple[str, ...], locale: 
     return {"headers": headers, "rows": rows}
 
 
-def band_findings(band: str, t: i18n.Translator) -> dict[str, Any]:
-    """A band's findings in three layers: a plain lead, the key numbers, and the caveats (band-specific, then common)."""
+def band_findings(band: str, t: i18n.Translator, per_year: float) -> dict[str, Any]:
+    """A band's findings in three layers (a plain lead, the key numbers, the caveats), plus a line of musical context.
+
+    Caveats run band-specific first, then the shows-to-years conversion, then the common ones.
+    """
     k = bands_mod.key(band)
     extra = {"min_pairs": shape.MIN_PAIRS}
-    caveats = [*t.section(f"findings.{k}.caveats", **extra), t("findings.common", **extra)]
-    return {"lead": t(f"findings.{k}.lead"), "numbers": t(f"findings.{k}.numbers"), "caveats": caveats}
+    caveats = [*t.section(f"findings.{k}.caveats", **extra), t("findings.calendar", band=band, per_year=t.number(per_year)),
+               t("findings.common", **extra)]
+    return {"lead": t(f"findings.{k}.lead"), "context": t(f"findings.{k}.context"),
+            "numbers": t(f"findings.{k}.numbers"), "caveats": caveats}
 
 
 def band_context(band: str, *, locale: str, t: i18n.Translator, marts: dict[str, pd.DataFrame],
@@ -115,20 +120,30 @@ def band_context(band: str, *, locale: str, t: i18n.Translator, marts: dict[str,
     chips = [t("band.chip_years", first=facts["first_year"], last=facts["last_year"]),
              t("band.chip_shows", n=t.number(facts["shows"])),
              t("band.chip_match", pct=t.percent(facts["match"], 1))]
+    per_year = float(shape.shows_per_active_year(marts["mart_repertoire_age"])[band])
     if pd.notna(facts["median"]):
-        chips.append(t("band.chip_median", n=t.number(facts["median"])))
+        chips.append(t("band.chip_median", n=t.number(facts["median"]),
+                       cal=i18n.fmt_span(facts["median"], per_year, locale)))
     slug = bands_mod.slug(band)
     kw = {"band": band}
 
     def chart_text(section: str) -> dict[str, str]:
         return {"title": t.plain(f"band.{section}.title", **kw), "desc": t.plain(f"band.{section}.desc", **kw)}
 
+    if pd.notna(facts["median"]):
+        survival_median = t("band.survival.median", band=band, median=t.number(facts["median"]),
+                            median_cal=i18n.fmt_span(facts["median"], per_year, locale))
+    else:
+        survival_median = t("band.survival.no_median", band=band)
     albums = sections.album_rows(marts, band, t)
     album_table = shape.album_table(marts["mart_survival_summary"], band)
     return {
         "band_token": theme.band_token(band),
         "chips": chips,
-        "findings": band_findings(band, t),
+        "findings": band_findings(band, t, per_year),
+        "texts": {"rotation": t("band.rotation.p", band=band), "age": t("band.age.p", band=band),
+                  "survival": t("band.survival.p", band=band, per_year=t.number(per_year),
+                                cal_100=i18n.fmt_span(100, per_year, locale), median=survival_median)},
         "charts": {
             "age": sections.age_chart(marts, (band,), t, prefix=f"{slug}-age", **chart_text("age")),
             "tours": sections.tour_chart(marts, band, t, prefix=f"{slug}-tours", **chart_text("tours")),

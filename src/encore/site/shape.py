@@ -142,6 +142,13 @@ def shows_by_band(age: pd.DataFrame) -> pd.Series:
     return age.groupby("band")["shows"].sum()
 
 
+def shows_per_active_year(age: pd.DataFrame) -> pd.Series:
+    """Average shows per year with at least one show, per band: the yardstick that turns a count of shows into an
+    approximate calendar length (it counts only the shows in the data, and skips years without any)."""
+    yearly = age.groupby(["band", "show_year"])["shows"].sum()
+    return yearly.groupby("band").mean()
+
+
 def touring_intensity(rot: pd.DataFrame, since: int = 2015) -> pd.Series:
     """Average show pairs per active year from `since` on (years with no pairs are not averaged)."""
     recent = rot[rot["show_year"] >= since]

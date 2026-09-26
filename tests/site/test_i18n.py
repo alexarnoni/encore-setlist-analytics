@@ -81,3 +81,11 @@ def test_number_formatting_per_locale() -> None:
     assert i18n.fmt_number(0.86, 2, "pt-BR") == "0,86"
     assert i18n.fmt_percent(0.36, 0, "pt-BR") == "36%"
     assert i18n.fmt_percent(0.9897, 1, "en") == "99.0%"
+
+
+def test_a_value_below_100_percent_is_never_rounded_up_to_100() -> None:
+    """Normal rounding everywhere; flooring only where rounding would print exactly 100% for a value under 100%."""
+    assert i18n.fmt_percent(0.9996, 1, "pt-BR") == "99,9%" and i18n.fmt_percent(0.9996, 1, "en") == "99.9%"
+    assert i18n.fmt_percent(0.996, 0, "en") == "99%"
+    assert i18n.fmt_percent(1.0, 1, "en") == "100.0%"
+    assert i18n.fmt_percent(0.9286, 1, "en") == "92.9%" and i18n.fmt_percent(0.9286, 1, "pt-BR") == "92,9%"  # plain rounding

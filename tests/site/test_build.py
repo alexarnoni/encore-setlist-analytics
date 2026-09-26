@@ -90,8 +90,11 @@ def test_status_line_carries_both_dates_in_one_marked_element(built_site: Path) 
     html = (built_site / "en" / "index.html").read_text(encoding="utf8")
     start = html.index("data-build-stamp")
     element = html[start: html.index("</div>\n</div>", start)]
-    assert "2026-09-23" in element and BUILT_ON.isoformat() in element
-    assert html.count("2026-09-23") == html.count("2026-09-23", start, start + len(element)) == 2  # time + datetime
+    assert "2026-09-23" in element and BUILT_ON.isoformat() in element  # machine-readable, in the datetime attribute
+    assert "23 Sep 2026" in element and "24 Sep 2026" in element  # English reads day, month name, year
+    assert html.count("2026-09-23") == html.count("2026-09-23", start, start + len(element)) == 1
+    pt = (built_site / "pt" / "index.html").read_text(encoding="utf8")
+    assert "23/09/2026" in pt and "24/09/2026" in pt  # pt-BR reads day/month/year
 
 
 def test_stylesheet_has_generated_tokens_and_both_themes(built_site: Path) -> None:

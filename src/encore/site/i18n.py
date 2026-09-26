@@ -14,6 +14,8 @@ Band, album and tour names never come from here: they are data.
 
 from __future__ import annotations
 
+import math
+from datetime import date
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Callable
@@ -79,9 +81,69 @@ def fmt_number(value: float, decimals: int, locale: str) -> str:
     return text
 
 
+def _floor(value: float, decimals: int) -> float:
+    scale = 10 ** decimals
+    return math.floor(value * scale + 1e-9) / scale
+
+
 def fmt_percent(fraction: float, decimals: int, locale: str) -> str:
-    """Format a 0-1 fraction as a percentage string (no space before the sign)."""
-    return fmt_number(fraction * 100, decimals, locale) + "%"
+    """Format a 0-1 fraction as a percentage string (no space before the sign).
+
+    A value below 100% is never rounded up to "100%": it is floored instead.
+    """
+    pct = fraction * 100
+    if pct < 100 and round(pct, decimals) >= 100:
+        pct = _floor(pct, decimals)
+    return fmt_number(pct, decimals, locale) + "%"
+
+
+_EN_MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+
+def fmt_date(day: date, locale: str) -> str:
+    """Format a date in the reader's convention (pt-BR `23/09/2026`, en `23 Sep 2026`)."""
+    if locale == "pt-BR":
+        return f"{day.day:02d}/{day.month:02d}/{day.year}"
+    return f"{day.day} {_EN_MONTHS[day.month - 1]} {day.year}"
+
+
+def fmt_span(shows: float, per_year: float, locale: str) -> str:
+    """Approximate calendar length of `shows` shows at `per_year` shows a year (`cerca de 12 anos`, `about 8 months`).
+
+    Whole years from 1.5 years up, whole months below that.
+    """
+    years = shows / per_year
+    if years >= 1.5:
+        n, unit = round(years), ("ano" if round(years) == 1 else "anos") if locale == "pt-BR" else "years"
+    else:
+        n = max(1, round(years * 12))
+        unit = ("mês" if n == 1 else "meses") if locale == "pt-BR" else ("month" if n == 1 else "months")
+    return f"cerca de {n} {unit}" if locale == "pt-BR" else f"about {n} {unit}"
+
+
+_EN_MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+
+def fmt_date(day: date, locale: str) -> str:
+    """Format a date in the reader's convention (pt-BR `23/09/2026`, en `23 Sep 2026`)."""
+    if locale == "pt-BR":
+        return f"{day.day:02d}/{day.month:02d}/{day.year}"
+    return f"{day.day} {_EN_MONTHS[day.month - 1]} {day.year}"
+
+
+def fmt_span(shows: float, per_year: float, locale: str) -> str:
+    """Approximate calendar length of `shows` shows at `per_year` shows a year (`cerca de 12 anos`, `about 8 months`).
+
+    Whole years from 1.5 years up, whole months below that.
+    """
+    years = shows / per_year
+    if years >= 1.5:
+        n = round(years)
+        unit = "anos" if locale == "pt-BR" else "years"
+    else:
+        n = max(1, round(years * 12))
+        unit = ("mês" if n == 1 else "meses") if locale == "pt-BR" else ("month" if n == 1 else "months")
+    return f"cerca de {n} {unit}" if locale == "pt-BR" else f"about {n} {unit}"
 
 
 def _environment() -> Environment:
