@@ -33,10 +33,8 @@ flowchart LR
 
     TRANSFORM --> ANALYTICS[("analytics\npersistent marts")]
     ANALYZE --> ANALYTICS
-    ANALYTICS --> BUILD["make site
-(static generator)"]
-    BUILD --> PAGES["Cloudflare Pages
-static site, no backend"]
+    ANALYTICS --> BUILD["make site\n(static generator)"]
+    BUILD --> PAGES["Cloudflare Pages\nstatic site, no backend"]
 
     style RAWSF fill:#fdd,stroke:#900
     style RAWMB fill:#dfd,stroke:#090
