@@ -42,8 +42,8 @@ flowchart LR
 ```
 
 Dotted arrows show the cleanup of the ephemeral schema. The site build is a
-separate, manual step (see "Public site" below). The `encore_pipeline` DAG (`airflow/dags/encore_pipeline.py`) runs
-monthly: `truncate_raw_setlistfm_start → check_api_budget →
+separate, manual step (see "Public site" below). The `encore_pipeline` DAG (`airflow/dags/encore_pipeline.py`) has a
+monthly schedule by design, but is created paused and runs are triggered on demand: `truncate_raw_setlistfm_start → check_api_budget →
 extract_musicbrainz → extract_setlistfm → validate_raw → transform →
 analyze → cleanup_raw_setlistfm → log_run`, with `cleanup_raw_setlistfm`
 and `log_run` set to `trigger_rule=all_done` so raw setlist.fm data is
