@@ -8,12 +8,12 @@ full project brief (questions answered, KPIs, band scope) and
 [docs/context/](docs/context/) for the product/tech/structure context
 used to drive implementation.
 
-> This README grows spec by spec. Everything below reflects what
-> **spec-01** (infrastructure and ingestion) has built; dbt models, KPIs
-> and the API/frontend are later specs. See
-> [docs/specs/spec-01-progress.md](docs/specs/spec-01-progress.md) for
-> the detailed, task-by-task build log — including bugs found and fixed
-> along the way.
+The result is a public, static, bilingual (pt-BR and English) site at
+<https://encore.alexarnoni.com>, hosted on Cloudflare Pages. It has no API
+and no backend at runtime: an Airflow pipeline ingests and models the data,
+and a generator turns the aggregated `analytics` marts into plain HTML. See
+[docs/specs/](docs/specs/) for the specs and the task-by-task build logs,
+including bugs found and fixed along the way.
 
 ## Architecture
 
@@ -33,17 +33,17 @@ flowchart LR
 
     TRANSFORM --> ANALYTICS[("analytics\npersistent marts")]
     ANALYZE --> ANALYTICS
-    ANALYTICS -.-> API["FastAPI — spec 04"]
-    API -.-> FRONTEND["Cloudflare Pages — spec 04"]
+    ANALYTICS --> BUILD["make site\n(static generator)"]
+    BUILD --> PAGES["Cloudflare Pages\nstatic site, no backend"]
 
     style RAWSF fill:#fdd,stroke:#900
     style RAWMB fill:#dfd,stroke:#090
     style ANALYTICS fill:#dfd,stroke:#090
 ```
 
-Solid arrows are built (specs 01, 02a and 03); dashed arrows are later
-specs. The `encore_pipeline` DAG (`airflow/dags/encore_pipeline.py`) runs
-monthly: `truncate_raw_setlistfm_start → check_api_budget →
+Dotted arrows show the cleanup of the ephemeral schema. The site build is a
+separate, manual step (see "Public site" below). The `encore_pipeline` DAG (`airflow/dags/encore_pipeline.py`) has a
+monthly schedule by design, but is created paused and runs are triggered on demand: `truncate_raw_setlistfm_start → check_api_budget →
 extract_musicbrainz → extract_setlistfm → validate_raw → transform →
 analyze → cleanup_raw_setlistfm → log_run`, with `cleanup_raw_setlistfm`
 and `log_run` set to `trigger_rule=all_done` so raw setlist.fm data is
@@ -75,15 +75,13 @@ Non-negotiable, from [docs/context/product.md](docs/context/product.md):
   (`tests/integration/test_analytics_schema_guard.py`) fails the build
   if any table there ever gets a `setlist_id` column.
 - **No per-show setlist pages.** When a show is referenced anywhere
-  public (once the frontend exists, spec 04), it links to that show's
+  public, it links to that show's
   own page on setlist.fm rather than reproducing its content.
 - **setlist.fm attribution is mandatory** on every page that uses its
   data: a visible link to the setlist.fm page for that data (or to
   setlist.fm's home page), without `nofollow`, present in the rendered
-  HTML so it's crawlable — not just in a footer buried behind
-  JavaScript. This has no concrete implementation yet (there's no
-  frontend until spec 04), but the requirement is fixed now so it isn't
-  an afterthought later.
+  HTML so it's crawlable, not just in a footer buried behind
+  JavaScript. The site build fails if the attribution is missing.
 - **MusicBrainz data (CC0) can be persisted normally** — it's the only
   reason `raw_musicbrainz` is allowed to survive between runs while
   `raw_setlistfm` isn't.
@@ -201,7 +199,7 @@ If `postgres-test` isn't running, every test in `tests/integration/`
 skips (rather than erroring) — the connection attempt happens once per
 session, so a skip run finishes in a few seconds, not minutes.
 
-## Public site (spec 04)
+## Public site
 
 A static, bilingual (pt-BR default, English) site generated from the `analytics` marts and
 published on Cloudflare Pages at `https://encore.alexarnoni.com`. No API, no backend and no
@@ -295,8 +293,9 @@ IBM Plex Mono (SIL OFL 1.1, latin subset) is self-hosted from `src/encore/site/a
 
 Per [docs/context/tech.md](docs/context/tech.md): an Oracle Cloud VM
 (ARM64/aarch64, Ubuntu 24.04) with Docker installed, project directory
-`/opt/encore`. Deployment is manual for spec-01 (automation is a later
-spec) — the reference sequence:
+`/opt/encore`. Deployment is manual; this is the reference sequence
+for the pipeline stack (the public site itself is on Cloudflare Pages, see
+above):
 
 ```bash
 # On the VM, as the deploy user
@@ -321,9 +320,9 @@ Once the image is built, `make up`/`make down`/`make ps`/`make logs`
 work the same way they do locally.
 
 Every port in `infra/docker-compose.yml` binds to `127.0.0.1` only
-(never `0.0.0.0`), matching the ports table in `tech.md`. Nginx on the
-host is the only public entry point; the Airflow UI (port 8080) is
-reached through an SSH tunnel, not exposed directly:
+(never `0.0.0.0`), matching the ports table in `tech.md`. Nothing on the VM
+serves the public site; the Airflow UI (port 8080) is reached through an
+SSH tunnel, not exposed directly:
 
 ```bash
 ssh -L 8080:127.0.0.1:8080 <user>@<vm-host>
