@@ -15,6 +15,12 @@ and a generator turns the aggregated `analytics` marts into plain HTML. See
 [docs/specs/](docs/specs/) for the specs and the task-by-task build logs,
 including bugs found and fixed along the way.
 
+## Explore the code
+
+- [Airflow DAG](airflow/dags/encore_pipeline.py) — ingests MusicBrainz and setlist.fm data, validates the load, and cleans up raw setlist.fm data even when an earlier task fails.
+- [Repertoire age mart](dbt/models/analytics/mart_repertoire_age.sql) — measures how old the live repertoire is by band, tour, and year, with a match rate to show how much of the repertoire could be dated.
+- [dbt test for forbidden columns](dbt/tests/assert_no_forbidden_columns_in_analytics.sql) — checks the actual warehouse schema for columns that could retain show-level details in persistent analytics tables.
+
 ## Architecture
 
 ```mermaid
